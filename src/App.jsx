@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useReducer } from "react";
+import React, { useState, useEffect, useRef, useCallback, useReducer } from 'react';
 import { MongoSyncAdapter } from "./mongoSync.jsx";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
@@ -547,7 +547,26 @@ function TasksView({proj,dispatch,toast}){
 }
 
 // ── DASHBOARD ────────────────────────────────────────────
-function Dashboard({projects,cloudUrl,setCloudUrl,toast}){
+const emptyProjForm=()=>({name:"",loc:"",type:"Residential",floors:10,status:"Pre-Construction",ko:"2026-01-01",col:"#1A304A"});
+function projFormFromProject(p){
+  if(!p)return emptyProjForm();
+  return{name:p.name||"",loc:p.loc||"",type:p.type||"Residential",floors:p.floors||10,status:p.status||"Pre-Construction",ko:p.ko||"2026-01-01",col:p.col||"#1A304A"};
+}
+function ProjectFormFields({form,setForm}){
+  return(
+    <div className="fgrid">
+      <div className="fg" style={{gridColumn:"1/-1"}}><label>Project Name</label><input type="text" value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} placeholder="e.g. Baner Heights"/></div>
+      <div className="fg"><label>Location</label><input type="text" value={form.loc} onChange={e=>setForm(p=>({...p,loc:e.target.value}))} placeholder="e.g. Baner, Pune"/></div>
+      <div className="fg"><label>Type</label><select value={form.type} onChange={e=>setForm(p=>({...p,type:e.target.value}))}><option>Residential</option><option>Commercial</option><option>Mixed-Use</option><option>Grade-A Commercial Tower</option><option>Luxury Villa</option></select></div>
+      <div className="fg"><label>Floors</label><input type="number" value={form.floors} onChange={e=>setForm(p=>({...p,floors:parseInt(e.target.value,10)||1}))} min={1}/></div>
+      <div className="fg"><label>Status</label><select value={form.status} onChange={e=>setForm(p=>({...p,status:e.target.value}))}><option>Pre-Construction</option><option>Pipeline</option><option>Evaluation</option><option>Acquired</option><option>Under Construction</option></select></div>
+      <div className="fg"><label>Kickoff Date</label><input type="date" value={form.ko} onChange={e=>setForm(p=>({...p,ko:e.target.value}))}/></div>
+      <div className="fg"><label>Brand Color</label><input type="color" value={form.col} onChange={e=>setForm(p=>({...p,col:e.target.value}))}/></div>
+    </div>
+  );
+}
+
+function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onEditProject,onDeleteProject}){
   const allStats=projects.map(p=>({p,s:pStats(p)}));
   const tT=allStats.reduce((a,x)=>a+x.s.tot,0),tC=allStats.reduce((a,x)=>a+x.s.comp,0),
         tO=allStats.reduce((a,x)=>a+x.s.ov,0),tI=allStats.reduce((a,x)=>a+x.s.ip,0);
@@ -588,7 +607,7 @@ function Dashboard({projects,cloudUrl,setCloudUrl,toast}){
           const dm=cDates(p);let nxt=null;
           for(const ph of p.phases)for(const t of ph.tasks){const st=gSt(t,dm);if(st==="inprogress"||st==="upcoming"){nxt=t;break;}if(nxt)break;}
           return(
-            <div key={p.id} className="pcard">
+            <div key={p.id} className="pcard" style={{cursor:onOpenProject?"pointer":"default"}} onClick={()=>onOpenProject&&onOpenProject(p.id)}>
               <svg width="64" height="64" viewBox="0 0 80 80" style={{flexShrink:0}}>
                 <circle fill="none" stroke="#CEC8BB" strokeWidth="4" cx="40" cy="40" r={r}/>
                 <circle fill="none" stroke={p.col} strokeWidth="4" strokeLinecap="round" cx="40" cy="40" r={r}
@@ -604,6 +623,10 @@ function Dashboard({projects,cloudUrl,setCloudUrl,toast}){
                   <span style={{color:C.red}}>{s.ov} late</span>
                 </div>
                 {nxt&&<div style={{fontSize:11,color:C.tx3,marginTop:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>↳ {nxt.name}</div>}
+                <div style={{display:"flex",gap:5,marginTop:8}} onClick={e=>e.stopPropagation()}>
+                  {onEditProject&&<button type="button" className="bts" onClick={()=>onEditProject(p)}>Edit</button>}
+                  {onDeleteProject&&<button type="button" className="btd bts" onClick={()=>onDeleteProject(p)}>Delete</button>}
+                </div>
               </div>
             </div>
           );
@@ -703,7 +726,19 @@ function reducer(state,action){
     }
     case"addComment":{const t=ft(action.projId,action.phId,action.tId);if(t)t.comments.push(action.comment);break;}
     case"addProject":S.projects.push(action.proj);break;
-    case"delProject":S.projects=S.projects.filter(p=>p.id!==action.pid);break;
+    case"delProject":{
+      S.projects=S.projects.filter(p=>p.id!==action.pid);
+      break;
+    }
+    case"updProject":{
+      const p=fp(action.pid);
+      if(!p)break;
+      const f=action.fields||{};
+      ["name","loc","type","floors","status","ko","col"].forEach(k=>{
+        if(f[k]!==undefined)p[k]=f[k];
+      });
+      break;
+    }
     case"setCloudUrl":S.cloudUrl=action.v;break;
     case"loadState":return action.state;
     default:break;
@@ -730,12 +765,17 @@ function Modal({open,onClose,title,wide,children,footer}){
 }
 
 // ── MAIN APP ─────────────────────────────────────────────
+const CLOUD_LABELS={loading:"Mongo…",synced:"Mongo ✓",dirty:"Saving…",saving:"Saving…",new:"Mongo (new)",offline:"Mongo offline",local:"Local only",error:"Mongo error",conflict:"Conflict"};
+
 export default function App(){
   const[state,dispatch]=useReducer(reducer,null,()=>buildInit());
   const[curView,setCurView]=useState("dashboard");
   const[subTab,setSubTab]=useState({});
   const[regStatus,setRegStatus]=useState({});
   const[modal,setModal]=useState(null);
+  const[editProjId,setEditProjId]=useState(null);
+  const[cloudStatus,setCloudStatus]=useState("loading");
+  const mongoFlushRef=useRef(null);
   const{toasts,toast}=useToasts();
   const curProj=state.projects.find(p=>p.id===curView);
 
@@ -757,12 +797,25 @@ export default function App(){
     const r=new FileReader();r.onload=e=>{try{const d=JSON.parse(e.target.result);dispatch({type:"loadState",state:d});toast("Imported","ok");}catch{toast("Invalid JSON","err");}};r.readAsText(file);
   };
 
-  // Add project form state
-  const[newProj,setNewProj]=useState({name:"",loc:"",type:"Residential",floors:10,status:"Pre-Construction",ko:"2026-01-01",col:"#1A304A"});
+  const[newProj,setNewProj]=useState(emptyProjForm);
+  const[editProj,setEditProj]=useState(emptyProjForm);
+
+  const confirmDeleteProject=(p)=>{
+    if(!p||!confirm(`Delete project "${p.name}" and all its tasks?`))return;
+    dispatch({type:"delProject",pid:p.id});
+    if(curView===p.id)setCurView("dashboard");
+    toast("Project deleted","ok");
+  };
+  const openEditProject=(p)=>{
+    if(!p)return;
+    setEditProjId(p.id);
+    setEditProj(projFormFromProject(p));
+    setModal("editProj");
+  };
 
   return(
     <div style={{minHeight:"100vh",background:C.bg}}>
-      <MongoSyncAdapter state={state} dispatch={dispatch} toast={toast}/>
+      <MongoSyncAdapter state={state} dispatch={dispatch} toast={toast} flushRef={mongoFlushRef} onSyncStatus={setCloudStatus}/>
       <nav className="tnav">
         <div style={{display:"flex",alignItems:"center",gap:9,paddingRight:18,borderRight:`1.5px solid ${C.bd}`,marginRight:2,flexShrink:0}}>
           <div className="nlogo">GA</div>
@@ -779,13 +832,14 @@ export default function App(){
         <div className="nact">
           <button className="bti" title="Export JSON" onClick={exportJSON}>⬇️</button>
           <label className="bti" title="Import JSON" style={{cursor:"pointer"}}>⬆️<input type="file" accept=".json" style={{display:"none"}} onChange={e=>{if(e.target.files[0])importJSON(e.target.files[0]);e.target.value="";}}/></label>
-          <button className="btp" onClick={()=>{toast("Data saved in session","ok");}}>💾 Save</button>
+          <span style={{fontSize:10,color:C.tx3,padding:"0 6px"}} title="MongoDB sync">{CLOUD_LABELS[cloudStatus]||cloudStatus}</span>
+          <button className="btp" onClick={()=>{if(mongoFlushRef.current)mongoFlushRef.current();else toast("Cloud save unavailable","err");}}>💾 Save</button>
         </div>
       </nav>
 
       <main className="main">
         {curView==="dashboard"
-          ?<Dashboard projects={state.projects} cloudUrl={cloudUrl} setCloudUrl={setCloudUrl} toast={toast}/>
+          ?<Dashboard projects={state.projects} cloudUrl={cloudUrl} setCloudUrl={setCloudUrl} toast={toast} onOpenProject={id=>setCurView(id)} onEditProject={openEditProject} onDeleteProject={confirmDeleteProject}/>
           :curProj?(()=>{
             const s=pStats(curProj);const sub=subTab[curProj.id]||"tasks";
             return(
@@ -813,7 +867,8 @@ export default function App(){
                     </div>
                     <div style={{display:"flex",gap:5,marginTop:9,justifyContent:"flex-end"}}>
                       <button className="bts" onClick={()=>setModal("addPhase_"+curProj.id)}>+ Phase</button>
-                      <button className="btd bts" onClick={()=>{if(confirm(`Delete "${curProj.name}"?`)){dispatch({type:"delProject",pid:curProj.id});setCurView("dashboard");}}}>Delete</button>
+                      <button className="bts" onClick={()=>openEditProject(curProj)}>Edit</button>
+                      <button className="btd bts" onClick={()=>confirmDeleteProject(curProj)}>Delete</button>
                     </div>
                   </div>
                 </div>
@@ -833,23 +888,28 @@ export default function App(){
       </main>
 
       {/* Add Project Modal */}
-      <Modal open={modal==="addProj"} onClose={()=>setModal(null)} title="Add New Project"
-        footer={<><button className="btg" onClick={()=>setModal(null)}>Cancel</button>
+      <Modal open={modal==="addProj"} onClose={()=>{setModal(null);setNewProj(emptyProjForm());}} title="Add New Project"
+        footer={<><button className="btg" onClick={()=>{setModal(null);setNewProj(emptyProjForm());}}>Cancel</button>
           <button className="btp" onClick={()=>{
             if(!newProj.name.trim()){toast("Name required","err");return;}
-            const{so,cp}=mkPhasesFor("prj_"+Date.now());
-            dispatch({type:"addProject",proj:{...newProj,id:"prj_"+Date.now(),phases:[{id:"pl",name:"Land Acquisition",col:PCOL[0],open:true,tasks:[mkT(uid(),"Scouting",21,[],null)]},so,cp]}});
-            setModal(null);toast("Project created","ok");
+            const pid="prj_"+Date.now();
+            const{so,cp}=mkPhasesFor(pid);
+            dispatch({type:"addProject",proj:{...newProj,id:pid,phases:[{id:"pl",name:"Land Acquisition",col:PCOL[0],open:true,tasks:[mkT(uid(),"Scouting",21,[],null)]},so,cp]}});
+            setModal(null);setNewProj(emptyProjForm());setCurView(pid);toast("Project created","ok");
           }}>Create</button></>}>
-        <div className="fgrid">
-          <div className="fg" style={{gridColumn:"1/-1"}}><label>Project Name</label><input type="text" value={newProj.name} onChange={e=>setNewProj(p=>({...p,name:e.target.value}))} placeholder="e.g. Baner Heights"/></div>
-          <div className="fg"><label>Location</label><input type="text" value={newProj.loc} onChange={e=>setNewProj(p=>({...p,loc:e.target.value}))} placeholder="e.g. Baner, Pune"/></div>
-          <div className="fg"><label>Type</label><select value={newProj.type} onChange={e=>setNewProj(p=>({...p,type:e.target.value}))}><option>Residential</option><option>Commercial</option><option>Mixed-Use</option><option>Grade-A Commercial Tower</option><option>Luxury Villa</option></select></div>
-          <div className="fg"><label>Floors</label><input type="number" value={newProj.floors} onChange={e=>setNewProj(p=>({...p,floors:parseInt(e.target.value)||10}))} min={1}/></div>
-          <div className="fg"><label>Status</label><select value={newProj.status} onChange={e=>setNewProj(p=>({...p,status:e.target.value}))}><option>Pre-Construction</option><option>Pipeline</option><option>Evaluation</option><option>Acquired</option></select></div>
-          <div className="fg"><label>Kickoff Date</label><input type="date" value={newProj.ko} onChange={e=>setNewProj(p=>({...p,ko:e.target.value}))}/></div>
-          <div className="fg"><label>Brand Color</label><input type="color" value={newProj.col} onChange={e=>setNewProj(p=>({...p,col:e.target.value}))}/></div>
-        </div>
+        <ProjectFormFields form={newProj} setForm={setNewProj}/>
+      </Modal>
+
+      {/* Edit Project Modal */}
+      <Modal open={modal==="editProj"} onClose={()=>{setModal(null);setEditProjId(null);}} title="Edit Project"
+        footer={<><button className="btg" onClick={()=>{setModal(null);setEditProjId(null);}}>Cancel</button>
+          <button className="btp" onClick={()=>{
+            if(!editProj.name.trim()){toast("Name required","err");return;}
+            if(!editProjId){setModal(null);return;}
+            dispatch({type:"updProject",pid:editProjId,fields:editProj});
+            setModal(null);setEditProjId(null);toast("Project updated","ok");
+          }}>Save</button></>}>
+        <ProjectFormFields form={editProj} setForm={setEditProj}/>
       </Modal>
 
       {/* Add Phase Modal */}
