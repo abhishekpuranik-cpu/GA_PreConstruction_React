@@ -298,6 +298,10 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .ttable th{padding:6px 9px;font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#96918A;text-align:left;border-bottom:1px solid #E2DDD4;background:#fff;white-space:nowrap;font-family:'DM Sans',sans-serif}
 .ttable td{padding:6px 9px;border-bottom:1px solid rgba(0,0,0,.04);vertical-align:middle}
 .trow:hover td{background:#F8F6F1}
+.trow.trow-drag-over td{background:#FBF7EE;border-top:2px solid #C89A3A}
+.tdrag{cursor:grab;color:#96918A;font-size:14px;line-height:1;user-select:none;padding:0 2px}
+.tdrag:active{cursor:grabbing}
+.tdrag.tdrag-off{opacity:.35;cursor:not-allowed}
 .ec{border-radius:4px;padding:2px 4px;outline:none;font-size:12.5px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:text;min-width:60px}
 .ec:hover{background:#EAE6DC}
 .ec:focus{outline:2px solid #C89A3A;background:#fff;border-radius:4px}
@@ -668,10 +672,14 @@ function RegView({proj,regStatus,setRegStatus}){
 }
 
 // ── TASKS VIEW ───────────────────────────────────────────
+function phaseExpandKey(projId,phId){return`${projId}:${phId}`;}
+
 function TasksView({proj,dispatch,toast,departments}){
   const dm=cDates(proj);
   const[expandedC,setExpandedC]=useState({});
   const[expandedPh,setExpandedPh]=useState({});
+  const[dragTask,setDragTask]=useState(null);
+  const[dragOverId,setDragOverId]=useState(null);
   const[horizonDays,setHorizonDays]=useState(null);
   const[statusFilter,setStatusFilter]=useState("");
   const[assigneeFilter,setAssigneeFilter]=useState("");
@@ -681,6 +689,28 @@ function TasksView({proj,dispatch,toast,departments}){
   const roleOptions=useMemo(()=>collectAllRoles([proj]),[proj]);
   const todayStr=todayIso();
   const filters={statusFilter,assigneeFilter,departmentFilter,departments,roleFilter,horizonDays,todayStr};
+  const filtersActive=!!(statusFilter||assigneeFilter||departmentFilter||roleFilter||horizonDays!=null);
+  const expandAll=()=>{
+    const next={};
+    proj.phases.forEach(ph=>{next[phaseExpandKey(proj.id,ph.id)]=true;});
+    setExpandedPh(next);
+  };
+  const collapseAll=()=>{
+    const next={};
+    proj.phases.forEach(ph=>{next[phaseExpandKey(proj.id,ph.id)]=false;});
+    setExpandedPh(next);
+  };
+  const dropReorder=(ph,fromId,toId)=>{
+    if(!fromId||!toId||fromId===toId)return;
+    dispatch({type:"reorderTask",projId:proj.id,phId:ph.id,fromId,toId});
+    toast("Task order updated","ok");
+  };
+  const moveTaskByStep=(ph,tId,dir)=>{
+    const idx=ph.tasks.findIndex(x=>x.id===tId);
+    const to=idx+dir;
+    if(idx<0||to<0||to>=ph.tasks.length)return;
+    dispatch({type:"reorderTask",projId:proj.id,phId:ph.id,fromId:tId,toId:ph.tasks[to].id});
+  };
   const addComment=(phId,tId)=>{
     const txt=document.getElementById(`ct_${tId}`)?.value?.trim();
     const auth=document.getElementById(`cn_${tId}`)?.value?.trim()||"Anonymous";
@@ -694,8 +724,10 @@ function TasksView({proj,dispatch,toast,departments}){
     <div>
       <ActionFilters horizonDays={horizonDays} setHorizonDays={setHorizonDays} statusFilter={statusFilter} setStatusFilter={setStatusFilter} assigneeFilter={assigneeFilter} setAssigneeFilter={setAssigneeFilter} assignees={assignees} departmentFilter={departmentFilter} setDepartmentFilter={setDepartmentFilter} departments={departments} roleFilter={roleFilter} setRoleFilter={setRoleFilter} roleOptions={roleOptions} allowAllHorizon/>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}}>
-        <span className="task-tip" style={{fontSize:12,color:C.tx3}}>💡 Edit name inline · Status dropdown · Filters narrow visible rows</span>
-        <div style={{display:"flex",gap:7}}>
+        <span className="task-tip" style={{fontSize:12,color:C.tx3}}>💡 Drag ⋮⋮ to set chronology · {filtersActive?"Clear filters to reorder":"Expand phases below"}</span>
+        <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
+          <button type="button" className="btg" onClick={expandAll} title="Open every phase section">Expand all</button>
+          <button type="button" className="btg" onClick={collapseAll} title="Close every phase section">Collapse all</button>
           <button className="btg" onClick={()=>dispatch({type:"addPhase",projId:proj.id})}>+ Phase</button>
           <button className="btg" onClick={()=>{
             const dm2=cDates(proj);let csv="Phase,Task,Start,End,Dur,Roles (Process),Assignee,Status,Comments\n";
@@ -714,12 +746,14 @@ function TasksView({proj,dispatch,toast,departments}){
         if(departmentFilter&&visible.length===0)return null;
         const comp=visible.filter(t=>taskStatus(t,dm)==="completed").length;
         const pct=visible.length?Math.round(comp/visible.length*100):0;
-        const isOpen=expandedPh[ph.id]!==false;
+        const ek=phaseExpandKey(proj.id,ph.id);
+        const isOpen=expandedPh[ek]!==false;
         const dept=getDepartmentForPhase(ph.name,departments);
         return(
           <div key={ph.id} className="ps">
-            <div className="psh" onClick={()=>setExpandedPh(p=>({...p,[ph.id]:!isOpen}))}>
+            <div className="psh" onClick={()=>setExpandedPh(p=>({...p,[ek]:!isOpen}))}>
               <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                <span style={{fontSize:11,color:C.tx3,width:14,textAlign:"center",flexShrink:0}} aria-hidden>{isOpen?"▾":"▸"}</span>
                 <div style={{width:9,height:9,borderRadius:"50%",background:ph.col,flexShrink:0}}/>
                 <span style={{fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:".5px",color:ph.col}}>{ph.name}</span>
                 {dept?<span style={{fontSize:10,color:C.tx2,background:C.sf2,padding:"2px 8px",borderRadius:4}} title="Department head">{dept.name} · {dept.head}</span>:null}
@@ -734,18 +768,38 @@ function TasksView({proj,dispatch,toast,departments}){
             </div>
             {isOpen&&<div className="ttable-wrap"><table className="ttable">
               <thead><tr>
+                <th style={{width:22}} aria-label="Reorder"/>
                 <th style={{width:26}}>#</th><th>Task</th><th>Roles (Process)</th><th>Start ✏️</th><th>Dur</th><th>End</th>
                 <th>Assignee</th><th>Status</th><th>Log</th><th>Actions</th>
               </tr></thead>
               <tbody>
-                {visible.map((t,ti)=>{
+                {visible.map((t)=>{
+                  const seqIdx=ph.tasks.findIndex(x=>x.id===t.id)+1;
                   const d=dm[t.id]||{s:"",e:""};const st=taskStatus(t,dm);const od=st==="overdue"?dbDays(d.e,todayStr):0;
                   const cc=t.comments.length;
                   const showC=expandedC[t.id];
+                  const canDrag=!filtersActive;
+                  const isDragOver=dragOverId===t.id&&dragTask?.phId===ph.id;
                   return(
                     <React.Fragment key={t.id}>
-                      <tr className="trow">
-                        <td style={{textAlign:"center",color:C.tx3,fontSize:11}}>{ti+1}</td>
+                      <tr className={`trow${isDragOver?" trow-drag-over":""}`}
+                        onDragOver={e=>{if(!canDrag||!dragTask||dragTask.phId!==ph.id)return;e.preventDefault();e.dataTransfer.dropEffect="move";setDragOverId(t.id);}}
+                        onDragLeave={()=>{if(dragOverId===t.id)setDragOverId(null);}}
+                        onDrop={e=>{
+                          e.preventDefault();
+                          setDragOverId(null);
+                          if(!canDrag||!dragTask||dragTask.phId!==ph.id)return;
+                          dropReorder(ph,dragTask.tId,t.id);
+                          setDragTask(null);
+                        }}
+                      >
+                        <td style={{textAlign:"center",verticalAlign:"middle"}}>
+                          <span className={`tdrag${canDrag?"":" tdrag-off"}`} draggable={canDrag} title={canDrag?"Drag to reorder":"Clear filters to reorder"}
+                            onDragStart={e=>{if(!canDrag){e.preventDefault();return;}setDragTask({phId:ph.id,tId:t.id});e.dataTransfer.effectAllowed="move";}}
+                            onDragEnd={()=>{setDragTask(null);setDragOverId(null);}}
+                          >⋮⋮</span>
+                        </td>
+                        <td style={{textAlign:"center",color:C.tx3,fontSize:11}}>{seqIdx}</td>
                         <td style={{minWidth:180}}>
                           <div className="ec" contentEditable suppressContentEditableWarning
                             onBlur={e=>dispatch({type:"updTask",projId:proj.id,phId:ph.id,tId:t.id,f:"name",v:e.target.textContent.trim()})}
@@ -770,12 +824,14 @@ function TasksView({proj,dispatch,toast,departments}){
                         </td>
                         <td><button className="bts" onClick={()=>setExpandedC(p=>({...p,[t.id]:!p[t.id]}))}>💬{cc||""}</button></td>
                         <td><div className="tact">
+                          <button type="button" className="abt" title="Move up" disabled={filtersActive||seqIdx<=1} onClick={()=>moveTaskByStep(ph,t.id,-1)}>↑</button>
+                          <button type="button" className="abt" title="Move down" disabled={filtersActive||seqIdx>=ph.tasks.length} onClick={()=>moveTaskByStep(ph,t.id,1)}>↓</button>
                           <button className="abt" title="Done" onClick={()=>{dispatch({type:"markDone",projId:proj.id,phId:ph.id,tId:t.id});toast("Marked complete","ok");}}>✓</button>
                           <button className="abt" title="Add after" onClick={()=>dispatch({type:"addTask",projId:proj.id,phId:ph.id,afterId:t.id})}>+</button>
                           <button className="abt del" title="Delete" onClick={()=>{if(confirm(`Delete "${t.name}"?`))dispatch({type:"delTask",projId:proj.id,phId:ph.id,tId:t.id});}}>🗑</button>
                         </div></td>
                       </tr>
-                      {showC&&<tr><td colSpan={10} className="cexp">
+                      {showC&&<tr><td colSpan={11} className="cexp">
                         <div style={{fontSize:11,fontWeight:600,textTransform:"uppercase",letterSpacing:".5px",color:C.gold,marginBottom:9}}>Comments — {t.name}</div>
                         {t.comments.length>0?<div style={{marginBottom:10}}>
                           {t.comments.map((cm,ci)=>(
@@ -1026,6 +1082,15 @@ function reducer(state,action){
       const id=uid();const nt=mkT(id,action.name||"New Task",action.dur||7,action.pred||[],null,action.ex||{});
       if(action.afterId){const i=ph.tasks.findIndex(t=>t.id===action.afterId);if(i>=0){ph.tasks.splice(i+1,0,nt);break;}}
       ph.tasks.push(nt);break;
+    }
+    case"reorderTask":{
+      const ph=fph(action.projId,action.phId);if(!ph||!ph.tasks?.length)break;
+      const fromIdx=ph.tasks.findIndex(t=>t.id===action.fromId);
+      const toIdx=ph.tasks.findIndex(t=>t.id===action.toId);
+      if(fromIdx<0||toIdx<0||fromIdx===toIdx)break;
+      const[item]=ph.tasks.splice(fromIdx,1);
+      ph.tasks.splice(toIdx,0,item);
+      break;
     }
     case"delPhase":{const p=fp(action.projId);if(p)p.phases=p.phases.filter(ph=>ph.id!==action.phId);break;}
     case"addPhase":{
