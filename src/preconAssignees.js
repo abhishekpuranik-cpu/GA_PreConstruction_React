@@ -1,11 +1,16 @@
 import { iterAllTasks } from './preconExport.js';
 
-/** Multi-assignee stored in task.who as "; "-separated names. */
-export function parseAssignees(who) {
+/** Split stored assignee text into individual names (supports ";", ",", "&", "and"). */
+export function expandAssigneeTokens(who) {
   return String(who || '')
-    .split(/[;,]/)
+    .split(/\s*[;,]\s*|\s+&\s+|\s+and\s+/i)
     .map((s) => s.trim())
     .filter(Boolean);
+}
+
+/** Multi-assignee stored in task.who as "; "-separated names. */
+export function parseAssignees(who) {
+  return expandAssigneeTokens(who);
 }
 
 export function formatAssignees(names) {
@@ -36,9 +41,17 @@ export function nameMatches(a, b) {
 export function collectAssignees(projects) {
   const set = new Set();
   iterAllTasks(projects || [], ({ t }) => {
-    parseAssignees(t.who).forEach((a) => set.add(a));
+    expandAssigneeTokens(t.who).forEach((a) => set.add(a));
   });
   return [...set].sort((a, b) => a.localeCompare(b));
+}
+
+/** Projects used for assignee dropdown (Admin-assigned + current project if open). */
+export function projectsForAssigneeRoster(allProjects, loginUser, currentProject) {
+  const visible = filterProjectsForUser(allProjects, loginUser);
+  if (!currentProject?.id) return visible;
+  if (visible.some((p) => p.id === currentProject.id)) return visible;
+  return [...visible, currentProject];
 }
 
 const NON_ADOPTED = new Set(['pipeline', 'evaluation']);
@@ -67,9 +80,13 @@ export function filterProjectsForUser(projects, loginUser) {
   });
 }
 
-/** Dropdown options: assignees on allowed projects + department heads. */
+/** Dropdown options: task assignees on allowed projects, Admin team, dept heads, login user. */
 export function buildAssigneeRoster(projects, departments, loginUser) {
   const set = new Set(collectAssignees(projects));
+  (loginUser?.teamNames || []).forEach((n) => {
+    const t = String(n || '').trim();
+    if (t) set.add(t);
+  });
   (departments || []).forEach((d) => {
     const h = String(d.head || '').trim();
     if (h) set.add(h);

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { formatAssignees, parseAssignees } from './preconAssignees.js';
 
 /**
@@ -9,6 +9,11 @@ export function AssigneeMultiSelect({ value, options, onChange, disabled, compac
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const selected = parseAssignees(value);
+  const displayOptions = useMemo(() => {
+    const set = new Set(options || []);
+    selected.forEach((n) => set.add(n));
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }, [options, selected]);
 
   useEffect(() => {
     const onDoc = (e) => {
@@ -56,8 +61,8 @@ export function AssigneeMultiSelect({ value, options, onChange, disabled, compac
       {open ? (
         <div className="ams-menu" role="listbox">
           <div className="ams-menu-hint">Select one or more people</div>
-          {options.length ? (
-            options.map((name) => {
+          {displayOptions.length ? (
+            displayOptions.map((name) => {
               const on = selected.includes(name);
               return (
                 <label key={name} className={`ams-opt${on ? ' on' : ''}`}>

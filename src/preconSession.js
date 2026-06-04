@@ -38,6 +38,23 @@ export function fallbackLoginName() {
  * Loads /api/auth/session (same-origin when embedded on platform).
  * Persists ga_user_name for legacy apps.
  */
+/** Active PreConstruction users who share Admin-assigned projects (or all if unrestricted). */
+export async function fetchPreconTeamRoster() {
+  try {
+    const res = await fetch('/api/auth/preconstruction-team-roster', {
+      credentials: 'include',
+      cache: 'no-store',
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data?.names)) return data.names.filter(Boolean);
+    }
+  } catch {
+    /* standalone / offline */
+  }
+  return [];
+}
+
 export async function fetchLoginUser() {
   try {
     const res = await fetch('/api/auth/session', { credentials: 'include', cache: 'no-store' });
@@ -46,12 +63,14 @@ export async function fetchLoginUser() {
       if (data?.authenticated && data.user) {
         const name = displayNameFromUser(data.user) || fallbackLoginName();
         safeLsSet(GA_USER_NAME_KEY, name);
+        const teamNames = await fetchPreconTeamRoster();
         return {
           ready: true,
           authenticated: true,
           name,
           email: String(data.user.email || '').trim(),
           allowedProjects: Array.isArray(data.user.allowedProjects) ? data.user.allowedProjects : [],
+          teamNames,
         };
       }
     }
@@ -64,5 +83,6 @@ export async function fetchLoginUser() {
     name: fallbackLoginName(),
     email: '',
     allowedProjects: [],
+    teamNames: [],
   };
 }

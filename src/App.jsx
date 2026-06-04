@@ -23,7 +23,7 @@ import { validateCommentPayload, formatCommentLine } from "./preconComments.js";
 import { useLoginUser } from "./useLoginUser.js";
 import { MyWorkView } from "./MyWorkView.jsx";
 import { AssigneeMultiSelect } from "./AssigneeMultiSelect.jsx";
-import { filterProjectsForUser, buildAssigneeRoster, assigneeMatches } from "./preconAssignees.js";
+import { filterProjectsForUser, buildAssigneeRoster, assigneeMatches, projectsForAssigneeRoster } from "./preconAssignees.js";
 import { migratePreWorkFollowUpState, applyGhqPreWorkToPhases } from "./preconGhqPreWorkMigrate.js";
 import {
   taskStatus,
@@ -1353,8 +1353,9 @@ export default function App(){
   const loginUser=useLoginUser();
   const{toasts,toast}=useToasts();
   const visibleProjects=useMemo(()=>filterProjectsForUser(state.projects,loginUser),[state.projects,loginUser]);
-  const assigneeRoster=useMemo(()=>buildAssigneeRoster(visibleProjects,state.departments,loginUser),[visibleProjects,state.departments,loginUser]);
   const curProj=state.projects.find(p=>p.id===curView);
+  const rosterProjects=useMemo(()=>projectsForAssigneeRoster(state.projects,loginUser,curProj),[state.projects,loginUser,curProj]);
+  const assigneeRoster=useMemo(()=>buildAssigneeRoster(rosterProjects,state.departments,loginUser),[rosterProjects,state.departments,loginUser]);
   const viewSelectValue=curView==="mywork"||curView==="dashboard"||state.projects.some(p=>p.id===curView)?curView:"dashboard";
 
   // inject styles
@@ -1453,7 +1454,7 @@ export default function App(){
           >
             <option value="dashboard">Dashboard — all projects</option>
             <option value="mywork">My Work — your assignments</option>
-            {state.projects.map(p=><option key={p.id} value={p.id}>{p.name}{p.loc?` · ${p.loc}`:""}</option>)}
+            {visibleProjects.map(p=><option key={p.id} value={p.id}>{p.name}{p.loc?` · ${p.loc}`:""}</option>)}
           </select>
         </div>
         <div className={`nact${navOpen?" open":""}`}>
