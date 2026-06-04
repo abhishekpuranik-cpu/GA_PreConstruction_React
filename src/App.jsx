@@ -19,9 +19,12 @@ import {
   collectAllRoles,
 } from "./preconDepartments.js";
 import { PortfolioRagMatrix } from "./PortfolioRagMatrix.jsx";
-import { validateCommentPayload, formatCommentLine } from "./preconComments.js";
+import { formatCommentLine } from "./preconComments.js";
 import { useLoginUser } from "./useLoginUser.js";
 import { MyWorkView } from "./MyWorkView.jsx";
+import { CommentForm } from "./CommentForm.jsx";
+import { AttachmentLinks } from "./AttachmentPicker.jsx";
+import { TaskActivityFiles } from "./TaskActivityFiles.jsx";
 import { AssigneeMultiSelect } from "./AssigneeMultiSelect.jsx";
 import { filterProjectsForUser, buildAssigneeRoster, assigneeMatches, projectsForAssigneeRoster } from "./preconAssignees.js";
 import { migratePreWorkFollowUpState, applyGhqPreWorkToPhases } from "./preconGhqPreWorkMigrate.js";
@@ -429,6 +432,49 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .cform-textarea{resize:vertical;min-height:88px;line-height:1.45}
 .cform-foot{display:flex;justify-content:flex-end;padding-top:2px}
 .cform-foot .btp{min-height:44px;padding:10px 20px;font-size:13px}
+.cform-rich{max-width:100%}
+.c-email-meta{font-size:10px;color:#1B5E9E;margin-top:6px}
+.att-pick{margin-top:4px;padding:10px 12px;background:#F8F6F1;border:1px dashed #E2DDD4;border-radius:8px}
+.att-pick-compact{padding:8px 10px}
+.att-pick-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:6px}
+.att-pick-title{font-size:11px;font-weight:600;color:#1A304A}
+.att-pick-add{padding:6px 12px;border-radius:6px;border:1px solid #1B5E9E;background:#fff;color:#1B5E9E;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif}
+.att-pick-add:hover{background:#EEF4FC}
+.att-pick-input{display:none}
+.att-pick-hint{font-size:10px;color:#96918A;margin:0 0 8px;line-height:1.4}
+.att-pick-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.att-pick-item{display:flex;align-items:flex-start;gap:8px;padding:8px;background:#fff;border:1px solid #E2DDD4;border-radius:6px}
+.att-pick-fields{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.att-pick-meta{font-size:10px;color:#96918A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.att-pick-rm{border:none;background:transparent;color:#B32E1E;font-size:14px;cursor:pointer;padding:4px;line-height:1}
+.att-pick-empty{font-size:11px;color:#96918A;margin:0;font-style:italic}
+.att-links{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.att-link{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;background:#EEF4FC;border:1px solid #C5D9ED;color:#1B5E9E;font-size:11px;font-weight:600;text-decoration:none}
+.att-link:hover{background:#dbeafe}
+.nrp{margin-top:4px;padding:10px 12px;background:#fff;border:1px solid #E2DDD4;border-radius:8px}
+.nrp-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-bottom:8px}
+.nrp-title{font-size:11px;font-weight:700;color:#1A304A}
+.nrp-ok{font-size:10px;color:#1A6A3C}
+.nrp-warn{font-size:10px;color:#AE6418}
+.nrp-link{border:none;background:none;color:#1B5E9E;font-size:10px;font-weight:600;cursor:pointer;text-decoration:underline;padding:0;font-family:'DM Sans',sans-serif}
+.nrp-group{margin-bottom:8px}
+.nrp-group-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:4px}
+.nrp-group-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:#96918A}
+.nrp-group-hint{font-size:10px;color:#C4BEB6}
+.nrp-chips{display:flex;flex-wrap:wrap;gap:5px}
+.nrp-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 9px;border-radius:999px;border:1px solid #E2DDD4;background:#FAFAF8;font-size:11px;cursor:pointer;user-select:none}
+.nrp-chip.on{background:#EEF4FC;border-color:#1B5E9E}
+.nrp-chip.dim{opacity:.55}
+.nrp-chip input{accent-color:#1A304A}
+.nrp-no-email{font-size:9px;color:#AE6418}
+.nrp-loading,.nrp-err,.nrp-empty{font-size:11px;color:#96918A;margin:0}
+.nrp-err{color:#B32E1E}
+.task-files{margin:10px 0;padding:10px 12px;background:#fff;border:1px solid #E2DDD4;border-radius:8px}
+.task-files-head{margin-bottom:8px}
+.task-files-title{font-size:11px;font-weight:700;color:#1A304A;display:block}
+.task-files-sub{font-size:10px;color:#96918A}
+.mw-editor-wrap{margin-top:8px;padding-top:8px;border-top:1px solid #E2DDD4}
+.mw-open-task{margin-top:8px}
 .citem{background:#fff;border:1px solid #E2DDD4;border-radius:5px;padding:9px 11px;margin-bottom:7px}
 .citem:last-child{margin-bottom:0}
 .cinp{width:100%;padding:7px 9px;border:1px solid #E2DDD4;border-radius:5px;font-size:12px;resize:vertical;background:#fff;font-family:'DM Sans',sans-serif;min-height:52px}
@@ -839,23 +885,6 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
     dispatch({type:"reorderTask",projId:proj.id,phId:ph.id,fromId:tId,toId:ph.tasks[to].id});
   };
   const authorName=loginUser?.ready?(loginUser.name||"User"):"";
-  const addComment=(phId,tId)=>{
-    const txt=document.getElementById(`ct_${tId}`)?.value?.trim()||"";
-    const nextAction=document.getElementById(`na_${tId}`)?.value?.trim()||"";
-    const nextActionDate=document.getElementById(`nad_${tId}`)?.value?.trim()||"";
-    const err=validateCommentPayload({text:txt,nextAction,nextActionDate});
-    if(err){toast(err,"err");return;}
-    if(!authorName){toast("Loading login — try again","err");return;}
-    dispatch({type:"addComment",projId:proj.id,phId,tId,comment:{
-      text:txt,author:authorName,ts:now(),nextAction,nextActionDate,
-      flag:/issue|block|delay|risk/i.test(txt),
-    }});
-    toast("Comment saved","ok");
-    document.getElementById(`ct_${tId}`).value="";
-    document.getElementById(`na_${tId}`).value="";
-    document.getElementById(`nad_${tId}`).value="";
-    setTimeout(()=>setExpandedC(p=>({...p,[tId]:true})),50);
-  };
   return(
     <div>
       <ActionFilters horizonDays={horizonDays} setHorizonDays={setHorizonDays} statusFilter={statusFilter} setStatusFilter={setStatusFilter} assigneeFilter={assigneeFilter} setAssigneeFilter={setAssigneeFilter} assignees={assignees} departmentFilter={departmentFilter} setDepartmentFilter={setDepartmentFilter} departments={departments} roleFilter={roleFilter} setRoleFilter={setRoleFilter} roleOptions={roleOptions} allowAllHorizon/>
@@ -984,30 +1013,30 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                                 <span style={{fontWeight:600}}>Next action:</span> {cm.nextAction||"—"}
                                 {cm.nextActionDate?<span style={{color:C.tx2}}> · Due {fmt(cm.nextActionDate)}</span>:null}
                               </div>:null}
+                              <AttachmentLinks attachments={cm.attachments}/>
+                              {cm.notifyRecipients?.length?<div className="c-email-meta">
+                                {cm.emailSent?`✉ Sent to ${cm.notifyRecipients.map(r=>r.name||r.email).join(", ")}`:cm.emailError?`✉ Email failed: ${cm.emailError}`:"✉ Notify pending"}
+                              </div>:null}
                             </div>
                           ))}
                         </div>:<div style={{fontSize:12,color:C.tx3,fontStyle:"italic",marginBottom:10}}>No comments yet</div>}
-                        <div className="cform">
-                          <p className="cform-meta">
-                            Posting as <strong style={{color:C.navy}}>{authorName||"…"}</strong>
-                            {loginUser?.email?<span style={{color:C.tx3}}> · {loginUser.email}</span>:null}
-                          </p>
-                          <label className="cform-field" htmlFor={`ct_${t.id}`}>
-                            <span className="cform-lbl">Comment *</span>
-                            <textarea id={`ct_${t.id}`} className="cform-textarea" placeholder="Progress update, issue, or decision…" rows={3}/>
-                          </label>
-                          <label className="cform-field" htmlFor={`na_${t.id}`}>
-                            <span className="cform-lbl">Next action *</span>
-                            <input id={`na_${t.id}`} type="text" className="cform-inp" placeholder="What needs to happen next?" autoComplete="off"/>
-                          </label>
-                          <label className="cform-field" htmlFor={`nad_${t.id}`}>
-                            <span className="cform-lbl">Next action date *</span>
-                            <input id={`nad_${t.id}`} type="date" className="cform-inp cform-inp-date" required/>
-                          </label>
-                          <div className="cform-foot">
-                            <button type="button" className="btp" onClick={()=>addComment(ph.id,t.id)}>Post comment</button>
-                          </div>
-                        </div>
+                        <TaskActivityFiles proj={proj} task={t} dispatch={dispatch} toast={toast}/>
+                        <CommentForm
+                          projectId={proj.id}
+                          taskId={t.id}
+                          authorName={authorName}
+                          authorEmail={loginUser?.email}
+                          projectName={proj.name}
+                          phaseName={ph.name}
+                          taskName={t.name}
+                          taskAttachmentIds={(t.attachments||[]).map(a=>a.id).filter(Boolean)}
+                          toast={toast}
+                          onSaved={(comment)=>new Promise((resolve)=>{
+                            dispatch({type:"addComment",projId:proj.id,phId:ph.id,tId:t.id,comment});
+                            setTimeout(()=>setExpandedC(p=>({...p,[t.id]:true})),50);
+                            resolve();
+                          })}
+                        />
                         </div>
                       </td></tr>}
                     </React.Fragment>
@@ -1256,7 +1285,16 @@ function reducer(state,action){
       const p=fp(action.projId);if(!p)break;
       const id="ph_"+Date.now();p.phases.push({id,name:action.name||"New Phase",col:action.col||PCOL[0],open:true,tasks:[]});break;
     }
-    case"addComment":{const t=ft(action.projId,action.phId,action.tId);if(t)t.comments.push(action.comment);break;}
+    case"addComment":{const t=ft(action.projId,action.phId,action.tId);if(t){if(!Array.isArray(t.comments))t.comments=[];t.comments.push(action.comment);}break;}
+    case"addTaskAttachments":{
+      const p=fp(action.projId);
+      if(!p)break;
+      for(const ph of p.phases||[]){
+        const t=ph.tasks.find(x=>x.id===action.tId);
+        if(t){if(!Array.isArray(t.attachments))t.attachments=[];t.attachments.push(...(action.attachments||[]));break;}
+      }
+      break;
+    }
     case"updComment":{
       const t=ft(action.projId,action.phId,action.tId);
       if(!t||!Array.isArray(t.comments))break;

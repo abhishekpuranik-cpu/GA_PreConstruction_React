@@ -10,6 +10,9 @@ export function formatCommentLine(c) {
   const base = `[${c.author || 'Anon'} ${c.ts || ''}] ${c.text || ''}`;
   const na = String(c.nextAction || '').trim();
   const nad = String(c.nextActionDate || '').trim();
-  if (na || nad) return `${base} | Next: ${na || '—'} (${nad || '—'})`;
-  return base;
+  const att = (c.attachments || []).length
+    ? ` | ${(c.attachments || []).length} file(s)`
+    : '';
+  if (na || nad) return `${base} | Next: ${na || '—'} (${nad || '—'})${att}`;
+  return base + att;
 }

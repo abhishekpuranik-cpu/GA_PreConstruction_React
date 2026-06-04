@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { assigneeMatches, buildAssigneeRoster } from './preconAssignees.js';
-import { validateCommentPayload } from './preconComments.js';
+import { CommentForm } from './CommentForm.jsx';
+import { AttachmentLinks } from './AttachmentPicker.jsx';
 import { statusLabel, statusBadgeClass, TASK_STATUS_OPTIONS } from './preconTaskStatus.js';
 import {
   buildMyWorkItems,
@@ -26,67 +27,18 @@ const GROUP_ACCENT = {
   done: '#1A6A3C',
 };
 
-function now() {
-  return new Date().toLocaleString('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-function WorkListRow({ item, person, dispatch, toast, onOpenProject, defaultExpanded }) {
+function WorkListRow({ item, person, loginUser, dispatch, toast, onOpenProject, defaultExpanded }) {
   const { proj, ph, task, st, sortDate, sortSource, nextDate, dueDate, nextAction, overdueDays, dept, editable } =
     item;
   const [expanded, setExpanded] = useState(defaultExpanded);
-  const [text, setText] = useState('');
-  const [nextAct, setNextAct] = useState('');
-  const [nextDateVal, setNextDateVal] = useState('');
-
-  useEffect(() => {
-    const c = editable?.comment;
-    setText(c?.text || '');
-    setNextAct(c?.nextAction || '');
-    setNextDateVal(c?.nextActionDate || '');
-  }, [editable?.comment, task.id, editable?.commentIndex]);
-
-  const saveComment = () => {
-    const err = validateCommentPayload({ text, nextAction: nextAct, nextActionDate: nextDateVal });
-    if (err) {
-      toast(err, 'err');
-      return;
-    }
-    const author = person || 'User';
-    const patch = {
-      text: text.trim(),
-      nextAction: nextAct.trim(),
-      nextActionDate: nextDateVal.trim(),
-      ts: now(),
-      flag: /issue|block|delay|risk/i.test(text),
-    };
-    if (editable) {
-      patch.author = editable.comment?.author || author;
-      dispatch({
-        type: 'updComment',
-        projId: proj.id,
-        phId: ph.id,
-        tId: task.id,
-        commentIndex: editable.commentIndex,
-        patch,
-      });
-    } else {
-      patch.author = author;
-      dispatch({
-        type: 'addComment',
-        projId: proj.id,
-        phId: ph.id,
-        tId: task.id,
-        comment: patch,
-      });
-    }
-    toast('Saved — updates appear on the project task', 'ok');
-  };
+  const authorName = person || 'User';
+  const initial = editable?.comment
+    ? {
+        text: editable.comment.text || '',
+        nextAction: editable.comment.nextAction || '',
+        nextActionDate: editable.comment.nextActionDate || '',
+      }
+    : {};
 
   const chronologyLabel =
     sortSource === 'next_action'
@@ -160,46 +112,58 @@ function WorkListRow({ item, person, dispatch, toast, onOpenProject, defaultExpa
         </button>
       </div>
       {expanded ? (
-          <div className="mw-editor">
-            <label className="mw-ed-lbl">
-              Comment *
-              <textarea
-                className="cform-textarea"
-                rows={3}
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder="Progress, issue, or decision…"
-              />
-            </label>
-            <label className="mw-ed-lbl">
-              Next action *
-              <input
-                type="text"
-                className="cform-inp"
-                value={nextAct}
-                onChange={(e) => setNextAct(e.target.value)}
-                placeholder="What happens next?"
-              />
-            </label>
-            <label className="mw-ed-lbl">
-              Next action date *
-              <input
-                type="date"
-                className="cform-inp cform-inp-date"
-                value={nextDateVal}
-                onChange={(e) => setNextDateVal(e.target.value)}
-              />
-            </label>
-            <div className="mw-ed-actions">
-              <button type="button" className="btp" onClick={saveComment}>
-                Save
-              </button>
-              <button type="button" className="btg" onClick={() => onOpenProject(proj.id)}>
-                Open task in project
-              </button>
-            </div>
-          </div>
-        ) : null}
+        <div className="mw-editor-wrap">
+          <CommentForm
+            key={`${task.id}-${editable?.commentIndex ?? 'new'}`}
+            projectId={proj.id}
+            taskId={task.id}
+            authorName={authorName}
+            authorEmail={loginUser?.email}
+            projectName={proj.name}
+            phaseName={ph.name}
+            taskName={task.name}
+            taskAttachmentIds={(task.attachments || []).map((a) => a.id).filter(Boolean)}
+            initial={initial}
+            submitLabel={editable ? 'Save changes' : 'Post comment'}
+            toast={toast}
+            onSaved={async (comment) => {
+              if (editable) {
+                dispatch({
+                  type: 'updComment',
+                  projId: proj.id,
+                  phId: ph.id,
+                  tId: task.id,
+                  commentIndex: editable.commentIndex,
+                  patch: {
+                    text: comment.text,
+                    nextAction: comment.nextAction,
+                    nextActionDate: comment.nextActionDate,
+                    flag: comment.flag,
+                    attachments: [
+                      ...(editable.comment?.attachments || []),
+                      ...(comment.attachments || []),
+                    ],
+                    notifyRecipients: comment.notifyRecipients,
+                    emailSent: comment.emailSent,
+                    emailError: comment.emailError,
+                  },
+                });
+              } else {
+                dispatch({
+                  type: 'addComment',
+                  projId: proj.id,
+                  phId: ph.id,
+                  tId: task.id,
+                  comment,
+                });
+              }
+            }}
+          />
+          <button type="button" className="btg mw-open-task" onClick={() => onOpenProject(proj.id)}>
+            Open task in project
+          </button>
+        </div>
+      ) : null}
     </li>
   );
 }
@@ -439,6 +403,7 @@ export function MyWorkView({ projects, loginUser, departments, dispatch, toast, 
                     key={`${item.proj.id}-${item.task.id}`}
                     item={item}
                     person={effectivePerson}
+                    loginUser={loginUser}
                     dispatch={dispatch}
                     toast={toast}
                     onOpenProject={onOpenProject}
