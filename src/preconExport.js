@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import { cDates } from './preconDates.js';
 import { taskStatus, statusLabel, ensureTaskStatus } from './preconTaskStatus.js';
+import { formatRoles } from './preconDepartments.js';
 
 function commentsText(t) {
   if (!t.comments?.length) return '';
@@ -37,6 +38,7 @@ function rowSnapshot({ proj, ph, t }) {
     Phase: ph.name,
     'Task ID': t.id,
     Task: t.name,
+    'Roles (Process)': formatRoles(t),
     Assignee: t.who || '',
     'Stored status': ensureTaskStatus(t),
     Duration_days: t.dur,
@@ -58,6 +60,7 @@ function rowReport({ proj, ph, t }) {
     Project: proj.name,
     Phase: ph.name,
     Task: t.name,
+    'Roles (Process)': formatRoles(t),
     Assignee: t.who || '',
     Status: statusLabel(st),
     'Status code': st,

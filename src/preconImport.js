@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import { ensureTaskStatus } from './preconTaskStatus.js';
+import { parseRolesInput } from './preconDepartments.js';
 
 const PCOL = ['#1A304A', '#2A6E7A', '#5A3020', '#1A5A30', '#6A3020', '#3A4A6A', '#4A3020'];
 
@@ -74,6 +75,8 @@ function rowToTaskPatch(row) {
   const tid = pick(row, ['Task ID', 'Id', 'ID']);
   const dur = Number(pick(row, ['Duration_days', 'Duration', 'Days'])) || 7;
   const who = pick(row, ['Assignee', 'Owner', 'Who', 'Responsible']);
+  const rolesRaw = pick(row, ['Roles (Process)', 'Roles', 'Role(s)', 'Role']);
+  const roles = rolesRaw ? parseRolesInput(rolesRaw) : [];
   const ms = pick(row, ['Manual start', 'Start', 'Target Date', 'Target', 'Due Date', 'Planned start']);
   const as = pick(row, ['Actual start']);
   const ae = pick(row, ['Actual end']);
@@ -88,7 +91,7 @@ function rowToTaskPatch(row) {
       comments = [{ author: 'Import', ts: new Date().toISOString().slice(0, 10), text: String(commentsRaw) }];
     }
   }
-  const t = mkTask(name, dur, { id: tid || undefined, who, ms, as, ae, comments });
+  const t = mkTask(name, dur, { id: tid || undefined, who, ms, as, ae, comments, roles });
   if (stored) {
     const s = String(stored).toLowerCase().replace(/\s+/g, '');
     if (s.includes('complete')) t.status = 'completed';
@@ -117,6 +120,7 @@ function mergeTask(existing, incoming) {
     existing.name = incoming.name;
   }
   if (incoming.comments?.length) existing.comments = incoming.comments;
+  if (incoming.roles?.length) existing.roles = incoming.roles;
 }
 
 /**

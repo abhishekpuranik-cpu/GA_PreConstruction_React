@@ -10,6 +10,15 @@ import {
   applyKickoffOffsets,
 } from "./preconLifecycle.js";
 import {
+  ensureStateDepartments,
+  getDepartmentForPhase,
+  formatRoles,
+  parseRolesInput,
+  taskMatchesDepartment,
+  taskMatchesRoleFilter,
+  collectAllRoles,
+} from "./preconDepartments.js";
+import {
   taskStatus,
   taskStatusSelectValue,
   statusLabel,
@@ -47,7 +56,7 @@ const iso=d=>{const dt=new Date(d);return `${dt.getFullYear()}-${String(dt.getMo
 const fmt=d=>{if(!d)return"—";const dt=new Date(d);return `${dt.getDate()} ${MON[dt.getMonth()]} ${String(dt.getFullYear()).slice(2)}`;};
 const db=(a,b)=>Math.round((new Date(b)-new Date(a))/864e5);
 const now=()=>new Date().toLocaleString("en-IN",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"});
-const mkT=(id,nm,dur,pred=[],par=null,ex={})=>({id,name:nm,dur,pred,par,ms:null,who:"",comments:[],as:null,ae:null,status:"notstarted",...ex});
+const mkT=(id,nm,dur,pred=[],par=null,ex={})=>({id,name:nm,dur,pred,par,ms:null,who:"",roles:Array.isArray(ex.roles)?ex.roles:[],comments:[],as:null,ae:null,status:"notstarted",...ex});
 const uid=()=>"t_"+Date.now()+"_"+Math.random().toString(36).slice(2,6);
 
 // ── PHASE TEMPLATES ──────────────────────────────────────
@@ -404,7 +413,23 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 }
 `;
 
-function ActionFilters({ horizonDays, setHorizonDays, statusFilter, setStatusFilter, assigneeFilter, setAssigneeFilter, assignees, showHorizon = true, allowAllHorizon = false }) {
+function ActionFilters({
+  horizonDays,
+  setHorizonDays,
+  statusFilter,
+  setStatusFilter,
+  assigneeFilter,
+  setAssigneeFilter,
+  assignees,
+  departmentFilter,
+  setDepartmentFilter,
+  departments,
+  roleFilter,
+  setRoleFilter,
+  roleOptions,
+  showHorizon = true,
+  allowAllHorizon = false,
+}) {
   return (
     <div className="fbar">
       {showHorizon && (
@@ -441,12 +466,40 @@ function ActionFilters({ horizonDays, setHorizonDays, statusFilter, setStatusFil
           </option>
         ))}
       </select>
+      {departments?.length ? (
+        <>
+          <label>Department</label>
+          <select value={departmentFilter} onChange={(e) => setDepartmentFilter(e.target.value)}>
+            <option value="">All</option>
+            {departments.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+          </select>
+        </>
+      ) : null}
+      {roleOptions?.length ? (
+        <>
+          <label>Role</label>
+          <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
+            <option value="">All</option>
+            {roleOptions.map((r) => (
+              <option key={r} value={r}>
+                {r.length > 42 ? `${r.slice(0, 40)}…` : r}
+              </option>
+            ))}
+          </select>
+        </>
+      ) : null}
     </div>
   );
 }
 
-function taskPassesFilters(t, dm, { statusFilter, assigneeFilter, horizonDays, todayStr }) {
+function taskPassesFilters(t, dm, phaseName, { statusFilter, assigneeFilter, departmentFilter, departments, roleFilter, horizonDays, todayStr }) {
   if (assigneeFilter && String(t.who || '').trim() !== assigneeFilter) return false;
+  if (!taskMatchesDepartment(t, phaseName, departmentFilter, departments)) return false;
+  if (!taskMatchesRoleFilter(t, roleFilter)) return false;
   const st = taskStatus(t, dm);
   if (statusFilter) {
     if (statusFilter === 'overdue' ? st !== 'overdue' : st !== statusFilter) return false;
@@ -608,16 +661,19 @@ function RegView({proj,regStatus,setRegStatus}){
 }
 
 // ── TASKS VIEW ───────────────────────────────────────────
-function TasksView({proj,dispatch,toast}){
+function TasksView({proj,dispatch,toast,departments}){
   const dm=cDates(proj);
   const[expandedC,setExpandedC]=useState({});
   const[expandedPh,setExpandedPh]=useState({});
   const[horizonDays,setHorizonDays]=useState(null);
   const[statusFilter,setStatusFilter]=useState("");
   const[assigneeFilter,setAssigneeFilter]=useState("");
+  const[departmentFilter,setDepartmentFilter]=useState("");
+  const[roleFilter,setRoleFilter]=useState("");
   const assignees=useMemo(()=>collectAssignees([proj]),[proj]);
+  const roleOptions=useMemo(()=>collectAllRoles([proj]),[proj]);
   const todayStr=todayIso();
-  const filters={statusFilter,assigneeFilter,horizonDays,todayStr};
+  const filters={statusFilter,assigneeFilter,departmentFilter,departments,roleFilter,horizonDays,todayStr};
   const addComment=(phId,tId)=>{
     const txt=document.getElementById(`ct_${tId}`)?.value?.trim();
     const auth=document.getElementById(`cn_${tId}`)?.value?.trim()||"Anonymous";
@@ -629,34 +685,37 @@ function TasksView({proj,dispatch,toast}){
   };
   return(
     <div>
-      <ActionFilters horizonDays={horizonDays} setHorizonDays={setHorizonDays} statusFilter={statusFilter} setStatusFilter={setStatusFilter} assigneeFilter={assigneeFilter} setAssigneeFilter={setAssigneeFilter} assignees={assignees} allowAllHorizon/>
+      <ActionFilters horizonDays={horizonDays} setHorizonDays={setHorizonDays} statusFilter={statusFilter} setStatusFilter={setStatusFilter} assigneeFilter={assigneeFilter} setAssigneeFilter={setAssigneeFilter} assignees={assignees} departmentFilter={departmentFilter} setDepartmentFilter={setDepartmentFilter} departments={departments} roleFilter={roleFilter} setRoleFilter={setRoleFilter} roleOptions={roleOptions} allowAllHorizon/>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}}>
         <span className="task-tip" style={{fontSize:12,color:C.tx3}}>💡 Edit name inline · Status dropdown · Filters narrow visible rows</span>
         <div style={{display:"flex",gap:7}}>
           <button className="btg" onClick={()=>dispatch({type:"addPhase",projId:proj.id})}>+ Phase</button>
           <button className="btg" onClick={()=>{
-            const dm2=cDates(proj);let csv="Phase,Task,Start,End,Dur,Assignee,Status,Comments\n";
+            const dm2=cDates(proj);let csv="Phase,Task,Start,End,Dur,Roles (Process),Assignee,Status,Comments\n";
             proj.phases.forEach(ph=>ph.tasks.forEach(t=>{
-              if(!taskPassesFilters(t,dm2,filters))return;
+              if(!taskPassesFilters(t,dm2,ph.name,filters))return;
               const d=dm2[t.id]||{s:"",e:""};
               const cm=(t.comments||[]).map(c=>`${c.author}: ${c.text}`).join(" | ");
-              csv+=`"${ph.name}","${t.name}","${d.s}","${d.e}","${t.dur}","${t.who||""}","${statusLabel(taskStatus(t,dm2))}","${cm.replace(/"/g,'""')}"\n`;
+              csv+=`"${ph.name}","${t.name}","${d.s}","${d.e}","${t.dur}","${formatRoles(t)}","${t.who||""}","${statusLabel(taskStatus(t,dm2))}","${cm.replace(/"/g,'""')}"\n`;
             }));
             const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download=proj.name.replace(/\s+/g,"_")+"_Schedule.csv";a.click();toast("CSV exported","ok");
           }}>Export CSV</button>
         </div>
       </div>
       {proj.phases.map((ph,pi)=>{
-        const visible=ph.tasks.filter(t=>taskPassesFilters(t,dm,filters));
+        const visible=ph.tasks.filter(t=>taskPassesFilters(t,dm,ph.name,filters));
+        if(departmentFilter&&visible.length===0)return null;
         const comp=visible.filter(t=>taskStatus(t,dm)==="completed").length;
         const pct=visible.length?Math.round(comp/visible.length*100):0;
         const isOpen=expandedPh[ph.id]!==false;
+        const dept=getDepartmentForPhase(ph.name,departments);
         return(
           <div key={ph.id} className="ps">
             <div className="psh" onClick={()=>setExpandedPh(p=>({...p,[ph.id]:!isOpen}))}>
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                 <div style={{width:9,height:9,borderRadius:"50%",background:ph.col,flexShrink:0}}/>
                 <span style={{fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:".5px",color:ph.col}}>{ph.name}</span>
+                {dept?<span style={{fontSize:10,color:C.tx2,background:C.sf2,padding:"2px 8px",borderRadius:4}} title="Department head">{dept.name} · {dept.head}</span>:null}
                 <span style={{fontSize:11,color:C.tx3}}>{visible.length}{visible.length!==ph.tasks.length?` / ${ph.tasks.length}`:""} tasks</span>
                 <div className="ppbar"><div className="ppfill" style={{width:`${pct}%`,background:ph.col}}/></div>
                 <span style={{fontSize:11,color:C.tx3}}>{pct}%</span>
@@ -668,7 +727,7 @@ function TasksView({proj,dispatch,toast}){
             </div>
             {isOpen&&<div className="ttable-wrap"><table className="ttable">
               <thead><tr>
-                <th style={{width:26}}>#</th><th>Task</th><th>Start ✏️</th><th>Dur</th><th>End</th>
+                <th style={{width:26}}>#</th><th>Task</th><th>Roles (Process)</th><th>Start ✏️</th><th>Dur</th><th>End</th>
                 <th>Assignee</th><th>Status</th><th>Log</th><th>Actions</th>
               </tr></thead>
               <tbody>
@@ -685,6 +744,10 @@ function TasksView({proj,dispatch,toast}){
                             onBlur={e=>dispatch({type:"updTask",projId:proj.id,phId:ph.id,tId:t.id,f:"name",v:e.target.textContent.trim()})}
                             onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();e.target.blur();}}}
                           >{t.name}</div>
+                        </td>
+                        <td>
+                          <input type="text" className="ti" defaultValue={formatRoles(t)} placeholder="e.g. Acq Lead, Architect" title="Roles from Process sheet — comma-separated"
+                            style={{width:200,minWidth:140}} onBlur={e=>dispatch({type:"updTask",projId:proj.id,phId:ph.id,tId:t.id,f:"roles",v:e.target.value})}/>
                         </td>
                         <td><input type="date" className="di" defaultValue={t.ms||d.s||""} onChange={e=>dispatch({type:"setMS",projId:proj.id,phId:ph.id,tId:t.id,v:e.target.value||null})}/></td>
                         <td><input type="number" className="ni" defaultValue={t.dur} min={1} max={999} onChange={e=>dispatch({type:"updTask",projId:proj.id,phId:ph.id,tId:t.id,f:"dur",v:parseInt(e.target.value)||1})}/></td>
@@ -705,7 +768,7 @@ function TasksView({proj,dispatch,toast}){
                           <button className="abt del" title="Delete" onClick={()=>{if(confirm(`Delete "${t.name}"?`))dispatch({type:"delTask",projId:proj.id,phId:ph.id,tId:t.id});}}>🗑</button>
                         </div></td>
                       </tr>
-                      {showC&&<tr><td colSpan={9} className="cexp">
+                      {showC&&<tr><td colSpan={10} className="cexp">
                         <div style={{fontSize:11,fontWeight:600,textTransform:"uppercase",letterSpacing:".5px",color:C.gold,marginBottom:9}}>Comments — {t.name}</div>
                         {t.comments.length>0?<div style={{marginBottom:10}}>
                           {t.comments.map((cm,ci)=>(
@@ -733,7 +796,7 @@ function TasksView({proj,dispatch,toast}){
             </table></div>}
           </div>
         );
-      })}
+      }).filter(Boolean)}
     </div>
   );
 }
@@ -758,13 +821,16 @@ function ProjectFormFields({form,setForm}){
   );
 }
 
-function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onEditProject,onDeleteProject,onAddProject,onImportJson,onImportExcel}){
+function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onEditProject,onDeleteProject,onAddProject,onImportJson,onImportExcel,departments}){
   const[horizonDays,setHorizonDays]=useState(30);
   const[statusFilter,setStatusFilter]=useState("");
   const[assigneeFilter,setAssigneeFilter]=useState("");
+  const[departmentFilter,setDepartmentFilter]=useState("");
+  const[roleFilter,setRoleFilter]=useState("");
   const assignees=useMemo(()=>collectAssignees(projects),[projects]);
+  const roleOptions=useMemo(()=>collectAllRoles(projects),[projects]);
   const todayStr=todayIso();
-  const filters={statusFilter,assigneeFilter,horizonDays,todayStr};
+  const filters={statusFilter,assigneeFilter,departmentFilter,departments,roleFilter,horizonDays,todayStr};
   const allStats=projects.map(p=>({p,s:pStats(p)}));
   const tT=allStats.reduce((a,x)=>a+x.s.tot,0),tC=allStats.reduce((a,x)=>a+x.s.comp,0),
         tO=allStats.reduce((a,x)=>a+x.s.ov,0),tI=allStats.reduce((a,x)=>a+x.s.ip,0);
@@ -779,7 +845,7 @@ function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onEditProj
       const d=dm[t.id];if(!d)return;const st=taskStatus(t,dm);
       if(st==="overdue")iss.push({proj,ph,t,d,dy:dbDays(d.e,todayStr)});
       const isAction=st==="inprogress"||st==="notstarted"||st==="upcoming"||st==="paused";
-      if(isAction&&taskPassesFilters(t,dm,filters)){
+      if(isAction&&taskPassesFilters(t,dm,ph.name,filters)){
         const dsStart=dbDays(todayStr,d.s);
         const dsEnd=dbDays(todayStr,d.e);
         const ds=Math.min(dsStart>=0?dsStart:999,dsEnd>=0?dsEnd:999);
@@ -840,7 +906,7 @@ function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onEditProj
           );
         })}
       </div>
-      <ActionFilters horizonDays={horizonDays} setHorizonDays={setHorizonDays} statusFilter={statusFilter} setStatusFilter={setStatusFilter} assigneeFilter={assigneeFilter} setAssigneeFilter={setAssigneeFilter} assignees={assignees}/>
+      <ActionFilters horizonDays={horizonDays} setHorizonDays={setHorizonDays} statusFilter={statusFilter} setStatusFilter={setStatusFilter} assigneeFilter={assigneeFilter} setAssigneeFilter={setAssigneeFilter} assignees={assignees} departmentFilter={departmentFilter} setDepartmentFilter={setDepartmentFilter} departments={departments} roleFilter={roleFilter} setRoleFilter={setRoleFilter} roleOptions={roleOptions}/>
       <div className="dg2">
         <div className="card">
           <div style={{padding:"13px 18px",borderBottom:`1px solid ${C.bd}`}}><span className="disp" style={{fontSize:15,fontWeight:600,color:C.navy}}>Status Breakdown</span></div>
@@ -922,7 +988,19 @@ function reducer(state,action){
       if(p){p.ko=action.v;applyKickoffOffsets(p);}
       break;
     }
-    case"updTask":{const t=ft(action.projId,action.phId,action.tId);if(t)t[action.f]=action.v;break;}
+    case"updTask":{
+      const t=ft(action.projId,action.phId,action.tId);
+      if(!t)break;
+      if(action.f==="roles")t.roles=parseRolesInput(action.v);
+      else if(action.f==="dur")t.dur=parseInt(action.v,10)||1;
+      else t[action.f]=action.v;
+      break;
+    }
+    case"setDepartmentHead":{
+      const d=(S.departments||[]).find(x=>x.id===action.deptId);
+      if(d)d.head=typeof action.head==="string"?action.head:"";
+      break;
+    }
     case"setMS":{const t=ft(action.projId,action.phId,action.tId);if(t)t.ms=action.v;break;}
     case"setTaskStatus":{
       const t=ft(action.projId,action.phId,action.tId);if(!t)break;
@@ -965,6 +1043,7 @@ function reducer(state,action){
     case"loadState":{
       const s=mergeGhqPreWorkPhase(action.state);
       const{state:merged,totalAdded}=mergeLifecycleIntoState(s);
+      ensureStateDepartments(merged);
       (merged.projects||[]).forEach(proj=>{
         (proj.phases||[]).forEach(ph=>{
           (ph.tasks||[]).forEach(t=>{
@@ -973,6 +1052,7 @@ function reducer(state,action){
               else if(t.as)t.status="inprogress";
               else t.status="notstarted";
             }
+            if(!Array.isArray(t.roles))t.roles=parseRolesInput(t.roles);
           });
         });
       });
@@ -981,6 +1061,30 @@ function reducer(state,action){
     default:break;
   }
   return S;
+}
+
+// ── DEPARTMENT HEADS ─────────────────────────────────────
+function DepartmentHeadsModal({open,onClose,departments,dispatch,toast}){
+  if(!open)return null;
+  return(
+    <Modal open onClose={onClose} title="Department heads & filters" wide
+      footer={<button type="button" className="btp" onClick={()=>{toast("Department heads updated","ok");onClose();}}>Done</button>}>
+      <p style={{fontSize:12,color:C.tx2,lineHeight:1.55,marginBottom:14}}>
+        Each lifecycle phase maps to one department. Use the <strong>Department</strong> and <strong>Role</strong> filters on Tasks and Dashboard.
+        Edit heads below — saved with your workspace in MongoDB.
+      </p>
+      {(departments||[]).map(d=>(
+        <div key={d.id} className="fg" style={{marginBottom:14,paddingBottom:12,borderBottom:`1px solid ${C.bd}`}}>
+          <label style={{fontWeight:600,color:C.navy}}>{d.name}</label>
+          <input type="text" defaultValue={d.head||""} placeholder="Department head name"
+            onBlur={e=>dispatch({type:"setDepartmentHead",deptId:d.id,head:e.target.value.trim()})}/>
+          <div style={{fontSize:10,color:C.tx3,marginTop:6,lineHeight:1.45}}>
+            Covers phases: {(d.phaseNames||[]).slice(0,6).join(" · ")}{(d.phaseNames?.length>6?" …":"")}
+          </div>
+        </div>
+      ))}
+    </Modal>
+  );
 }
 
 // ── MODAL COMPONENT ──────────────────────────────────────
@@ -1110,6 +1214,7 @@ export default function App(){
         </div>
         <div className={`nact${navOpen?" open":""}`}>
           <div className="nact-grp">
+            <button type="button" className="btg" onClick={()=>setModal("deptHeads")} title="Edit Minal / Amit / Abhishek department heads">Departments</button>
             <button type="button" className="btp-add" onClick={()=>setModal("addProj")}>+ Add project</button>
             <label className="file-lbl" title="Replace workspace from JSON backup">Import JSON<input type="file" accept=".json,application/json" onChange={e=>{if(e.target.files?.[0])importJSON(e.target.files[0]);e.target.value="";}}/></label>
             <label className="file-lbl" title={curProj?`Merge tasks into "${curProj.name}" (Project column must match). Wait until Mongo shows ✓ before importing.`:"Merge all projects from Excel dump/report. Wait until Mongo shows ✓ before importing."}>Import Excel<input type="file" accept=".xlsx,.xls" disabled={cloudStatus==="loading"} onChange={e=>{if(e.target.files?.[0])importExcel(e.target.files[0]);e.target.value="";}}/></label>
@@ -1128,7 +1233,7 @@ export default function App(){
 
       <main className="main">
         {curView==="dashboard"
-          ?<Dashboard projects={state.projects} cloudUrl={cloudUrl} setCloudUrl={setCloudUrl} toast={toast} onOpenProject={id=>setCurView(id)} onEditProject={openEditProject} onDeleteProject={confirmDeleteProject} onAddProject={()=>setModal("addProj")} onImportJson={importJSON} onImportExcel={importExcel}/>
+          ?<Dashboard projects={state.projects} cloudUrl={cloudUrl} setCloudUrl={setCloudUrl} toast={toast} onOpenProject={id=>setCurView(id)} onEditProject={openEditProject} onDeleteProject={confirmDeleteProject} onAddProject={()=>setModal("addProj")} onImportJson={importJSON} onImportExcel={importExcel} departments={state.departments}/>
           :curProj?(()=>{
             const s=pStats(curProj);const sub=subTab[curProj.id]||"tasks";
             return(
@@ -1166,7 +1271,7 @@ export default function App(){
                     <button key={t} className={`stab${sub===t?" act":""}`} onClick={()=>sst(curProj.id,t)}>{l}</button>
                   ))}
                 </div>
-                {sub==="tasks"&&<TasksView proj={curProj} dispatch={dispatch} toast={toast}/>}
+                {sub==="tasks"&&<TasksView proj={curProj} dispatch={dispatch} toast={toast} departments={state.departments}/>}
                 {sub==="gantt"&&<GanttView proj={curProj}/>}
                 {sub==="regs"&&<RegView proj={curProj} regStatus={regStatus} setRegStatus={setRegStatus}/>}
               </div>
@@ -1175,6 +1280,8 @@ export default function App(){
           :<p style={{padding:40,color:C.tx3}}>View not found</p>
         }
       </main>
+
+      <DepartmentHeadsModal open={modal==="deptHeads"} onClose={()=>setModal(null)} departments={state.departments} dispatch={dispatch} toast={toast}/>
 
       {/* Add Project Modal */}
       <Modal open={modal==="addProj"} onClose={()=>{setModal(null);setNewProj(emptyProjForm());}} title="Add New Project"

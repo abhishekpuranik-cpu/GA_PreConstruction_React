@@ -15,7 +15,15 @@
           "offsetFromKo": null,
           "pred": [],
           "par": null,
-          "phaseGroup": "Land Scouting"
+          "phaseGroup": "Land Scouting",
+          "roles": [
+            "Acq Lead",
+            "Admin",
+            "Strategy",
+            "CEO",
+            "Analyst",
+            "Board"
+          ]
         },
         {
           "id": "land_acquisition_feasibility_002",
@@ -29,7 +37,15 @@
             "land_acquisition_feasibility_001"
           ],
           "par": null,
-          "phaseGroup": "Feasibility of Land"
+          "phaseGroup": "Feasibility of Land",
+          "roles": [
+            "Architect",
+            "Admin",
+            "Town Planner",
+            "Acq Lead",
+            "Acq Lead+ External Consultant (if needed)",
+            "Liaison Officer"
+          ]
         },
         {
           "id": "land_acquisition_feasibility_003",
@@ -43,7 +59,14 @@
             "land_acquisition_feasibility_002"
           ],
           "par": null,
-          "phaseGroup": "Feasibility of Land"
+          "phaseGroup": "Feasibility of Land",
+          "roles": [
+            "Liaison Officer",
+            "Acq Lead",
+            "Surveyor Team",
+            "Surveyor",
+            "CAD Draftsman"
+          ]
         },
         {
           "id": "land_acquisition_feasibility_004",
@@ -57,7 +80,15 @@
             "land_acquisition_feasibility_003"
           ],
           "par": null,
-          "phaseGroup": "Feasibility of Land"
+          "phaseGroup": "Feasibility of Land",
+          "roles": [
+            "Architect",
+            "Acq Lead",
+            "Liaison",
+            "Strategy Lead",
+            "Marketing",
+            "Architect + Town Planner"
+          ]
         },
         {
           "id": "land_acquisition_feasibility_005",
@@ -71,7 +102,15 @@
             "land_acquisition_feasibility_004"
           ],
           "par": null,
-          "phaseGroup": "Feasibility of Land"
+          "phaseGroup": "Feasibility of Land",
+          "roles": [
+            "Acq Lead",
+            "Propviewz",
+            "Strategy Head",
+            "Field Survey Team",
+            "Field Surveyor",
+            "Broker Network"
+          ]
         },
         {
           "id": "land_acquisition_feasibility_006",
@@ -85,7 +124,15 @@
             "land_acquisition_feasibility_005"
           ],
           "par": null,
-          "phaseGroup": "Feasibility of Land"
+          "phaseGroup": "Feasibility of Land",
+          "roles": [
+            "Finance",
+            "Analyst",
+            "Acquisition Lead",
+            "QS",
+            "Finance Analyst",
+            "Finance + Strategy"
+          ]
         },
         {
           "id": "land_acquisition_feasibility_007",
@@ -99,7 +146,13 @@
             "land_acquisition_feasibility_006"
           ],
           "par": null,
-          "phaseGroup": "Term sheet/MoU"
+          "phaseGroup": "Term sheet/MoU",
+          "roles": [
+            "Acq Lead",
+            "Board",
+            "Partner",
+            "Legal"
+          ]
         },
         {
           "id": "land_acquisition_feasibility_008",
@@ -113,7 +166,15 @@
             "land_acquisition_feasibility_007"
           ],
           "par": null,
-          "phaseGroup": "Term sheet/MoU"
+          "phaseGroup": "Term sheet/MoU",
+          "roles": [
+            "Acq Lead",
+            "Legal",
+            "Board",
+            "External Advocate",
+            "Acquisition Lead",
+            "Legal Counsel"
+          ]
         },
         {
           "id": "land_acquisition_feasibility_009",
@@ -127,7 +188,15 @@
             "land_acquisition_feasibility_008"
           ],
           "par": null,
-          "phaseGroup": "Term sheet/MoU"
+          "phaseGroup": "Term sheet/MoU",
+          "roles": [
+            "Advocate",
+            "Legal Head",
+            "Admin",
+            "Acq Lead",
+            "Liaison",
+            "Board"
+          ]
         },
         {
           "id": "land_acquisition_feasibility_010",
@@ -141,7 +210,14 @@
             "land_acquisition_feasibility_009"
           ],
           "par": null,
-          "phaseGroup": "Term sheet/MoU"
+          "phaseGroup": "Term sheet/MoU",
+          "roles": [
+            "Liaison Officer",
+            "Acq Lead",
+            "Surveyor Team",
+            "Surveyor",
+            "CAD Draftsman"
+          ]
         },
         {
           "id": "land_acquisition_feasibility_011",
@@ -155,7 +231,15 @@
             "land_acquisition_feasibility_010"
           ],
           "par": null,
-          "phaseGroup": "Term sheet/MoU"
+          "phaseGroup": "Term sheet/MoU",
+          "roles": [
+            "Legal",
+            "Finance",
+            "Board",
+            "Partners",
+            "Legal Counsel",
+            "??"
+          ]
         },
         {
           "id": "land_acquisition_feasibility_012",
@@ -169,7 +253,15 @@
             "land_acquisition_feasibility_011"
           ],
           "par": null,
-          "phaseGroup": "Fund raising for Land acquisition"
+          "phaseGroup": "Fund raising for Land acquisition",
+          "roles": [
+            "Finance",
+            "Partners",
+            "Acquisition Lead",
+            "Strategy",
+            "Finance Analyst",
+            "Board"
+          ]
         },
         {
           "id": "land_acquisition_feasibility_013",
@@ -183,7 +275,13 @@
             "land_acquisition_feasibility_012"
           ],
           "par": null,
-          "phaseGroup": "Fund raising for Land acquisition"
+          "phaseGroup": "Fund raising for Land acquisition",
+          "roles": [
+            "Finance",
+            "Board",
+            "Legal",
+            "Acq Lead"
+          ]
         },
         {
           "id": "land_acquisition_feasibility_014",
@@ -197,7 +295,15 @@
             "land_acquisition_feasibility_013"
           ],
           "par": null,
-          "phaseGroup": "Fund raising for Land acquisition"
+          "phaseGroup": "Fund raising for Land acquisition",
+          "roles": [
+            "Acq Lead",
+            "Admin",
+            "Strategy",
+            "CEO",
+            "Analyst",
+            "Board"
+          ]
         },
         {
           "id": "land_acquisition_feasibility_015",
@@ -211,7 +317,8 @@
             "land_acquisition_feasibility_014"
           ],
           "par": null,
-          "phaseGroup": "Fund raising for Land acquisition"
+          "phaseGroup": "Fund raising for Land acquisition",
+          "roles": []
         },
         {
           "id": "land_acquisition_feasibility_016",
@@ -225,7 +332,13 @@
             "land_acquisition_feasibility_015"
           ],
           "par": null,
-          "phaseGroup": "Legal/Tehcnical due diligence"
+          "phaseGroup": "Legal/Tehcnical due diligence",
+          "roles": [
+            "Liaison Officer",
+            "Liaison",
+            "Legal",
+            "Admin"
+          ]
         },
         {
           "id": "land_acquisition_feasibility_017",
@@ -239,7 +352,15 @@
             "land_acquisition_feasibility_016"
           ],
           "par": null,
-          "phaseGroup": "Legal/Tehcnical due diligence"
+          "phaseGroup": "Legal/Tehcnical due diligence",
+          "roles": [
+            "Liaison Officer",
+            "Admin",
+            "Liaison",
+            "Legal",
+            "Govt. Surveyor (support by Liaison)",
+            "Acq Lead"
+          ]
         },
         {
           "id": "land_acquisition_feasibility_018",
@@ -253,7 +374,14 @@
             "land_acquisition_feasibility_017"
           ],
           "par": null,
-          "phaseGroup": "Legal/Tehcnical due diligence"
+          "phaseGroup": "Legal/Tehcnical due diligence",
+          "roles": [
+            "Acq Lead",
+            "Architect",
+            "Liaison Officer",
+            "Town Planner",
+            "Admin"
+          ]
         },
         {
           "id": "land_acquisition_feasibility_019",
@@ -267,7 +395,15 @@
             "land_acquisition_feasibility_018"
           ],
           "par": null,
-          "phaseGroup": "Legal/Tehcnical due diligence"
+          "phaseGroup": "Legal/Tehcnical due diligence",
+          "roles": [
+            "Liaison Officer",
+            "Acq Lead",
+            "Liaison",
+            "Legal",
+            "Analyst",
+            "Admin"
+          ]
         },
         {
           "id": "land_acquisition_feasibility_020",
@@ -281,7 +417,15 @@
             "land_acquisition_feasibility_019"
           ],
           "par": null,
-          "phaseGroup": "Legal/Tehcnical due diligence"
+          "phaseGroup": "Legal/Tehcnical due diligence",
+          "roles": [
+            "Liaison Officer",
+            "Admin",
+            "Liaison",
+            "Revenue Clerk + Liaison",
+            "Legal Counsel",
+            "Govt. Surveyor + Liaison (support)"
+          ]
         },
         {
           "id": "land_acquisition_feasibility_021",
@@ -295,7 +439,15 @@
             "land_acquisition_feasibility_020"
           ],
           "par": null,
-          "phaseGroup": "Legal/Tehcnical due diligence"
+          "phaseGroup": "Legal/Tehcnical due diligence",
+          "roles": [
+            "Liaison Officer",
+            "Acq Lead",
+            "Liaison",
+            "Legal",
+            "Analyst",
+            "Admin"
+          ]
         },
         {
           "id": "land_acquisition_feasibility_022",
@@ -309,7 +461,15 @@
             "land_acquisition_feasibility_021"
           ],
           "par": null,
-          "phaseGroup": "Legal/Tehcnical due diligence"
+          "phaseGroup": "Legal/Tehcnical due diligence",
+          "roles": [
+            "Advocate",
+            "Legal Head",
+            "Admin",
+            "Acq Lead",
+            "Liaison",
+            "Board"
+          ]
         },
         {
           "id": "land_acquisition_feasibility_023",
@@ -323,7 +483,14 @@
             "land_acquisition_feasibility_022"
           ],
           "par": null,
-          "phaseGroup": "Legal/Tehcnical due diligence"
+          "phaseGroup": "Legal/Tehcnical due diligence",
+          "roles": [
+            "Liaison Officer",
+            "Advocate",
+            "Finance + Advocate",
+            "Legal Head",
+            "Admin"
+          ]
         },
         {
           "id": "land_acquisition_feasibility_024",
@@ -337,7 +504,15 @@
             "land_acquisition_feasibility_023"
           ],
           "par": null,
-          "phaseGroup": "Legal/Tehcnical due diligence"
+          "phaseGroup": "Legal/Tehcnical due diligence",
+          "roles": [
+            "Finance",
+            "Board",
+            "Finance Advisor",
+            "Company CFO",
+            "Finance + Admin",
+            "Tax Consultant"
+          ]
         }
       ]
     },
@@ -355,7 +530,15 @@
           "offsetFromKo": null,
           "pred": [],
           "par": null,
-          "phaseGroup": "Legal/Tehcnical due diligence"
+          "phaseGroup": "Legal/Tehcnical due diligence",
+          "roles": [
+            "Propviewz",
+            "Acq Lead",
+            "Admin",
+            "Strategy",
+            "Strategy Head",
+            "Board"
+          ]
         },
         {
           "id": "project_finnancial_working_026",
@@ -369,7 +552,15 @@
             "project_finnancial_working_025"
           ],
           "par": null,
-          "phaseGroup": "Legal/Tehcnical due diligence"
+          "phaseGroup": "Legal/Tehcnical due diligence",
+          "roles": [
+            "Propviewz",
+            "Admin",
+            "Acq Lead",
+            "Strategy",
+            "Marketing",
+            "Admin + Strategy Head"
+          ]
         },
         {
           "id": "project_finnancial_working_027",
@@ -383,7 +574,15 @@
             "project_finnancial_working_026"
           ],
           "par": null,
-          "phaseGroup": "Legal/Tehcnical due diligence"
+          "phaseGroup": "Legal/Tehcnical due diligence",
+          "roles": [
+            "Strategy",
+            "Strategy Head",
+            "Marketing",
+            "Board",
+            "Propviewz",
+            "Architect"
+          ]
         },
         {
           "id": "project_finnancial_working_028",
@@ -397,7 +596,15 @@
             "project_finnancial_working_027"
           ],
           "par": null,
-          "phaseGroup": "Legal/Tehcnical due diligence"
+          "phaseGroup": "Legal/Tehcnical due diligence",
+          "roles": [
+            "Admin",
+            "Architect",
+            "Strategy",
+            "Propviewz",
+            "Planner",
+            "Analyst"
+          ]
         },
         {
           "id": "project_finnancial_working_029",
@@ -411,7 +618,15 @@
             "project_finnancial_working_028"
           ],
           "par": null,
-          "phaseGroup": "Legal/Tehcnical due diligence"
+          "phaseGroup": "Legal/Tehcnical due diligence",
+          "roles": [
+            "Architect",
+            "Admin",
+            "Finance",
+            "Strategy",
+            "Marketing",
+            "Liaison Officer"
+          ]
         },
         {
           "id": "project_finnancial_working_030",
@@ -425,7 +640,15 @@
             "project_finnancial_working_029"
           ],
           "par": null,
-          "phaseGroup": "Legal/Tehcnical due diligence"
+          "phaseGroup": "Legal/Tehcnical due diligence",
+          "roles": [
+            "Architect",
+            "Strategy",
+            "Finance",
+            "Admin",
+            "Liaison Officer",
+            "Planner"
+          ]
         },
         {
           "id": "project_finnancial_working_031",
@@ -439,7 +662,15 @@
             "project_finnancial_working_030"
           ],
           "par": null,
-          "phaseGroup": "Legal/Tehcnical due diligence"
+          "phaseGroup": "Legal/Tehcnical due diligence",
+          "roles": [
+            "Architect",
+            "Acq Lead",
+            "Liaison",
+            "Strategy Lead",
+            "Marketing",
+            "Architect + Town Planner"
+          ]
         },
         {
           "id": "project_finnancial_working_032",
@@ -453,7 +684,15 @@
             "project_finnancial_working_031"
           ],
           "par": null,
-          "phaseGroup": "Legal/Tehcnical due diligence"
+          "phaseGroup": "Legal/Tehcnical due diligence",
+          "roles": [
+            "Architect",
+            "Board",
+            "Planner",
+            "Urban Designer",
+            "Town Planner",
+            "Architect + Partners"
+          ]
         },
         {
           "id": "project_finnancial_working_033",
@@ -467,7 +706,15 @@
             "project_finnancial_working_032"
           ],
           "par": null,
-          "phaseGroup": "Legal/Tehcnical due diligence"
+          "phaseGroup": "Legal/Tehcnical due diligence",
+          "roles": [
+            "QS",
+            "Finance",
+            "Architect",
+            "Analyst",
+            "Quantity Surveyor (QS)",
+            "Cost Consultant"
+          ]
         },
         {
           "id": "project_finnancial_working_034",
@@ -481,7 +728,15 @@
             "project_finnancial_working_033"
           ],
           "par": null,
-          "phaseGroup": "Legal/Tehcnical due diligence"
+          "phaseGroup": "Legal/Tehcnical due diligence",
+          "roles": [
+            "Liaison Officer",
+            "Admin",
+            "Liaison",
+            "Revenue Clerk + Liaison",
+            "Legal Counsel",
+            "Govt. Surveyor + Liaison (support)"
+          ]
         },
         {
           "id": "project_finnancial_working_035",
@@ -495,7 +750,13 @@
             "project_finnancial_working_034"
           ],
           "par": null,
-          "phaseGroup": "Legal/Tehcnical due diligence"
+          "phaseGroup": "Legal/Tehcnical due diligence",
+          "roles": [
+            "Finance",
+            "Strategy",
+            "Architect",
+            "Board"
+          ]
         },
         {
           "id": "project_finnancial_working_036",
@@ -509,7 +770,14 @@
             "project_finnancial_working_035"
           ],
           "par": null,
-          "phaseGroup": "Legal/Tehcnical due diligence"
+          "phaseGroup": "Legal/Tehcnical due diligence",
+          "roles": [
+            "Finance",
+            "Dashboard",
+            "Board",
+            "Admin",
+            "Strategy"
+          ]
         },
         {
           "id": "project_finnancial_working_037",
@@ -523,7 +791,15 @@
             "project_finnancial_working_036"
           ],
           "par": null,
-          "phaseGroup": "Legal/Tehcnical due diligence"
+          "phaseGroup": "Legal/Tehcnical due diligence",
+          "roles": [
+            "Admin",
+            "Finance",
+            "Legal",
+            "Finance + Strategy",
+            "Acq Lead",
+            "Board"
+          ]
         }
       ]
     },
@@ -541,7 +817,15 @@
           "offsetFromKo": null,
           "pred": [],
           "par": null,
-          "phaseGroup": "Legal/Tehcnical due diligence"
+          "phaseGroup": "Legal/Tehcnical due diligence",
+          "roles": [
+            "Liaison Officer",
+            "Legal + Board",
+            "Advocate",
+            "Finance + Legal",
+            "Finance",
+            "Partners"
+          ]
         }
       ]
     },
@@ -559,7 +843,15 @@
           "offsetFromKo": null,
           "pred": [],
           "par": null,
-          "phaseGroup": "Team Creation"
+          "phaseGroup": "Team Creation",
+          "roles": [
+            "Admin",
+            "Board",
+            "Acq Lead",
+            "Strategy",
+            "Finance",
+            "Partners"
+          ]
         },
         {
           "id": "design_approvals_040",
@@ -573,7 +865,15 @@
             "design_approvals_039"
           ],
           "par": null,
-          "phaseGroup": "Team Creation"
+          "phaseGroup": "Team Creation",
+          "roles": [
+            "Admin",
+            "Board",
+            "Acq Lead",
+            "Strategy",
+            "Finance",
+            "Partners"
+          ]
         },
         {
           "id": "design_approvals_041",
@@ -587,7 +887,15 @@
             "design_approvals_040"
           ],
           "par": null,
-          "phaseGroup": "Team Creation"
+          "phaseGroup": "Team Creation",
+          "roles": [
+            "Admin",
+            "Board",
+            "Acq Lead",
+            "Strategy",
+            "Finance",
+            "Partners"
+          ]
         },
         {
           "id": "design_approvals_042",
@@ -601,7 +909,15 @@
             "design_approvals_041"
           ],
           "par": null,
-          "phaseGroup": "Team Creation"
+          "phaseGroup": "Team Creation",
+          "roles": [
+            "Admin",
+            "Board",
+            "Acq Lead",
+            "Strategy",
+            "Finance",
+            "Partners"
+          ]
         },
         {
           "id": "design_approvals_043",
@@ -615,7 +931,15 @@
             "design_approvals_042"
           ],
           "par": null,
-          "phaseGroup": "Team Creation"
+          "phaseGroup": "Team Creation",
+          "roles": [
+            "Admin",
+            "Board",
+            "Acq Lead",
+            "Strategy",
+            "Finance",
+            "Partners"
+          ]
         },
         {
           "id": "design_approvals_044",
@@ -629,7 +953,15 @@
             "design_approvals_043"
           ],
           "par": null,
-          "phaseGroup": "Team Creation"
+          "phaseGroup": "Team Creation",
+          "roles": [
+            "Admin",
+            "Board",
+            "Acq Lead",
+            "Strategy",
+            "Finance",
+            "Partners"
+          ]
         },
         {
           "id": "design_approvals_045",
@@ -643,7 +975,15 @@
             "design_approvals_044"
           ],
           "par": null,
-          "phaseGroup": "Initial Studies"
+          "phaseGroup": "Initial Studies",
+          "roles": [
+            "PMO",
+            "Geotech Agency",
+            "Structural Consultant",
+            "Admin",
+            "Architect",
+            "Board"
+          ]
         },
         {
           "id": "design_approvals_046",
@@ -657,7 +997,15 @@
             "design_approvals_045"
           ],
           "par": null,
-          "phaseGroup": "Design"
+          "phaseGroup": "Design",
+          "roles": [
+            "Architect",
+            "PMO",
+            "Admin",
+            "Planner",
+            "Architect + Structural + MEP + Landscape Consultants",
+            "Liaison"
+          ]
         },
         {
           "id": "design_approvals_047",
@@ -671,7 +1019,15 @@
             "design_approvals_046"
           ],
           "par": null,
-          "phaseGroup": "Design"
+          "phaseGroup": "Design",
+          "roles": [
+            "Architect",
+            "PMO",
+            "Admin",
+            "Planner",
+            "Architect + Structural + MEP + Landscape Consultants",
+            "Liaison"
+          ]
         },
         {
           "id": "design_approvals_048",
@@ -685,7 +1041,15 @@
             "design_approvals_047"
           ],
           "par": null,
-          "phaseGroup": "Design"
+          "phaseGroup": "Design",
+          "roles": [
+            "Architect",
+            "PMO",
+            "Admin",
+            "Planner",
+            "Architect + Structural + MEP + Landscape Consultants",
+            "Liaison"
+          ]
         },
         {
           "id": "design_approvals_049",
@@ -699,7 +1063,15 @@
             "design_approvals_048"
           ],
           "par": null,
-          "phaseGroup": "Design"
+          "phaseGroup": "Design",
+          "roles": [
+            "Architect",
+            "PMO",
+            "Admin",
+            "Planner",
+            "Architect + Structural + MEP + Landscape Consultants",
+            "Liaison"
+          ]
         },
         {
           "id": "design_approvals_050",
@@ -713,7 +1085,15 @@
             "design_approvals_049"
           ],
           "par": null,
-          "phaseGroup": "Design"
+          "phaseGroup": "Design",
+          "roles": [
+            "Architect",
+            "PMO",
+            "Admin",
+            "Planner",
+            "Architect + Structural + MEP + Landscape Consultants",
+            "Liaison"
+          ]
         },
         {
           "id": "design_approvals_051",
@@ -727,7 +1107,15 @@
             "design_approvals_050"
           ],
           "par": null,
-          "phaseGroup": "Design"
+          "phaseGroup": "Design",
+          "roles": [
+            "Architect",
+            "PMO",
+            "Admin",
+            "Planner",
+            "Architect + Structural + MEP + Landscape Consultants",
+            "Liaison"
+          ]
         },
         {
           "id": "design_approvals_052",
@@ -741,7 +1129,15 @@
             "design_approvals_051"
           ],
           "par": null,
-          "phaseGroup": "Approvals"
+          "phaseGroup": "Approvals",
+          "roles": [
+            "Admin",
+            "Architect",
+            "Liaison",
+            "PMO",
+            "Structural",
+            "Consultants"
+          ]
         },
         {
           "id": "design_approvals_053",
@@ -755,7 +1151,15 @@
             "design_approvals_052"
           ],
           "par": null,
-          "phaseGroup": "Approvals"
+          "phaseGroup": "Approvals",
+          "roles": [
+            "Admin",
+            "Architect",
+            "Liaison",
+            "PMO",
+            "Structural",
+            "Consultants"
+          ]
         },
         {
           "id": "design_approvals_054",
@@ -769,7 +1173,15 @@
             "design_approvals_053"
           ],
           "par": null,
-          "phaseGroup": "Approvals"
+          "phaseGroup": "Approvals",
+          "roles": [
+            "Admin",
+            "Architect",
+            "Liaison",
+            "PMO",
+            "Structural",
+            "Consultants"
+          ]
         },
         {
           "id": "design_approvals_055",
@@ -783,7 +1195,15 @@
             "design_approvals_054"
           ],
           "par": null,
-          "phaseGroup": "Approvals"
+          "phaseGroup": "Approvals",
+          "roles": [
+            "Admin",
+            "Architect",
+            "Liaison",
+            "PMO",
+            "Structural",
+            "Consultants"
+          ]
         },
         {
           "id": "design_approvals_056",
@@ -797,7 +1217,15 @@
             "design_approvals_055"
           ],
           "par": null,
-          "phaseGroup": "Approvals"
+          "phaseGroup": "Approvals",
+          "roles": [
+            "Admin",
+            "Architect",
+            "Liaison",
+            "PMO",
+            "Structural",
+            "Consultants"
+          ]
         },
         {
           "id": "design_approvals_057",
@@ -811,7 +1239,15 @@
             "design_approvals_056"
           ],
           "par": null,
-          "phaseGroup": "Approvals"
+          "phaseGroup": "Approvals",
+          "roles": [
+            "Admin",
+            "Architect",
+            "Liaison",
+            "PMO",
+            "Structural",
+            "Consultants"
+          ]
         },
         {
           "id": "design_approvals_058",
@@ -825,7 +1261,15 @@
             "design_approvals_057"
           ],
           "par": null,
-          "phaseGroup": "Approvals"
+          "phaseGroup": "Approvals",
+          "roles": [
+            "Admin",
+            "Architect",
+            "Liaison",
+            "PMO",
+            "Structural",
+            "Consultants"
+          ]
         },
         {
           "id": "design_approvals_059",
@@ -839,7 +1283,15 @@
             "design_approvals_058"
           ],
           "par": null,
-          "phaseGroup": "Approvals"
+          "phaseGroup": "Approvals",
+          "roles": [
+            "Admin",
+            "Architect",
+            "Liaison",
+            "PMO",
+            "Structural",
+            "Consultants"
+          ]
         },
         {
           "id": "design_approvals_060",
@@ -853,7 +1305,15 @@
             "design_approvals_059"
           ],
           "par": null,
-          "phaseGroup": "Approvals"
+          "phaseGroup": "Approvals",
+          "roles": [
+            "Admin",
+            "Architect",
+            "Liaison",
+            "PMO",
+            "Structural",
+            "Consultants"
+          ]
         },
         {
           "id": "design_approvals_061",
@@ -867,7 +1327,15 @@
             "design_approvals_060"
           ],
           "par": null,
-          "phaseGroup": "Approvals"
+          "phaseGroup": "Approvals",
+          "roles": [
+            "Admin",
+            "Architect",
+            "Liaison",
+            "PMO",
+            "Structural",
+            "Consultants"
+          ]
         },
         {
           "id": "design_approvals_062",
@@ -881,7 +1349,15 @@
             "design_approvals_061"
           ],
           "par": null,
-          "phaseGroup": "Approvals"
+          "phaseGroup": "Approvals",
+          "roles": [
+            "Admin",
+            "Architect",
+            "Liaison",
+            "PMO",
+            "Structural",
+            "Consultants"
+          ]
         },
         {
           "id": "design_approvals_063",
@@ -895,7 +1371,15 @@
             "design_approvals_062"
           ],
           "par": null,
-          "phaseGroup": "Approvals"
+          "phaseGroup": "Approvals",
+          "roles": [
+            "Admin",
+            "Architect",
+            "Liaison",
+            "PMO",
+            "Structural",
+            "Consultants"
+          ]
         },
         {
           "id": "design_approvals_064",
@@ -909,7 +1393,15 @@
             "design_approvals_063"
           ],
           "par": null,
-          "phaseGroup": "Approvals"
+          "phaseGroup": "Approvals",
+          "roles": [
+            "Admin",
+            "Architect",
+            "Liaison",
+            "PMO",
+            "Structural",
+            "Consultants"
+          ]
         },
         {
           "id": "design_approvals_065",
@@ -923,7 +1415,15 @@
             "design_approvals_064"
           ],
           "par": null,
-          "phaseGroup": "Approvals"
+          "phaseGroup": "Approvals",
+          "roles": [
+            "Admin",
+            "Architect",
+            "Liaison",
+            "PMO",
+            "Structural",
+            "Consultants"
+          ]
         },
         {
           "id": "design_approvals_066",
@@ -937,7 +1437,15 @@
             "design_approvals_065"
           ],
           "par": null,
-          "phaseGroup": "Approvals"
+          "phaseGroup": "Approvals",
+          "roles": [
+            "Admin",
+            "Architect",
+            "Liaison",
+            "PMO",
+            "Structural",
+            "Consultants"
+          ]
         },
         {
           "id": "design_approvals_067",
@@ -951,7 +1459,15 @@
             "design_approvals_066"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Admin",
+            "Architect",
+            "Liaison",
+            "PMO",
+            "Structural",
+            "Consultants"
+          ]
         },
         {
           "id": "design_approvals_068",
@@ -965,7 +1481,15 @@
             "design_approvals_067"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Admin",
+            "Architect",
+            "Liaison",
+            "PMO",
+            "Structural",
+            "Consultants"
+          ]
         },
         {
           "id": "design_approvals_069",
@@ -979,7 +1503,15 @@
             "design_approvals_068"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Admin",
+            "Architect",
+            "Liaison",
+            "PMO",
+            "Structural",
+            "Consultants"
+          ]
         },
         {
           "id": "design_approvals_070",
@@ -993,7 +1525,15 @@
             "design_approvals_069"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Admin",
+            "Architect",
+            "Liaison",
+            "PMO",
+            "Structural",
+            "Consultants"
+          ]
         },
         {
           "id": "design_approvals_071",
@@ -1007,7 +1547,15 @@
             "design_approvals_070"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Admin",
+            "Architect",
+            "Liaison",
+            "PMO",
+            "Structural",
+            "Consultants"
+          ]
         },
         {
           "id": "design_approvals_072",
@@ -1021,7 +1569,15 @@
             "design_approvals_071"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Admin",
+            "Board",
+            "Architect",
+            "Finance",
+            "Legal",
+            "PMO"
+          ]
         },
         {
           "id": "design_approvals_073",
@@ -1035,7 +1591,15 @@
             "design_approvals_072"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Liaison Officer",
+            "Legal + Board",
+            "Advocate",
+            "Finance + Legal",
+            "Finance",
+            "Partners"
+          ]
         }
       ]
     },
@@ -1053,7 +1617,13 @@
           "offsetFromKo": null,
           "pred": [],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Finance",
+            "Strategy",
+            "Architect",
+            "Board"
+          ]
         },
         {
           "id": "financing_pre_construction_075",
@@ -1067,7 +1637,15 @@
             "financing_pre_construction_074"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Finance",
+            "Admin",
+            "Board",
+            "PMO",
+            "Finance Analyst",
+            "Liaison"
+          ]
         },
         {
           "id": "financing_pre_construction_076",
@@ -1081,7 +1659,15 @@
             "financing_pre_construction_075"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Finance",
+            "Admin",
+            "Board",
+            "PMO",
+            "Finance Analyst",
+            "Liaison"
+          ]
         },
         {
           "id": "financing_pre_construction_077",
@@ -1095,7 +1681,15 @@
             "financing_pre_construction_076"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Finance",
+            "Admin",
+            "Board",
+            "PMO",
+            "Finance Analyst",
+            "Liaison"
+          ]
         },
         {
           "id": "financing_pre_construction_078",
@@ -1109,7 +1703,15 @@
             "financing_pre_construction_077"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Finance",
+            "Admin",
+            "PMO",
+            "QS",
+            "Board",
+            "PMC"
+          ]
         },
         {
           "id": "financing_pre_construction_079",
@@ -1123,7 +1725,15 @@
             "financing_pre_construction_078"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Finance",
+            "Admin",
+            "Legal",
+            "Board",
+            "PMO",
+            "PMC"
+          ]
         },
         {
           "id": "financing_pre_construction_080",
@@ -1137,7 +1747,15 @@
             "financing_pre_construction_079"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "PMC",
+            "Admin",
+            "Architect",
+            "Finance",
+            "Structural",
+            "QS"
+          ]
         },
         {
           "id": "financing_pre_construction_081",
@@ -1151,7 +1769,15 @@
             "financing_pre_construction_080"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "PMC",
+            "Admin",
+            "Architect",
+            "Finance",
+            "Structural",
+            "QS"
+          ]
         },
         {
           "id": "financing_pre_construction_082",
@@ -1165,7 +1791,15 @@
             "financing_pre_construction_081"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "PMC",
+            "Admin",
+            "Architect",
+            "Finance",
+            "Structural",
+            "QS"
+          ]
         },
         {
           "id": "financing_pre_construction_083",
@@ -1179,7 +1813,15 @@
             "financing_pre_construction_082"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Admin",
+            "Finance",
+            "Legal",
+            "PMC",
+            "Board",
+            "Contractor"
+          ]
         },
         {
           "id": "financing_pre_construction_084",
@@ -1193,7 +1835,15 @@
             "financing_pre_construction_083"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Finance",
+            "Admin",
+            "PMC",
+            "Legal",
+            "Contractor",
+            "Board"
+          ]
         },
         {
           "id": "financing_pre_construction_085",
@@ -1207,7 +1857,15 @@
             "financing_pre_construction_084"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "PMC",
+            "Contractor",
+            "Admin",
+            "Finance",
+            "QS",
+            "Board"
+          ]
         },
         {
           "id": "financing_pre_construction_086",
@@ -1221,7 +1879,15 @@
             "financing_pre_construction_085"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "PMC",
+            "Contractor",
+            "Admin",
+            "QA Engineer",
+            "Architect",
+            "Contractor IT Team"
+          ]
         },
         {
           "id": "financing_pre_construction_087",
@@ -1235,7 +1901,15 @@
             "financing_pre_construction_086"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "PMC",
+            "Contractor",
+            "Admin",
+            "QA Engineer",
+            "Architect",
+            "Contractor IT Team"
+          ]
         },
         {
           "id": "financing_pre_construction_088",
@@ -1249,7 +1923,15 @@
             "financing_pre_construction_087"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Admin",
+            "Contractor",
+            "Board",
+            "Marketing",
+            "PMC",
+            "Priest"
+          ]
         }
       ]
     },
@@ -1266,7 +1948,15 @@
           "dur": 7,
           "offsetFromKo": null,
           "pred": [],
-          "par": null
+          "par": null,
+          "roles": [
+            "Contractor",
+            "Admin",
+            "PMC",
+            "Marketing",
+            "Vendor",
+            "Architect"
+          ]
         },
         {
           "id": "construction_execution_090",
@@ -1279,7 +1969,15 @@
           "pred": [
             "construction_execution_089"
           ],
-          "par": null
+          "par": null,
+          "roles": [
+            "Contractor",
+            "Admin",
+            "PMC",
+            "Marketing",
+            "Vendor",
+            "Architect"
+          ]
         },
         {
           "id": "construction_execution_091",
@@ -1292,7 +1990,15 @@
           "pred": [
             "construction_execution_090"
           ],
-          "par": null
+          "par": null,
+          "roles": [
+            "Contractor",
+            "Admin",
+            "PMC",
+            "Marketing",
+            "Vendor",
+            "Architect"
+          ]
         },
         {
           "id": "construction_execution_092",
@@ -1305,7 +2011,15 @@
           "pred": [
             "construction_execution_091"
           ],
-          "par": null
+          "par": null,
+          "roles": [
+            "Contractor",
+            "Admin",
+            "PMC",
+            "Marketing",
+            "Vendor",
+            "Architect"
+          ]
         },
         {
           "id": "construction_execution_093",
@@ -1318,7 +2032,15 @@
           "pred": [
             "construction_execution_092"
           ],
-          "par": null
+          "par": null,
+          "roles": [
+            "Contractor",
+            "Admin",
+            "PMC",
+            "Marketing",
+            "Vendor",
+            "Architect"
+          ]
         }
       ]
     },
@@ -1336,7 +2058,13 @@
           "offsetFromKo": 15,
           "pred": [],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Board",
+            "Marketing Lead",
+            "PMC",
+            "Admin"
+          ]
         },
         {
           "id": "marketing_sales_095",
@@ -1350,7 +2078,14 @@
             "marketing_sales_094"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Board",
+            "Admin",
+            "Legal",
+            "Marketing Lead",
+            "Agency Team"
+          ]
         },
         {
           "id": "marketing_sales_096",
@@ -1364,7 +2099,11 @@
             "marketing_sales_095"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Agency",
+            "Marketing Lead"
+          ]
         },
         {
           "id": "marketing_sales_097",
@@ -1378,7 +2117,11 @@
             "marketing_sales_096"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Agency",
+            "Marketing Lead"
+          ]
         },
         {
           "id": "marketing_sales_098",
@@ -1392,7 +2135,12 @@
             "marketing_sales_097"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Marketing Lead",
+            "Board",
+            "Agency"
+          ]
         },
         {
           "id": "marketing_sales_099",
@@ -1406,7 +2154,8 @@
             "marketing_sales_098"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": []
         },
         {
           "id": "marketing_sales_100",
@@ -1420,7 +2169,15 @@
             "marketing_sales_099"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Finance",
+            "Admin",
+            "PMO",
+            "QS",
+            "Board",
+            "PMC"
+          ]
         },
         {
           "id": "marketing_sales_101",
@@ -1434,7 +2191,15 @@
             "marketing_sales_100"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Architect",
+            "PMO",
+            "Admin",
+            "Planner",
+            "Architect + Structural + MEP + Landscape Consultants",
+            "Liaison"
+          ]
         },
         {
           "id": "marketing_sales_102",
@@ -1448,7 +2213,8 @@
             "marketing_sales_101"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": []
         },
         {
           "id": "marketing_sales_103",
@@ -1462,7 +2228,8 @@
             "marketing_sales_102"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": []
         },
         {
           "id": "marketing_sales_104",
@@ -1476,7 +2243,11 @@
             "marketing_sales_103"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Agency",
+            "Marketing Lead"
+          ]
         },
         {
           "id": "marketing_sales_105",
@@ -1490,7 +2261,8 @@
             "marketing_sales_104"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": []
         },
         {
           "id": "marketing_sales_106",
@@ -1504,7 +2276,15 @@
             "marketing_sales_105"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Marketing Lead",
+            "Agency",
+            "Admin",
+            "Board",
+            "Data Admin",
+            "Pre-Sales"
+          ]
         },
         {
           "id": "marketing_sales_107",
@@ -1518,7 +2298,8 @@
             "marketing_sales_106"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": []
         },
         {
           "id": "marketing_sales_108",
@@ -1532,7 +2313,8 @@
             "marketing_sales_107"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": []
         },
         {
           "id": "marketing_sales_109",
@@ -1546,7 +2328,8 @@
             "marketing_sales_108"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": []
         }
       ]
     },
@@ -1564,7 +2347,15 @@
           "offsetFromKo": null,
           "pred": [],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Architect",
+            "Admin",
+            "Town Planner",
+            "Acq Lead",
+            "Acq Lead+ External Consultant (if needed)",
+            "Liaison Officer"
+          ]
         },
         {
           "id": "sales_office_setup_111",
@@ -1578,7 +2369,15 @@
             "sales_office_setup_110"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Admin",
+            "Board",
+            "Acq Lead",
+            "Strategy",
+            "Finance",
+            "Partners"
+          ]
         },
         {
           "id": "sales_office_setup_112",
@@ -1592,7 +2391,8 @@
             "sales_office_setup_111"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": []
         },
         {
           "id": "sales_office_setup_113",
@@ -1606,7 +2406,8 @@
             "sales_office_setup_112"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": []
         },
         {
           "id": "sales_office_setup_114",
@@ -1620,7 +2421,8 @@
             "sales_office_setup_113"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": []
         },
         {
           "id": "sales_office_setup_115",
@@ -1634,7 +2436,8 @@
             "sales_office_setup_114"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": []
         }
       ]
     },
@@ -1652,7 +2455,8 @@
           "offsetFromKo": 2,
           "pred": [],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": []
         },
         {
           "id": "handover_post_sales_117",
@@ -1666,7 +2470,15 @@
             "handover_post_sales_116"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Finance",
+            "Admin",
+            "Board",
+            "PMO",
+            "Finance Analyst",
+            "Liaison"
+          ]
         },
         {
           "id": "handover_post_sales_118",
@@ -1680,7 +2492,15 @@
             "handover_post_sales_117"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Finance",
+            "Admin",
+            "Board",
+            "PMO",
+            "Finance Analyst",
+            "Liaison"
+          ]
         },
         {
           "id": "handover_post_sales_119",
@@ -1694,7 +2514,15 @@
             "handover_post_sales_118"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Marketing Lead",
+            "Agency",
+            "Board",
+            "Data Analyst (Admin)",
+            "Finance",
+            "Adm"
+          ]
         },
         {
           "id": "handover_post_sales_120",
@@ -1708,7 +2536,8 @@
             "handover_post_sales_119"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": []
         },
         {
           "id": "handover_post_sales_121",
@@ -1722,7 +2551,12 @@
             "handover_post_sales_120"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Marketing Lead",
+            "Sales Head",
+            "Admin"
+          ]
         },
         {
           "id": "handover_post_sales_122",
@@ -1736,7 +2570,15 @@
             "handover_post_sales_121"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Finance",
+            "Admin",
+            "Board",
+            "PMO",
+            "Finance Analyst",
+            "Liaison"
+          ]
         },
         {
           "id": "handover_post_sales_123",
@@ -1750,7 +2592,15 @@
             "handover_post_sales_122"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Liaison Officer",
+            "Acq Lead",
+            "Liaison",
+            "Legal",
+            "Analyst",
+            "Admin"
+          ]
         },
         {
           "id": "handover_post_sales_124",
@@ -1764,7 +2614,12 @@
             "handover_post_sales_123"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Marketing Lead",
+            "Sales Head",
+            "Admin"
+          ]
         },
         {
           "id": "handover_post_sales_125",
@@ -1778,7 +2633,15 @@
             "handover_post_sales_124"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Finance",
+            "Admin",
+            "Legal",
+            "Board",
+            "IT",
+            "PMC"
+          ]
         },
         {
           "id": "handover_post_sales_126",
@@ -1792,7 +2655,15 @@
             "handover_post_sales_125"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "PMC",
+            "Admin",
+            "QA",
+            "Project Head",
+            "QA Engineer",
+            "Site Engineer"
+          ]
         },
         {
           "id": "handover_post_sales_127",
@@ -1806,7 +2677,15 @@
             "handover_post_sales_126"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "PMC",
+            "Admin",
+            "QA",
+            "Project Head",
+            "QA Engineer",
+            "Site Engineer"
+          ]
         },
         {
           "id": "handover_post_sales_128",
@@ -1820,7 +2699,15 @@
             "handover_post_sales_127"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Finance",
+            "Admin",
+            "Board",
+            "PMO",
+            "Finance Analyst",
+            "Liaison"
+          ]
         },
         {
           "id": "handover_post_sales_129",
@@ -1834,7 +2721,8 @@
             "handover_post_sales_128"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": []
         },
         {
           "id": "handover_post_sales_130",
@@ -1848,7 +2736,15 @@
             "handover_post_sales_129"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Architect",
+            "Strategy",
+            "Finance",
+            "Admin",
+            "Liaison Officer",
+            "Planner"
+          ]
         },
         {
           "id": "handover_post_sales_131",
@@ -1862,7 +2758,15 @@
             "handover_post_sales_130"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Architect",
+            "Strategy",
+            "Finance",
+            "Admin",
+            "Liaison Officer",
+            "Planner"
+          ]
         },
         {
           "id": "handover_post_sales_132",
@@ -1876,7 +2780,8 @@
             "handover_post_sales_131"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": []
         },
         {
           "id": "handover_post_sales_133",
@@ -1890,7 +2795,15 @@
             "handover_post_sales_132"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Admin",
+            "PMC",
+            "Liaison Officer",
+            "Architect",
+            "Board",
+            "QA Engineer"
+          ]
         },
         {
           "id": "handover_post_sales_134",
@@ -1904,7 +2817,15 @@
             "handover_post_sales_133"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Admin",
+            "PMC",
+            "Liaison Officer",
+            "Architect",
+            "Board",
+            "QA Engineer"
+          ]
         },
         {
           "id": "handover_post_sales_135",
@@ -1918,7 +2839,13 @@
             "handover_post_sales_134"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Admin",
+            "Legal",
+            "Board",
+            "Finance"
+          ]
         },
         {
           "id": "handover_post_sales_136",
@@ -1932,7 +2859,13 @@
             "handover_post_sales_135"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Admin",
+            "Legal",
+            "Board",
+            "Finance"
+          ]
         },
         {
           "id": "handover_post_sales_137",
@@ -1946,7 +2879,13 @@
             "handover_post_sales_136"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Admin",
+            "Legal",
+            "Board",
+            "Finance"
+          ]
         },
         {
           "id": "handover_post_sales_138",
@@ -1960,7 +2899,13 @@
             "handover_post_sales_137"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Admin",
+            "Legal",
+            "Board",
+            "Finance"
+          ]
         },
         {
           "id": "handover_post_sales_139",
@@ -1974,7 +2919,13 @@
             "handover_post_sales_138"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Admin",
+            "Legal",
+            "Board",
+            "Finance"
+          ]
         },
         {
           "id": "handover_post_sales_140",
@@ -1988,7 +2939,12 @@
             "handover_post_sales_139"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Admin",
+            "CHS Committee",
+            "Facility Head"
+          ]
         },
         {
           "id": "handover_post_sales_141",
@@ -2002,7 +2958,8 @@
             "handover_post_sales_140"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": []
         }
       ]
     },
@@ -2020,7 +2977,15 @@
           "offsetFromKo": null,
           "pred": [],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Finance",
+            "Admin",
+            "Board",
+            "PMO",
+            "Finance Analyst",
+            "Liaison"
+          ]
         },
         {
           "id": "closure_exit_143",
@@ -2034,7 +2999,15 @@
             "closure_exit_142"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Finance",
+            "Admin",
+            "Board",
+            "PMO",
+            "Finance Analyst",
+            "Liaison"
+          ]
         },
         {
           "id": "closure_exit_144",
@@ -2048,7 +3021,8 @@
             "closure_exit_143"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": []
         },
         {
           "id": "closure_exit_145",
@@ -2062,7 +3036,15 @@
             "closure_exit_144"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Admin",
+            "Board",
+            "Architect",
+            "Finance",
+            "Legal",
+            "PMO"
+          ]
         },
         {
           "id": "closure_exit_146",
@@ -2076,7 +3058,15 @@
             "closure_exit_145"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "HSE Officer",
+            "PMC",
+            "Admin",
+            "Contractor",
+            "Board",
+            "QA Engineer"
+          ]
         },
         {
           "id": "closure_exit_147",
@@ -2090,7 +3080,15 @@
             "closure_exit_146"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Liaison Officer",
+            "Acq Lead",
+            "Liaison",
+            "Legal",
+            "Analyst",
+            "Admin"
+          ]
         },
         {
           "id": "closure_exit_148",
@@ -2104,7 +3102,13 @@
             "closure_exit_147"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Admin",
+            "Board",
+            "Project Head",
+            "PMO"
+          ]
         },
         {
           "id": "closure_exit_149",
@@ -2118,7 +3122,12 @@
             "closure_exit_148"
           ],
           "par": null,
-          "phaseGroup": "Regulatory Obligations"
+          "phaseGroup": "Regulatory Obligations",
+          "roles": [
+            "Admin",
+            "PMC",
+            "Board"
+          ]
         }
       ]
     }

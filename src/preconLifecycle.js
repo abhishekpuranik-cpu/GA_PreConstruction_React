@@ -3,6 +3,7 @@
  * Merges template tasks into projects; schedules from kickoff via predecessors + offsetFromKo.
  */
 import lifecycleData from './data/cemeLifecycle.json';
+import { ensureStateDepartments } from './preconDepartments.js';
 
 const PCOL = ['#1B5E9E', '#6B3FA0', '#B45309', '#1A6A3C', '#B32E1E', '#2A6E7A', '#7A3A2A', '#8A5A2A'];
 
@@ -107,6 +108,7 @@ function mkTaskFromTemplate(tpl, pid, idMap) {
     ae: null,
     status: 'notstarted',
     offsetFromKo: tpl.offsetFromKo != null ? Number(tpl.offsetFromKo) : null,
+    roles: Array.isArray(tpl.roles) ? [...tpl.roles] : [],
   };
 }
 
@@ -178,6 +180,9 @@ export function mergeLifecycleIntoProject(proj) {
         if (tpl.offsetFromKo != null && existing.task.offsetFromKo == null) {
           existing.task.offsetFromKo = Number(tpl.offsetFromKo);
         }
+        if (tpl.roles?.length && (!existing.task.roles || !existing.task.roles.length)) {
+          existing.task.roles = [...tpl.roles];
+        }
         return;
       }
 
@@ -231,6 +236,7 @@ export function mergeLifecycleIntoState(state) {
     totalAdded += added;
   });
   s.lifecycleVersion = LIFECYCLE_VERSION;
+  ensureStateDepartments(s);
   return { state: s, totalAdded };
 }
 
