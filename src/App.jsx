@@ -316,10 +316,21 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .abt{width:21px;height:21px;border-radius:4px;border:none;background:transparent;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center}
 .abt:hover{background:#EAE6DC}
 .abt.del:hover{background:#FCECEA}
-.cexp td{padding:13px 18px !important;background:#FBF7EE !important}
+.cexp td{padding:14px 16px !important;background:#FBF7EE !important;vertical-align:top}
+.cexp-inner{width:100%;max-width:100%;box-sizing:border-box}
+.cform{display:flex;flex-direction:column;gap:12px;width:100%;max-width:520px}
+.cform-meta{font-size:11px;color:#55504A;line-height:1.45;word-break:break-word}
+.cform-field{display:flex;flex-direction:column;gap:4px;margin:0}
+.cform-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.45px;color:#96918A}
+.cform-inp,.cform-textarea{width:100%;max-width:100%;box-sizing:border-box;padding:10px 11px;border:1.5px solid #E2DDD4;border-radius:6px;background:#fff;font-size:16px;font-family:'DM Sans',sans-serif;color:#1A1815}
+.cform-inp:focus,.cform-textarea:focus{outline:none;border-color:#C89A3A;box-shadow:0 0 0 2px rgba(200,154,58,.2)}
+.cform-inp-date{min-height:44px}
+.cform-textarea{resize:vertical;min-height:88px;line-height:1.45}
+.cform-foot{display:flex;justify-content:flex-end;padding-top:2px}
+.cform-foot .btp{min-height:44px;padding:10px 20px;font-size:13px}
 .citem{background:#fff;border:1px solid #E2DDD4;border-radius:5px;padding:9px 11px;margin-bottom:7px}
 .citem:last-child{margin-bottom:0}
-.cinp{width:100%;padding:7px 9px;border:1px solid #E2DDD4;border-radius:5px;font-size:12px;resize:none;background:#fff;font-family:'DM Sans',sans-serif;min-height:52px}
+.cinp{width:100%;padding:7px 9px;border:1px solid #E2DDD4;border-radius:5px;font-size:12px;resize:vertical;background:#fff;font-family:'DM Sans',sans-serif;min-height:52px}
 .cinp:focus{outline:none;border-color:#C89A3A}
 .gw{background:#fff;border:1px solid #E2DDD4;border-radius:8px;overflow:hidden}
 .gsplit{display:flex;max-height:calc(100vh-310px);overflow:hidden}
@@ -387,7 +398,8 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
   .nact-grp{width:100%;justify-content:flex-start}
   .nact-sep{display:none}
   .file-lbl,.btg,.btp,.btp-add{min-height:44px;padding:10px 12px;font-size:13px}
-  .main{margin-top:0;padding:12px 10px calc(24px + env(safe-area-inset-bottom,0px))}
+  .main{margin-top:0;padding:12px 10px calc(24px + env(safe-area-inset-bottom,0px));overflow-x:hidden;max-width:100vw}
+  .cexp-inner{max-width:none}
   .kgrid{grid-template-columns:repeat(2,1fr);gap:8px}
   .pgrid{grid-template-columns:1fr}
   .dg2{grid-template-columns:1fr}
@@ -423,6 +435,10 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
   .pcard{flex-direction:column;align-items:flex-start}
   .pch,.psh{font-size:11px}
   .ttable-wrap .ttable{min-width:640px}
+  .cexp td{padding:12px 10px!important}
+  .cform{max-width:none}
+  .cform-foot .btp{width:100%}
+  tr.cexp-tr td{display:block;width:100%;box-sizing:border-box;border-bottom:1px solid #E2DDD4}
 }
 `;
 
@@ -842,12 +858,13 @@ function TasksView({proj,dispatch,toast,departments,loginUser}){
                           <button className="abt del" title="Delete" onClick={()=>{if(confirm(`Delete "${t.name}"?`))dispatch({type:"delTask",projId:proj.id,phId:ph.id,tId:t.id});}}>🗑</button>
                         </div></td>
                       </tr>
-                      {showC&&<tr><td colSpan={11} className="cexp">
-                        <div style={{fontSize:11,fontWeight:600,textTransform:"uppercase",letterSpacing:".5px",color:C.gold,marginBottom:9}}>Comments — {t.name}</div>
-                        {t.comments.length>0?<div style={{marginBottom:10}}>
+                      {showC&&<tr className="cexp-tr"><td colSpan={11} className="cexp">
+                        <div className="cexp-inner">
+                        <div style={{fontSize:11,fontWeight:600,textTransform:"uppercase",letterSpacing:".5px",color:C.gold,marginBottom:10}}>Comments — {t.name}</div>
+                        {t.comments.length>0?<div style={{marginBottom:12}}>
                           {t.comments.map((cm,ci)=>(
                             <div key={ci} className="citem">
-                              <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                              <div style={{display:"flex",flexWrap:"wrap",justifyContent:"space-between",gap:4,marginBottom:3}}>
                                 <span style={{fontSize:11,fontWeight:600,color:C.navy}}>{cm.author||"Anon"}</span>
                                 <span style={{fontSize:10,color:C.tx3}}>{cm.ts}</span>
                               </div>
@@ -858,18 +875,28 @@ function TasksView({proj,dispatch,toast,departments,loginUser}){
                               </div>:null}
                             </div>
                           ))}
-                        </div>:<div style={{fontSize:12,color:C.tx3,fontStyle:"italic",marginBottom:9}}>No comments yet</div>}
-                        <div style={{fontSize:11,color:C.tx2,marginBottom:8}}>
-                          Posting as <span style={{fontWeight:600,color:C.navy}}>{authorName||"…"}</span>
-                          {loginUser?.email?<span style={{color:C.tx3}}> ({loginUser.email})</span>:null}
+                        </div>:<div style={{fontSize:12,color:C.tx3,fontStyle:"italic",marginBottom:10}}>No comments yet</div>}
+                        <div className="cform">
+                          <p className="cform-meta">
+                            Posting as <strong style={{color:C.navy}}>{authorName||"…"}</strong>
+                            {loginUser?.email?<span style={{color:C.tx3}}> · {loginUser.email}</span>:null}
+                          </p>
+                          <label className="cform-field" htmlFor={`na_${t.id}`}>
+                            <span className="cform-lbl">Next action *</span>
+                            <input id={`na_${t.id}`} type="text" className="cform-inp" placeholder="What needs to happen next?" autoComplete="off"/>
+                          </label>
+                          <label className="cform-field" htmlFor={`nad_${t.id}`}>
+                            <span className="cform-lbl">Next action date *</span>
+                            <input id={`nad_${t.id}`} type="date" className="cform-inp cform-inp-date" required/>
+                          </label>
+                          <label className="cform-field" htmlFor={`ct_${t.id}`}>
+                            <span className="cform-lbl">Comment *</span>
+                            <textarea id={`ct_${t.id}`} className="cform-textarea" placeholder="Progress update, issue, or decision…" rows={3}/>
+                          </label>
+                          <div className="cform-foot">
+                            <button type="button" className="btp" onClick={()=>addComment(ph.id,t.id)}>Post comment</button>
+                          </div>
                         </div>
-                        <div style={{display:"grid",gridTemplateColumns:"1fr minmax(140px,180px)",gap:8,marginBottom:8}}>
-                          <input id={`na_${t.id}`} type="text" className="ti" placeholder="Next action *" required style={{width:"100%",padding:"6px 8px"}}/>
-                          <input id={`nad_${t.id}`} type="date" className="di" placeholder="Next action date" required title="Next action date *" style={{width:"100%"}}/>
-                        </div>
-                        <div style={{display:"flex",gap:7,alignItems:"flex-end"}}>
-                          <textarea id={`ct_${t.id}`} className="cinp" placeholder="Comment, issue, progress update… *" rows={2}/>
-                          <button type="button" className="btp" onClick={()=>addComment(ph.id,t.id)}>Post</button>
                         </div>
                       </td></tr>}
                     </React.Fragment>
@@ -1278,7 +1305,7 @@ export default function App(){
   };
 
   return(
-    <div style={{minHeight:"100vh",background:C.bg}}>
+    <div style={{minHeight:"100dvh",background:C.bg,maxWidth:"100vw",overflowX:"hidden"}}>
       <MongoSyncAdapter state={state} dispatch={dispatch} toast={toast} flushRef={mongoFlushRef} onSyncStatus={setCloudStatus}/>
       <nav className="tnav">
         <div className="tnav-row">
