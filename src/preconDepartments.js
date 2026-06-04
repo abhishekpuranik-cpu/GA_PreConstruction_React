@@ -57,7 +57,6 @@ export const DEFAULT_DEPARTMENTS = [
       'handover & post sales',
       'closure & exit',
       'construction pre-requisite',
-      'pre-work start follow-up (before site works)',
     ],
   },
 ];

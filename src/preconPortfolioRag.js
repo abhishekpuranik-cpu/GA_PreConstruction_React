@@ -44,7 +44,7 @@ export const PORTFOLIO_PHASE_COLUMNS = [
     id: 'construction',
     label: 'Site Preparation',
     short: 'Site Prep',
-    match: ['site preparation', 'site prep', 'construction execution', 'construction pre-requisite', 'pre-work start'],
+    match: ['site preparation', 'site prep', 'construction execution', 'construction pre-requisite'],
   },
   { id: 'marketing', label: 'Marketing & Sales', short: 'Marketing', match: ['marketing & sales', 'marketing and sales'] },
   { id: 'sales_office', label: 'Sales Office Setup', short: 'Sales Office', match: ['sales office'] },

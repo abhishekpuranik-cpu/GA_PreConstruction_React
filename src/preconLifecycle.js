@@ -30,7 +30,7 @@ const PHASE_SLUG_ALIASES = {
   registration: ['registration'],
 };
 
-const CUSTOM_PHASE_KEEP = /sales office setup|construction pre-requisite|pre-work start follow-up/i;
+const CUSTOM_PHASE_KEEP = /sales office setup|construction pre-requisite/i;
 
 function norm(s) {
   return String(s || '')

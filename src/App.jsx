@@ -19,6 +19,7 @@ import {
   collectAllRoles,
 } from "./preconDepartments.js";
 import { PortfolioRagMatrix } from "./PortfolioRagMatrix.jsx";
+import { migratePreWorkFollowUpState, applyGhqPreWorkToPhases } from "./preconGhqPreWorkMigrate.js";
 import {
   taskStatus,
   taskStatusSelectValue,
@@ -92,49 +93,9 @@ function mkPhasesFor(pid){
   return{so,cp};
 }
 
-/** Golden HQ — follow-up sheet before work start (31 May 2026). Target dates from client tracker. */
-function ghqPreWorkStartPhase(){
-  const note=(text)=>text?[{author:"Follow-up sheet",text}]:[];
-  const t=(id,name,ms,who,remark,dur=1,pred=[])=>mkT(id,name,dur,pred,null,{ms,who:who||"",comments:note(remark)});
-  return{
-    id:"pws",
-    name:"Pre-Work Start Follow-up (Before Site Works)",
-    col:"#7A3A2A",
-    open:true,
-    tasks:[
-      t("ws01","Demolition order","2026-06-02","Amit & Ashish","With sanction may receive; confirm if separate permission is required."),
-      t("ws02","Plan sanction","2026-06-15"),
-      t("ws03","MSEDCL franchise model review","2026-06-20","Amit & Minal"),
-      t("ws04","Shore pile vendor finalization","2026-06-24","","First step before excavation."),
-      t("ws05","On-site demolition completion","2026-06-30","","On-site demolition completion.",1,["ws01"]),
-      t("ws06","Royalty order (permissions & licences with GA)","2026-07-06","Amit & Minal","Contractor scope — retain all permissions and licences."),
-      t("ws07","Tree cutting permission (final order)","2026-07-15","Amit & Minal"),
-      t("ws08","Parking vendor — parking management","2026-07-16","Minal"),
-      t("ws09","Plantation contract with vendor","2026-07-20","Amit & Minal","7-year maintenance contract; six-monthly reports."),
-      t("ws10","Blasting permission","2026-07-25","Amit & Minal","Contractor scope — retain all permissions and licences."),
-      t("ws11","P.T. drawing costing (final quantities)","2026-07-30","Amar, Minal, Namdeo","Costing received; reconcile after drawing finalization."),
-      t("ws12","Transformer shifting","2026-08-10","Mahesh Bhusare","Permission valid till September; complete before blasting works."),
-      t("ws13","Construction meter sanction","2026-10-05","Ashish & Minal","After transformer shifting.",1,["ws12"]),
-      t("ws14","Dry-type transformer sanction","2027-03-15","Amit & Minal","Stand-by transformer required for dry-type approval."),
-    ],
-  };
-}
-
-function mergeGhqPreWorkPhase(state){
-  const s=typeof state==="object"&&state?JSON.parse(JSON.stringify(state)):state;
-  const ghq=(s.projects||[]).find(p=>p.id==="ghq");
-  if(!ghq||ghq.phases.some(ph=>ph.id==="pws")) return s;
-  const pws=JSON.parse(JSON.stringify(ghqPreWorkStartPhase()));
-  const idx=ghq.phases.findIndex(ph=>/sales office setup/i.test(ph.name||""));
-  if(idx>=0) ghq.phases.splice(idx,0,pws);
-  else ghq.phases.push(pws);
-  return s;
-}
-
 // ── INITIAL DATA ────────────────────────────────────────
 function buildInit(){
   const{so:ghqSO,cp:ghqCP}=mkPhasesFor("ghq");
-  const ghqPWS=ghqPreWorkStartPhase();
   const{so:nkwSO,cp:nkwCP}=mkPhasesFor("nkw");
   const{so:wgaSO,cp:wgaCP}=mkPhasesFor("wga");
   const{so:parSO,cp:parCP}=mkPhasesFor("par");
@@ -182,7 +143,6 @@ function buildInit(){
           mkT("re15","Environmental Clearance (SEIAA)",90,["re14"]),mkT("re16","MPCB Consent to Establish",90,["re15"]),
           mkT("re17","Building Plan Sanction",60,["re15","re11","re12"]),mkT("re18","RERA Registration",60,["re17"]),
         ]},
-        ghqPWS,
         ghqSO, ghqCP,
       ]},
       {id:"nkw",name:"NKG Wakad",loc:"Wakad, Pune",type:"Residential",floors:14,status:"Pipeline",ko:"2026-06-01",col:"#1A5A30",phases:[
@@ -202,7 +162,11 @@ function buildInit(){
       ]},
     ]
   };
-  return mergeLifecycleIntoState(init).state;
+  const merged = mergeLifecycleIntoState(init).state;
+  migratePreWorkFollowUpState(merged);
+  const ghq = merged.projects?.find((p) => p.id === "ghq");
+  if (ghq) applyGhqPreWorkToPhases(ghq.phases);
+  return merged;
 }
 
 const gSt=(t,dm)=>taskStatus(t,dm);
@@ -1085,8 +1049,8 @@ function reducer(state,action){
     }
     case"setCloudUrl":S.cloudUrl=action.v;break;
     case"loadState":{
-      const s=mergeGhqPreWorkPhase(action.state);
-      const{state:merged,totalAdded}=mergeLifecycleIntoState(s);
+      const{state:merged,totalAdded}=mergeLifecycleIntoState(action.state);
+      migratePreWorkFollowUpState(merged);
       ensureStateDepartments(merged);
       (merged.projects||[]).forEach(proj=>{
         (proj.phases||[]).forEach(ph=>{
