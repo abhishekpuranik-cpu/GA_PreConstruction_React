@@ -63,10 +63,14 @@ export function TaskActivityFiles({
           taskAttachmentIds: [],
           extraRecipients: loadExtraRecipients(proj.id),
         });
-        if (emailRes.ok) {
-          toast(`Uploaded & emailed ${emailRes.recipientCount || 'team'}`, 'ok');
+        const wa = emailRes.whatsappCount || 0;
+        if (emailRes.ok || emailRes.whatsapp?.ok) {
+          const parts = [];
+          if (emailRes.ok) parts.push(`email ${emailRes.recipientCount || 0}`);
+          if (emailRes.whatsapp?.ok && wa) parts.push(`WhatsApp ${wa}`);
+          toast(`Uploaded & notified (${parts.join(', ') || 'ok'})`, 'ok');
         } else {
-          toast(`Uploaded — email: ${emailRes.error || 'failed'}`, 'err');
+          toast(`Uploaded — notify: ${emailRes.error || emailRes.whatsapp?.error || 'failed'}`, 'err');
         }
       } catch (e) {
         toast(`Uploaded — email failed: ${e?.message || ''}`, 'err');

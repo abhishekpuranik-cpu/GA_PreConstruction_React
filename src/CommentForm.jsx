@@ -33,6 +33,7 @@ export function CommentForm({
   const [extraRecipients, setExtraRecipients] = useState(() => loadExtraRecipients(projectId));
   const [autoRecipients, setAutoRecipients] = useState([]);
   const [emailEnabled, setEmailEnabled] = useState(false);
+  const [whatsappEnabled, setWhatsappEnabled] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const isBusy = busy || externalBusy;
@@ -43,6 +44,7 @@ export function CommentForm({
       .then((data) => {
         if (!alive) return;
         setEmailEnabled(!!data.emailEnabled);
+        setWhatsappEnabled(!!data.whatsappEnabled);
         setAutoRecipients(data.autoRecipients || []);
       })
       .catch(() => {
@@ -118,9 +120,10 @@ export function CommentForm({
       let emailSent = false;
       let emailError = '';
       let notifyRecipients = allRecipientsPreview;
+      let emailRes = null;
 
       try {
-        const emailRes = await notifyPreconUpdate({
+        emailRes = await notifyPreconUpdate({
           kind: 'comment',
           projectId,
           phaseName,
@@ -148,11 +151,16 @@ export function CommentForm({
 
       await onSaved(comment);
 
-      if (emailEnabled && notifyRecipients.length) {
-        if (emailSent) toast(`Saved — emailed ${notifyRecipients.length} automatically`, 'ok');
-        else toast(`Saved — email failed: ${emailError || 'check SMTP'}`, 'err');
+      const waOk = emailRes?.whatsapp?.ok;
+      const waCount = emailRes?.whatsappCount || 0;
+      if (notifyRecipients.length && (emailEnabled || whatsappEnabled)) {
+        const parts = [];
+        if (emailSent) parts.push(`email ${notifyRecipients.length}`);
+        if (waOk && waCount) parts.push(`WhatsApp ${waCount}`);
+        if (parts.length) toast(`Saved — ${parts.join(', ')}`, 'ok');
+        else toast(`Saved — notify failed: ${emailError || emailRes?.whatsapp?.error || 'check SMTP/Twilio'}`, 'err');
       } else if (!notifyRecipients.length) {
-        toast('Saved — no recipient emails configured in Admin', 'err');
+        toast('Saved — add emails/phones in Admin Security', 'err');
       } else {
         toast('Comment saved', 'ok');
       }
@@ -174,17 +182,19 @@ export function CommentForm({
         Posting as <strong style={{ color: '#1A304A' }}>{authorName || '…'}</strong>
         {authorEmail ? <span style={{ color: '#96918A' }}> · {authorEmail}</span> : null}
       </p>
-      {emailEnabled ? (
+      {emailEnabled || whatsappEnabled ? (
         <div className="nrp-auto-banner">
-          <strong>✉ Sends automatically</strong> to department heads, leadership, and this activity&apos;s assignees
+          <strong>✉ Sends automatically</strong> to department heads, leadership, and assignees
+          {emailEnabled ? <span className="nrp-auto-names"> · email</span> : null}
+          {whatsappEnabled ? <span className="nrp-auto-names"> · WhatsApp (phones in Admin)</span> : null}
           {allRecipientsPreview.length ? (
             <span className="nrp-auto-names"> ({allRecipientsPreview.map((r) => r.name).join(', ')})</span>
           ) : (
-            <span className="nrp-auto-names"> — add emails in Admin Security</span>
+            <span className="nrp-auto-names"> — add email &amp; WhatsApp phone per user in Admin</span>
           )}
         </div>
       ) : (
-        <div className="nrp-auto-banner nrp-auto-warn">SMTP not configured — comment saves without email</div>
+        <div className="nrp-auto-banner nrp-auto-warn">Email/WhatsApp not configured on server — comment saves locally only</div>
       )}
       <label className="cform-field">
         <span className="cform-lbl">Comment *</span>

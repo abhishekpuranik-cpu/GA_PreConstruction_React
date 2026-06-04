@@ -20,6 +20,7 @@ export function NotifyRecipientPicker({
 }) {
   const [loading, setLoading] = useState(true);
   const [emailEnabled, setEmailEnabled] = useState(false);
+  const [whatsappEnabled, setWhatsappEnabled] = useState(false);
   const [groups, setGroups] = useState({ departmentHeads: [], leadership: [], assignees: [], team: [] });
   const [err, setErr] = useState('');
 
@@ -34,6 +35,7 @@ export function NotifyRecipientPicker({
       .then((data) => {
         if (!alive) return;
         setEmailEnabled(!!data.emailEnabled);
+        setWhatsappEnabled(!!data.whatsappEnabled);
         setGroups(data.groups || { departmentHeads: [], leadership: [], assignees: [], team: [] });
       })
       .catch((e) => {
@@ -84,6 +86,7 @@ export function NotifyRecipientPicker({
               <label key={r.email} className={`nrp-chip${on ? ' on' : ''}`}>
                 <input type="checkbox" disabled={disabled} checked={on} onChange={() => toggleExtra(r)} />
                 <span className="nrp-chip-name">{r.name}</span>
+                {whatsappEnabled && !r.phone ? <span className="nrp-no-email">no WA</span> : null}
               </label>
             );
           })}
@@ -91,9 +94,9 @@ export function NotifyRecipientPicker({
       ) : (
         <p className="nrp-empty">Everyone with email is already in the automatic list.</p>
       )}
-      {!emailEnabled ? (
+      {!emailEnabled && !whatsappEnabled ? (
         <p className="nrp-warn" style={{ marginTop: 8 }}>
-          Configure SMTP on the server to enable automatic email.
+          Configure SMTP and/or Twilio WhatsApp on the server for automatic notifications.
         </p>
       ) : null}
     </div>
