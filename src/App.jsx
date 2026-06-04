@@ -21,6 +21,7 @@ import {
 import { PortfolioRagMatrix } from "./PortfolioRagMatrix.jsx";
 import { validateCommentPayload, formatCommentLine } from "./preconComments.js";
 import { useLoginUser } from "./useLoginUser.js";
+import { MyWorkView } from "./MyWorkView.jsx";
 import { migratePreWorkFollowUpState, applyGhqPreWorkToPhases } from "./preconGhqPreWorkMigrate.js";
 import {
   taskStatus,
@@ -290,6 +291,69 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .rag-tt-row{margin-bottom:6px;font-size:11px}
 @media(max-width:900px){.rag-metrics{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:600px){.rag-metrics{grid-template-columns:1fr}}
+.mywork{margin:0 auto;max-width:1100px}
+.mw-hero{background:linear-gradient(135deg,#1A304A 0%,#253E60 55%,#3d5a7a 100%);border-radius:12px;padding:22px 24px 20px;margin-bottom:18px;color:#fff;box-shadow:0 4px 24px rgba(26,48,74,.18)}
+.mw-hero-inner{margin-bottom:18px}
+.mw-eyebrow{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:rgba(255,255,255,.55);margin:0 0 6px}
+.mw-title{font-size:clamp(1.75rem,5vw,2.35rem);font-weight:600;margin:0;line-height:1.1;color:#fff}
+.mw-sub{font-size:13px;line-height:1.5;color:rgba(255,255,255,.78);margin:10px 0 0;max-width:52em}
+.mw-signed{font-size:12px;color:rgba(255,255,255,.6);margin:10px 0 0}
+.mw-signed strong{color:#E8D4A0}
+.mw-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.mw-stat{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:12px 10px;text-align:center}
+.mw-stat-n{display:block;font-size:26px;font-weight:600;line-height:1;color:#fff}
+.mw-stat-l{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:rgba(255,255,255,.55);margin-top:4px}
+.mw-stat-risk{border-color:rgba(179,46,30,.45);background:rgba(179,46,30,.15)}
+.mw-stat-risk .mw-stat-n{color:#FFB4A8}
+.mw-stat-today{border-color:rgba(200,154,58,.4);background:rgba(200,154,58,.12)}
+.mw-stat-today .mw-stat-n{color:#E8D4A0}
+.mw-toolbar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px 18px;padding:14px 16px;margin-bottom:18px}
+.mw-toolbar-field{display:flex;flex-direction:column;gap:4px;min-width:min(100%,220px)}
+.mw-toolbar-field label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.45px;color:#96918A}
+.mw-select{padding:10px 12px;border:1.5px solid #E2DDD4;border-radius:6px;font-size:14px;font-family:'DM Sans',sans-serif;min-height:44px;background:#fff;max-width:100%}
+.mw-check{display:flex;align-items:center;gap:8px;font-size:12px;color:#55504A;cursor:pointer;min-height:44px}
+.mw-toolbar-hint{font-size:11px;color:#96918A;line-height:1.4;flex:1;min-width:200px}
+.mw-timeline{display:flex;flex-direction:column;gap:22px}
+.mw-group-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--mw-g,#1A304A)}
+.mw-group-title{font-size:15px;font-weight:600;color:#1A304A;margin:0;font-family:'Cormorant Garamond',serif}
+.mw-group-hint{font-size:11px;color:#96918A;margin:2px 0 0}
+.mw-group-count{font-size:12px;font-weight:700;color:#fff;background:var(--mw-g,#1A304A);min-width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 8px}
+.mw-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:12px}
+.mw-card-wrap{position:relative}
+.mw-dept{position:absolute;top:-6px;right:8px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.35px;color:#96918A;background:#F3F0EA;padding:2px 7px;border-radius:4px;z-index:1}
+.mw-card{background:#fff;border:1px solid #E2DDD4;border-radius:10px;padding:14px 16px;border-left:4px solid var(--mw-accent,#1A304A);box-shadow:0 1px 4px rgba(0,0,0,.04);display:flex;flex-direction:column;gap:8px;min-height:100%}
+.mw-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.mw-proj-link{border:none;background:none;padding:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#1B5E9E;cursor:pointer;font-family:'DM Sans',sans-serif;text-align:left}
+.mw-proj-link:hover{text-decoration:underline;color:#1A304A}
+.mw-task-name{font-size:14px;font-weight:600;color:#1A1815;margin:0;line-height:1.35}
+.mw-meta-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:11px}
+.mw-phase{padding:2px 8px;border-radius:4px;border:1px solid;font-weight:600;font-size:10px}
+.mw-loc{color:#96918A}
+.mw-date-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 10px;font-size:12px}
+.mw-date-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:#96918A;font-weight:600}
+.mw-date-val{font-weight:600;color:#1A304A}
+.mw-date-val.mw-date-late{color:#B32E1E}
+.mw-date-tag{font-size:9px;color:#9A6E20;background:#FBF7EE;padding:2px 6px;border-radius:3px}
+.mw-next{background:#F8F6F1;border-radius:6px;padding:8px 10px;font-size:12px;line-height:1.4}
+.mw-next-k{font-weight:700;color:#9A6E20;margin-right:6px;font-size:10px;text-transform:uppercase}
+.mw-next-v{color:#1A1815}
+.mw-snippet{font-size:11px;color:#55504A;margin:0;line-height:1.45;font-style:italic;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.mw-open-btn{margin-top:auto;align-self:flex-start;padding:8px 14px;border:none;border-radius:6px;background:#1A304A;color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;min-height:40px}
+.mw-open-btn:hover{background:#253E60}
+.mw-empty{text-align:center;padding:40px 24px}
+.mw-empty-icon{width:56px;height:56px;border-radius:50%;background:#EAF5EE;color:#1A6A3C;font-size:28px;line-height:56px;margin:0 auto 14px;font-weight:700}
+.mw-empty h2{font-size:22px;color:#1A304A;margin:0 0 8px}
+.mw-empty p{color:#55504A;font-size:13px;margin:0;max-width:360px;margin-left:auto;margin-right:auto}
+.mw-cta{display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border-radius:8px;background:linear-gradient(135deg,#1A304A,#253E60);color:#fff;text-decoration:none;font-size:13px;font-weight:600;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;box-shadow:0 2px 12px rgba(26,48,74,.2)}
+.mw-cta:hover{filter:brightness(1.08)}
+@media(max-width:768px){
+  .mw-hero{padding:18px 16px}
+  .mw-stats{grid-template-columns:repeat(2,1fr)}
+  .mw-stats .mw-stat:nth-child(5){grid-column:1/-1}
+  .mw-toolbar{flex-direction:column;align-items:stretch}
+  .mw-toolbar-hint{min-width:0}
+  .mw-cards{grid-template-columns:1fr}
+}
 .stabs{display:flex;border-bottom:1.5px solid #E2DDD4;margin-bottom:18px}
 .stab{padding:7px 15px;border:none;background:none;color:#55504A;font-size:12px;font-weight:500;cursor:pointer;border-bottom:2.5px solid transparent;margin-bottom:-1.5px;transition:all .15s;font-family:'DM Sans',sans-serif}
 .stab.act{color:#1A304A;border-bottom-color:#1A304A;font-weight:600}
@@ -391,7 +455,15 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
   .tnav-row{display:flex;align-items:center;width:100%;gap:8px;min-width:0}
   .tnav-brand{border-right:none;padding-right:0;margin-right:0;flex:1;min-width:0}
   .tnav-menu-btn{display:inline-flex;flex-shrink:0}
-  .proj-sel-wrap{width:100%;padding:0}
+  .proj-sel-wrap{width:100%;padding:0;display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 10px}
+.mw-nav-tab{flex-shrink:0;min-height:40px;font-weight:600}
+.mw-nav-tab.act{background:#1A304A;color:#fff;border-color:#1A304A}
+.proj-sel-wrap .proj-sel-lbl{width:100%}
+.proj-sel-wrap .proj-sel{flex:1;min-width:0}
+@media(min-width:769px){
+  .proj-sel-wrap .proj-sel-lbl{width:auto}
+  .proj-sel-wrap .proj-sel{flex:1;min-width:140px;max-width:280px}
+}
   .proj-sel{max-width:none;width:100%;min-height:44px;font-size:14px}
   .nact{display:none;flex-direction:column;align-items:stretch;width:100%;padding:10px 0 4px;border-left:none;border-top:1.5px solid #E2DDD4;gap:10px}
   .nact.open{display:flex}
@@ -931,7 +1003,7 @@ function ProjectFormFields({form,setForm}){
   );
 }
 
-function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onEditProject,onDeleteProject,onAddProject,onImportJson,onImportExcel,departments}){
+function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWork,onEditProject,onDeleteProject,onAddProject,onImportJson,onImportExcel,departments}){
   const[horizonDays,setHorizonDays]=useState(30);
   const[statusFilter,setStatusFilter]=useState("");
   const[assigneeFilter,setAssigneeFilter]=useState("");
@@ -971,6 +1043,7 @@ function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onEditProj
         <h1 className="disp" style={{fontSize:30,fontWeight:600,color:C.navy,lineHeight:1.1}}>Pre-Construction Command Centre</h1>
         <p style={{color:C.tx2,fontSize:13,marginTop:4}}>Golden Abodes · {projects.length} Projects · {fmt(todayStr)}</p>
         <div className="dash-actions">
+          {onOpenMyWork?<button type="button" className="mw-cta" onClick={onOpenMyWork}>◎ My Work — your assignments</button>:null}
           {onAddProject?<button type="button" className="btp-add" onClick={onAddProject}>+ Add project</button>:null}
           {onImportJson?<label className="file-lbl">Import JSON<input type="file" accept=".json,application/json" onChange={e=>{const f=e.target.files?.[0];if(f)onImportJson(f);e.target.value="";}}/></label>:null}
           {onImportExcel?<label className="file-lbl">Import Excel<input type="file" accept=".xlsx,.xls" onChange={e=>{const f=e.target.files?.[0];if(f)onImportExcel(f);e.target.value="";}}/></label>:null}
@@ -1241,7 +1314,7 @@ export default function App(){
   const loginUser=useLoginUser();
   const{toasts,toast}=useToasts();
   const curProj=state.projects.find(p=>p.id===curView);
-  const viewSelectValue=curView==="dashboard"||!state.projects.some(p=>p.id===curView)?"dashboard":curView;
+  const viewSelectValue=curView==="mywork"||curView==="dashboard"||state.projects.some(p=>p.id===curView)?curView:"dashboard";
 
   // inject styles
   useEffect(()=>{
@@ -1321,6 +1394,14 @@ export default function App(){
           </button>
         </div>
         <div className="proj-sel-wrap">
+          <button
+            type="button"
+            className={`btg mw-nav-tab${curView==="mywork"?" act":""}`}
+            onClick={()=>{setCurView("mywork");setNavOpen(false);}}
+            title="Your tasks across all projects"
+          >
+            ◎ My Work
+          </button>
           <label className="proj-sel-lbl" htmlFor="ga-precon-view">Project</label>
           <select
             id="ga-precon-view"
@@ -1330,6 +1411,7 @@ export default function App(){
             aria-label="Select dashboard or project"
           >
             <option value="dashboard">Dashboard — all projects</option>
+            <option value="mywork">My Work — your assignments</option>
             {state.projects.map(p=><option key={p.id} value={p.id}>{p.name}{p.loc?` · ${p.loc}`:""}</option>)}
           </select>
         </div>
@@ -1354,7 +1436,9 @@ export default function App(){
 
       <main className="main">
         {curView==="dashboard"
-          ?<Dashboard projects={state.projects} cloudUrl={cloudUrl} setCloudUrl={setCloudUrl} toast={toast} onOpenProject={id=>setCurView(id)} onEditProject={openEditProject} onDeleteProject={confirmDeleteProject} onAddProject={()=>setModal("addProj")} onImportJson={importJSON} onImportExcel={importExcel} departments={state.departments}/>
+          ?<Dashboard projects={state.projects} cloudUrl={cloudUrl} setCloudUrl={setCloudUrl} toast={toast} onOpenProject={id=>setCurView(id)} onOpenMyWork={()=>setCurView("mywork")} onEditProject={openEditProject} onDeleteProject={confirmDeleteProject} onAddProject={()=>setModal("addProj")} onImportJson={importJSON} onImportExcel={importExcel} departments={state.departments}/>
+          :curView==="mywork"
+          ?<MyWorkView projects={state.projects} loginUser={loginUser} departments={state.departments} onOpenProject={id=>{setCurView(id);setSubTab(p=>({...p,[id]:"tasks"}));}}/>
           :curProj?(()=>{
             const s=pStats(curProj);const sub=subTab[curProj.id]||"tasks";
             return(
