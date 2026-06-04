@@ -18,6 +18,7 @@ import {
   taskMatchesRoleFilter,
   collectAllRoles,
 } from "./preconDepartments.js";
+import { PortfolioRagMatrix } from "./PortfolioRagMatrix.jsx";
 import {
   taskStatus,
   taskStatusSelectValue,
@@ -281,6 +282,48 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .pcard{background:#fff;border:1px solid #E2DDD4;border-radius:8px;padding:13px;display:flex;gap:11px;align-items:center;cursor:pointer;transition:all .15s}
 .pcard:hover{border-color:#CEC8BB;box-shadow:0 2px 8px rgba(0,0,0,.08)}
 .dg2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+.rag-section{margin-bottom:20px;padding:0;overflow:visible}
+.rag-head{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:12px;padding:16px 18px 12px;border-bottom:1px solid #E2DDD4}
+.rag-title{font-size:20px;font-weight:600;color:#1A304A;margin:0}
+.rag-sub{font-size:12px;color:#55504A;margin:4px 0 0;line-height:1.45}
+.rag-legend{display:flex;flex-wrap:wrap;gap:10px 14px;font-size:10px;color:#55504A;text-transform:uppercase;letter-spacing:.35px}
+.rag-leg-item{display:inline-flex;align-items:center;gap:5px}
+.rag-leg-swatch{width:12px;height:12px;border-radius:2px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+.rag-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px 14px;background:#F8F6F1;border-bottom:1px solid #E2DDD4}
+.rag-metric{background:#fff;border:1px solid #E2DDD4;border-radius:6px;padding:10px 12px;border-left:3px solid #CEC8BB}
+.rag-metric-l{font-size:9px;text-transform:uppercase;letter-spacing:.55px;color:#96918A;margin-bottom:4px}
+.rag-metric-v{font-size:22px;font-weight:600;font-family:'Cormorant Garamond',serif;line-height:1}
+.rag-metric-s{font-size:10px;color:#96918A;margin-top:2px}
+.rag-scroll{overflow-x:auto;padding:0 0 4px}
+.rag-table{width:100%;border-collapse:separate;border-spacing:0;min-width:960px}
+.rag-th-proj,.rag-td-proj{position:sticky;left:0;z-index:3;background:#fff;min-width:148px;max-width:180px;border-right:1px solid #E2DDD4;box-shadow:2px 0 6px rgba(0,0,0,.04)}
+.rag-th-proj{padding:10px 12px;font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#96918A;text-align:left;border-bottom:1px solid #E2DDD4;background:#F3F0EA}
+.rag-th-phase{padding:8px 6px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.35px;color:#55504A;text-align:center;border-bottom:1px solid #E2DDD4;background:#F3F0EA;vertical-align:bottom;min-width:72px;max-width:88px}
+.rag-th-text{display:block;line-height:1.25}
+.rag-td-proj{padding:6px 8px;border-bottom:1px solid #E2DDD4;vertical-align:middle}
+.rag-td-cell{padding:5px;border-bottom:1px solid #E2DDD4;text-align:center;vertical-align:middle}
+.rag-proj-btn{display:block;width:100%;text-align:left;border:none;background:transparent;cursor:pointer;padding:6px 8px;border-radius:4px;font-family:'DM Sans',sans-serif}
+.rag-proj-btn:hover{background:#F3F0EA}
+.rag-proj-name{display:block;font-size:12px;font-weight:600;color:#1A304A;line-height:1.3}
+.rag-proj-meta{display:block;font-size:10px;color:#96918A;margin-top:2px}
+.rag-cell{display:flex;align-items:center;justify-content:center;width:100%;min-width:56px;height:44px;border-radius:4px;border:2px solid transparent;cursor:pointer;position:relative;transition:transform .12s,box-shadow .12s;font-family:inherit;padding:0}
+.rag-cell:hover{transform:scale(1.06);box-shadow:0 4px 14px rgba(0,0,0,.18);z-index:2}
+.rag-cell-pct{font-size:11px;font-weight:700;color:rgba(255,255,255,.95);text-shadow:0 1px 2px rgba(0,0,0,.25)}
+.rag-cell-flag{position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:#fff;box-shadow:0 0 0 2px #B32E1E}
+.rag-na .rag-cell-pct{display:none}
+.rag-tooltip{position:fixed;z-index:600;max-width:300px;padding:12px 14px;background:#1A304A;color:#fff;border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,.28);font-size:12px;line-height:1.45;pointer-events:none;font-family:'DM Sans',sans-serif}
+.rag-tt-title{font-size:13px;font-weight:600;margin-bottom:6px;color:#C89A3A}
+.rag-tt-phase{display:block;font-size:11px;font-weight:400;color:rgba(255,255,255,.65);margin-top:2px}
+.rag-tt-rag{font-size:11px;font-weight:600;margin-bottom:8px}
+.rag-tt-k{font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:rgba(255,255,255,.5);margin-bottom:3px}
+.rag-tt-v{font-size:12px;font-weight:500;margin-bottom:2px}
+.rag-tt-meta{font-size:11px;color:rgba(255,255,255,.72)}
+.rag-tt-block{margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.12)}
+.rag-tt-issue-flag .rag-tt-v{color:#FFB4A8}
+.rag-tt-foot{margin-top:10px;font-size:10px;color:rgba(255,255,255,.55)}
+.rag-tt-row{margin-bottom:6px;font-size:11px}
+@media(max-width:900px){.rag-metrics{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.rag-metrics{grid-template-columns:1fr}}
 .stabs{display:flex;border-bottom:1.5px solid #E2DDD4;margin-bottom:18px}
 .stab{padding:7px 15px;border:none;background:none;color:#55504A;font-size:12px;font-weight:500;cursor:pointer;border-bottom:2.5px solid transparent;margin-bottom:-1.5px;transition:all .15s;font-family:'DM Sans',sans-serif}
 .stab.act{color:#1A304A;border-bottom-color:#1A304A;font-weight:600}
@@ -866,6 +909,7 @@ function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onEditProj
           {onImportExcel?<label className="file-lbl">Import Excel<input type="file" accept=".xlsx,.xls" onChange={e=>{const f=e.target.files?.[0];if(f)onImportExcel(f);e.target.value="";}}/></label>:null}
         </div>
       </div>
+      <PortfolioRagMatrix projects={projects} departments={departments} onOpenProject={onOpenProject}/>
       <div className="kgrid">
         {[{l:"Total Tasks",v:tT,c:C.navy},{l:"Completed",v:tC,c:C.green,sub:`${op}% overall`},{l:"In Progress",v:tI,c:C.blue},{l:"Overdue",v:tO,c:C.red,sub:tO>0?"Needs attention":"All on track"},{l:"Projects",v:projects.length,c:C.gold}].map((k,i)=>(
           <div key={i} className="kcard" style={{"--acc":k.c}}>
