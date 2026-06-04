@@ -2,10 +2,11 @@ import * as XLSX from 'xlsx';
 import { cDates } from './preconDates.js';
 import { taskStatus, statusLabel, ensureTaskStatus } from './preconTaskStatus.js';
 import { formatRoles } from './preconDepartments.js';
+import { formatCommentLine } from './preconComments.js';
 
 function commentsText(t) {
   if (!t.comments?.length) return '';
-  return t.comments.map((c) => `[${c.author || 'Anon'} ${c.ts || ''}] ${c.text || ''}`).join(' | ');
+  return t.comments.map((c) => formatCommentLine(c)).join(' | ');
 }
 
 function flaggedComments(t) {

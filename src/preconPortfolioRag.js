@@ -90,6 +90,8 @@ export function getLatestIssue(tasks) {
           text: c.text || '',
           author: c.author || 'Anon',
           ts: c.ts || '',
+          nextAction: c.nextAction || '',
+          nextActionDate: c.nextActionDate || '',
           flagged: !!c.flag,
           taskName: task.name,
           phaseName: phase?.name || '',

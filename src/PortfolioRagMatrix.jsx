@@ -71,6 +71,12 @@ function RagTooltip({ tip, pos }) {
         <div className={`rag-tt-block${cell.issue.flagged ? ' rag-tt-issue-flag' : ''}`}>
           <div className="rag-tt-k">{cell.issue.flagged ? 'Flagged issue' : 'Latest comment'}</div>
           <div className="rag-tt-v">{cell.issue.text}</div>
+          {cell.issue.nextAction ? (
+            <div className="rag-tt-meta">
+              Next: {cell.issue.nextAction}
+              {cell.issue.nextActionDate ? ` · ${cell.issue.nextActionDate}` : ''}
+            </div>
+          ) : null}
           <div className="rag-tt-meta">
             {cell.issue.author}
             {cell.issue.ts ? ` · ${cell.issue.ts}` : ''}

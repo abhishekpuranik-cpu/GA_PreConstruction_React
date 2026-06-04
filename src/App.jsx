@@ -19,6 +19,8 @@ import {
   collectAllRoles,
 } from "./preconDepartments.js";
 import { PortfolioRagMatrix } from "./PortfolioRagMatrix.jsx";
+import { validateCommentPayload, formatCommentLine } from "./preconComments.js";
+import { useLoginUser } from "./useLoginUser.js";
 import { migratePreWorkFollowUpState, applyGhqPreWorkToPhases } from "./preconGhqPreWorkMigrate.js";
 import {
   taskStatus,
@@ -674,7 +676,7 @@ function RegView({proj,regStatus,setRegStatus}){
 // ── TASKS VIEW ───────────────────────────────────────────
 function phaseExpandKey(projId,phId){return`${projId}:${phId}`;}
 
-function TasksView({proj,dispatch,toast,departments}){
+function TasksView({proj,dispatch,toast,departments,loginUser}){
   const dm=cDates(proj);
   const[expandedC,setExpandedC]=useState({});
   const[expandedPh,setExpandedPh]=useState({});
@@ -711,13 +713,22 @@ function TasksView({proj,dispatch,toast,departments}){
     if(idx<0||to<0||to>=ph.tasks.length)return;
     dispatch({type:"reorderTask",projId:proj.id,phId:ph.id,fromId:tId,toId:ph.tasks[to].id});
   };
+  const authorName=loginUser?.ready?(loginUser.name||"User"):"";
   const addComment=(phId,tId)=>{
-    const txt=document.getElementById(`ct_${tId}`)?.value?.trim();
-    const auth=document.getElementById(`cn_${tId}`)?.value?.trim()||"Anonymous";
-    if(!txt)return;
-    dispatch({type:"addComment",projId:proj.id,phId,tId,comment:{text:txt,author:auth,ts:now(),flag:/issue|block|delay|risk/i.test(txt)}});
+    const txt=document.getElementById(`ct_${tId}`)?.value?.trim()||"";
+    const nextAction=document.getElementById(`na_${tId}`)?.value?.trim()||"";
+    const nextActionDate=document.getElementById(`nad_${tId}`)?.value?.trim()||"";
+    const err=validateCommentPayload({text:txt,nextAction,nextActionDate});
+    if(err){toast(err,"err");return;}
+    if(!authorName){toast("Loading login — try again","err");return;}
+    dispatch({type:"addComment",projId:proj.id,phId,tId,comment:{
+      text:txt,author:authorName,ts:now(),nextAction,nextActionDate,
+      flag:/issue|block|delay|risk/i.test(txt),
+    }});
     toast("Comment saved","ok");
     document.getElementById(`ct_${tId}`).value="";
+    document.getElementById(`na_${tId}`).value="";
+    document.getElementById(`nad_${tId}`).value="";
     setTimeout(()=>setExpandedC(p=>({...p,[tId]:true})),50);
   };
   return(
@@ -734,7 +745,7 @@ function TasksView({proj,dispatch,toast,departments}){
             proj.phases.forEach(ph=>ph.tasks.forEach(t=>{
               if(!taskPassesFilters(t,dm2,ph.name,filters))return;
               const d=dm2[t.id]||{s:"",e:""};
-              const cm=(t.comments||[]).map(c=>`${c.author}: ${c.text}`).join(" | ");
+              const cm=(t.comments||[]).map(c=>formatCommentLine(c)).join(" | ");
               csv+=`"${ph.name}","${t.name}","${d.s}","${d.e}","${t.dur}","${formatRoles(t)}","${t.who||""}","${statusLabel(taskStatus(t,dm2))}","${cm.replace(/"/g,'""')}"\n`;
             }));
             const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download=proj.name.replace(/\s+/g,"_")+"_Schedule.csv";a.click();toast("CSV exported","ok");
@@ -841,15 +852,24 @@ function TasksView({proj,dispatch,toast,departments}){
                                 <span style={{fontSize:10,color:C.tx3}}>{cm.ts}</span>
                               </div>
                               <div style={{fontSize:12,color:C.tx,lineHeight:1.5}}>{cm.text}</div>
+                              {(cm.nextAction||cm.nextActionDate)?<div style={{fontSize:11,color:C.navy,marginTop:6,lineHeight:1.45}}>
+                                <span style={{fontWeight:600}}>Next action:</span> {cm.nextAction||"—"}
+                                {cm.nextActionDate?<span style={{color:C.tx2}}> · Due {fmt(cm.nextActionDate)}</span>:null}
+                              </div>:null}
                             </div>
                           ))}
                         </div>:<div style={{fontSize:12,color:C.tx3,fontStyle:"italic",marginBottom:9}}>No comments yet</div>}
-                        <div style={{display:"flex",gap:7,marginBottom:6}}>
-                          <input id={`cn_${t.id}`} type="text" placeholder="Your name" style={{padding:"4px 8px",border:`1px solid ${C.bd}`,borderRadius:4,fontSize:12,width:140,fontFamily:"'DM Sans',sans-serif"}}/>
+                        <div style={{fontSize:11,color:C.tx2,marginBottom:8}}>
+                          Posting as <span style={{fontWeight:600,color:C.navy}}>{authorName||"…"}</span>
+                          {loginUser?.email?<span style={{color:C.tx3}}> ({loginUser.email})</span>:null}
+                        </div>
+                        <div style={{display:"grid",gridTemplateColumns:"1fr minmax(140px,180px)",gap:8,marginBottom:8}}>
+                          <input id={`na_${t.id}`} type="text" className="ti" placeholder="Next action *" required style={{width:"100%",padding:"6px 8px"}}/>
+                          <input id={`nad_${t.id}`} type="date" className="di" placeholder="Next action date" required title="Next action date *" style={{width:"100%"}}/>
                         </div>
                         <div style={{display:"flex",gap:7,alignItems:"flex-end"}}>
-                          <textarea id={`ct_${t.id}`} className="cinp" placeholder="Comment, issue, progress update…" rows={2}/>
-                          <button className="btp" onClick={()=>addComment(ph.id,t.id)}>Post</button>
+                          <textarea id={`ct_${t.id}`} className="cinp" placeholder="Comment, issue, progress update… *" rows={2}/>
+                          <button type="button" className="btp" onClick={()=>addComment(ph.id,t.id)}>Post</button>
                         </div>
                       </td></tr>}
                     </React.Fragment>
@@ -1191,6 +1211,7 @@ export default function App(){
   const[editProjId,setEditProjId]=useState(null);
   const[cloudStatus,setCloudStatus]=useState("loading");
   const mongoFlushRef=useRef(null);
+  const loginUser=useLoginUser();
   const{toasts,toast}=useToasts();
   const curProj=state.projects.find(p=>p.id===curView);
   const viewSelectValue=curView==="dashboard"||!state.projects.some(p=>p.id===curView)?"dashboard":curView;
@@ -1344,7 +1365,7 @@ export default function App(){
                     <button key={t} className={`stab${sub===t?" act":""}`} onClick={()=>sst(curProj.id,t)}>{l}</button>
                   ))}
                 </div>
-                {sub==="tasks"&&<TasksView proj={curProj} dispatch={dispatch} toast={toast} departments={state.departments}/>}
+                {sub==="tasks"&&<TasksView proj={curProj} dispatch={dispatch} toast={toast} departments={state.departments} loginUser={loginUser}/>}
                 {sub==="gantt"&&<GanttView proj={curProj}/>}
                 {sub==="regs"&&<RegView proj={curProj} regStatus={regStatus} setRegStatus={setRegStatus}/>}
               </div>
