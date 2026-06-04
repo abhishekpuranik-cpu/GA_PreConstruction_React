@@ -41,6 +41,20 @@ export function collectAssignees(projects) {
   return [...set].sort((a, b) => a.localeCompare(b));
 }
 
+const NON_ADOPTED = new Set(['pipeline', 'evaluation']);
+const COMPLETED_LIKE = new Set(['under construction', 'completed', 'closed', 'cancelled']);
+
+/** Aligns with platform Admin "Add all active" rules. */
+export function isProjectAssignable(project) {
+  const s = String(project?.status || '').trim().toLowerCase();
+  if (!s) return true;
+  if (NON_ADOPTED.has(s)) return false;
+  if (COMPLETED_LIKE.has(s)) return false;
+  if (s.includes('complete')) return false;
+  if (s.includes('non-adopted') || s.includes('non adopted')) return false;
+  return true;
+}
+
 /** Projects visible per Admin Security allowedProjects (name or id); empty list = all. */
 export function filterProjectsForUser(projects, loginUser) {
   const allowed = loginUser?.allowedProjects;
