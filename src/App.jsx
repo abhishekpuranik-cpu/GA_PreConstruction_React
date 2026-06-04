@@ -22,6 +22,8 @@ import { PortfolioRagMatrix } from "./PortfolioRagMatrix.jsx";
 import { validateCommentPayload, formatCommentLine } from "./preconComments.js";
 import { useLoginUser } from "./useLoginUser.js";
 import { MyWorkView } from "./MyWorkView.jsx";
+import { AssigneeMultiSelect } from "./AssigneeMultiSelect.jsx";
+import { filterProjectsForUser, buildAssigneeRoster, assigneeMatches } from "./preconAssignees.js";
 import { migratePreWorkFollowUpState, applyGhqPreWorkToPhases } from "./preconGhqPreWorkMigrate.js";
 import {
   taskStatus,
@@ -318,28 +320,53 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .mw-group-title{font-size:15px;font-weight:600;color:#1A304A;margin:0;font-family:'Cormorant Garamond',serif}
 .mw-group-hint{font-size:11px;color:#96918A;margin:2px 0 0}
 .mw-group-count{font-size:12px;font-weight:700;color:#fff;background:var(--mw-g,#1A304A);min-width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 8px}
-.mw-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:12px}
-.mw-card-wrap{position:relative}
-.mw-dept{position:absolute;top:-6px;right:8px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.35px;color:#96918A;background:#F3F0EA;padding:2px 7px;border-radius:4px;z-index:1}
-.mw-card{background:#fff;border:1px solid #E2DDD4;border-radius:10px;padding:14px 16px;border-left:4px solid var(--mw-accent,#1A304A);box-shadow:0 1px 4px rgba(0,0,0,.04);display:flex;flex-direction:column;gap:8px;min-height:100%}
-.mw-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.mw-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.mw-row{display:grid;grid-template-columns:88px 1fr;gap:12px 16px;padding:14px 16px;background:#fff;border:1px solid #E2DDD4;border-radius:10px;border-left:4px solid var(--mw-accent,#1A304A);box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.mw-row-date{display:flex;flex-direction:column;gap:2px;padding-top:2px}
+.mw-row-date-val{font-size:15px;font-weight:700;color:#1A304A;font-family:'Cormorant Garamond',serif;line-height:1.1}
+.mw-row-date-lbl{font-size:9px;text-transform:uppercase;letter-spacing:.4px;color:#96918A}
+.mw-row-late{font-size:10px;font-weight:700;color:#B32E1E}
+.mw-row-body{min-width:0}
+.mw-row-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
 .mw-proj-link{border:none;background:none;padding:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#1B5E9E;cursor:pointer;font-family:'DM Sans',sans-serif;text-align:left}
 .mw-proj-link:hover{text-decoration:underline;color:#1A304A}
-.mw-task-name{font-size:14px;font-weight:600;color:#1A1815;margin:0;line-height:1.35}
-.mw-meta-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:11px}
+.mw-task-name{font-size:15px;font-weight:600;color:#1A1815;margin:6px 0 0;line-height:1.35}
+.mw-row-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:11px;margin-top:6px}
 .mw-phase{padding:2px 8px;border-radius:4px;border:1px solid;font-weight:600;font-size:10px}
+.mw-dept-tag{font-size:10px;color:#55504A;background:#F3F0EA;padding:2px 8px;border-radius:4px}
 .mw-loc{color:#96918A}
-.mw-date-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 10px;font-size:12px}
-.mw-date-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:#96918A;font-weight:600}
-.mw-date-val{font-weight:600;color:#1A304A}
-.mw-date-val.mw-date-late{color:#B32E1E}
-.mw-date-tag{font-size:9px;color:#9A6E20;background:#FBF7EE;padding:2px 6px;border-radius:3px}
-.mw-next{background:#F8F6F1;border-radius:6px;padding:8px 10px;font-size:12px;line-height:1.4}
-.mw-next-k{font-weight:700;color:#9A6E20;margin-right:6px;font-size:10px;text-transform:uppercase}
-.mw-next-v{color:#1A1815}
-.mw-snippet{font-size:11px;color:#55504A;margin:0;line-height:1.45;font-style:italic;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.mw-open-btn{margin-top:auto;align-self:flex-start;padding:8px 14px;border:none;border-radius:6px;background:#1A304A;color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;min-height:40px}
-.mw-open-btn:hover{background:#253E60}
+.mw-row-dates{display:flex;flex-wrap:wrap;gap:8px 14px;font-size:11px;color:#55504A;margin-top:8px}
+.mw-row-dates strong{color:#96918A;font-weight:600;text-transform:uppercase;font-size:9px;letter-spacing:.3px;margin-right:4px}
+.mw-row-na,.mw-row-snippet{font-size:12px;color:#55504A;margin:8px 0 0;line-height:1.45}
+.mw-row-snippet{font-style:italic;padding:8px 10px;background:#F8F6F1;border-radius:6px}
+.mw-expand-btn{margin-top:10px;padding:0;border:none;background:none;color:#1B5E9E;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;text-decoration:underline}
+.mw-editor{margin-top:12px;padding-top:12px;border-top:1px solid #E2DDD4;display:flex;flex-direction:column;gap:10px}
+.mw-ed-lbl{display:flex;flex-direction:column;gap:4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:#96918A}
+.mw-ed-actions{display:flex;flex-wrap:wrap;gap:8px}
+.mw-filter-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,200px),1fr));gap:12px;width:100%}
+.mw-scope{border:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;width:100%}
+.mw-scope legend{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.45px;color:#96918A;width:100%;margin-bottom:2px}
+.mw-projects .mw-proj-chips{display:flex;flex-wrap:wrap;gap:6px}
+.mw-proj-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid #E2DDD4;background:#fff;font-size:11px;cursor:pointer;user-select:none}
+.mw-proj-chip.on{background:#EEF4FC;border-color:#1B5E9E;color:#1A304A}
+.mw-proj-chip input{accent-color:#1A304A}
+.ams{position:relative;display:inline-block;min-width:100px}
+.ams-compact{min-width:90px}
+.ams-trigger{display:flex;align-items:center;gap:4px;width:100%;min-height:36px;padding:4px 8px;border:1px solid #E2DDD4;border-radius:6px;background:#fff;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11px;text-align:left}
+.ams-trigger:disabled{opacity:.6;cursor:not-allowed}
+.ams-placeholder{color:#96918A}
+.ams-chips-inline{display:flex;flex-wrap:wrap;gap:3px;flex:1;min-width:0}
+.ams-chip{background:#EEF4FC;color:#1A304A;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ams-more{font-size:10px;color:#96918A}
+.ams-caret{color:#96918A;font-size:10px;flex-shrink:0}
+.ams-menu{position:absolute;top:calc(100% + 4px);left:0;z-index:50;min-width:min(260px,90vw);max-height:min(280px,50vh);overflow:auto;background:#fff;border:1px solid #E2DDD4;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:8px}
+.ams-menu-hint{font-size:10px;color:#96918A;padding:4px 8px 8px}
+.ams-opt{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:12px}
+.ams-opt:hover{background:#F8F6F1}
+.ams-opt.on{background:#EEF4FC}
+.ams-opt input{accent-color:#1A304A;min-width:16px;min-height:16px}
+.ams-empty{font-size:11px;color:#96918A;padding:8px}
+.ams-clear{display:block;width:100%;margin-top:6px;padding:8px;border:none;background:#F3F0EA;color:#55504A;font-size:11px;border-radius:6px;cursor:pointer}
 .mw-empty{text-align:center;padding:40px 24px}
 .mw-empty-icon{width:56px;height:56px;border-radius:50%;background:#EAF5EE;color:#1A6A3C;font-size:28px;line-height:56px;margin:0 auto 14px;font-weight:700}
 .mw-empty h2{font-size:22px;color:#1A304A;margin:0 0 8px}
@@ -352,7 +379,9 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
   .mw-stats .mw-stat:nth-child(5){grid-column:1/-1}
   .mw-toolbar{flex-direction:column;align-items:stretch}
   .mw-toolbar-hint{min-width:0}
-  .mw-cards{grid-template-columns:1fr}
+  .mw-row{grid-template-columns:1fr;gap:10px}
+  .mw-row-date{flex-direction:row;align-items:center;gap:10px;flex-wrap:wrap}
+  .mw-filter-grid{grid-template-columns:1fr}
 }
 .stabs{display:flex;border-bottom:1.5px solid #E2DDD4;margin-bottom:18px}
 .stab{padding:7px 15px;border:none;background:none;color:#55504A;font-size:12px;font-weight:500;cursor:pointer;border-bottom:2.5px solid transparent;margin-bottom:-1.5px;transition:all .15s;font-family:'DM Sans',sans-serif}
@@ -598,7 +627,7 @@ function ActionFilters({
 }
 
 function taskPassesFilters(t, dm, phaseName, { statusFilter, assigneeFilter, departmentFilter, departments, roleFilter, horizonDays, todayStr }) {
-  if (assigneeFilter && String(t.who || '').trim() !== assigneeFilter) return false;
+  if (assigneeFilter && !assigneeMatches(t.who, assigneeFilter)) return false;
   if (!taskMatchesDepartment(t, phaseName, departmentFilter, departments)) return false;
   if (!taskMatchesRoleFilter(t, roleFilter)) return false;
   const st = taskStatus(t, dm);
@@ -764,7 +793,7 @@ function RegView({proj,regStatus,setRegStatus}){
 // ── TASKS VIEW ───────────────────────────────────────────
 function phaseExpandKey(projId,phId){return`${projId}:${phId}`;}
 
-function TasksView({proj,dispatch,toast,departments,loginUser}){
+function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
   const dm=cDates(proj);
   const[expandedC,setExpandedC]=useState({});
   const[expandedPh,setExpandedPh]=useState({});
@@ -912,7 +941,9 @@ function TasksView({proj,dispatch,toast,departments,loginUser}){
                         <td><input type="date" className="di" defaultValue={t.ms||d.s||""} onChange={e=>dispatch({type:"setMS",projId:proj.id,phId:ph.id,tId:t.id,v:e.target.value||null})}/></td>
                         <td><input type="number" className="ni" defaultValue={t.dur} min={1} max={999} onChange={e=>dispatch({type:"updTask",projId:proj.id,phId:ph.id,tId:t.id,f:"dur",v:parseInt(e.target.value)||1})}/></td>
                         <td style={{color:C.tx2,fontSize:12,whiteSpace:"nowrap"}}>{fmt(d.e)}</td>
-                        <td><input type="text" className="ti" defaultValue={t.who||""} placeholder="Assignee" style={{width:118}} onBlur={e=>dispatch({type:"updTask",projId:proj.id,phId:ph.id,tId:t.id,f:"who",v:e.target.value})}/></td>
+                        <td>
+                          <AssigneeMultiSelect compact value={t.who||""} options={assigneeRoster} onChange={v=>dispatch({type:"updTask",projId:proj.id,phId:ph.id,tId:t.id,f:"who",v})}/>
+                        </td>
                         <td>
                           <select className="bts" style={{minWidth:118,fontWeight:600,color:SCOL[st]||C.gray}}
                             value={taskStatusSelectValue(t)}
@@ -1218,6 +1249,14 @@ function reducer(state,action){
       const id="ph_"+Date.now();p.phases.push({id,name:action.name||"New Phase",col:action.col||PCOL[0],open:true,tasks:[]});break;
     }
     case"addComment":{const t=ft(action.projId,action.phId,action.tId);if(t)t.comments.push(action.comment);break;}
+    case"updComment":{
+      const t=ft(action.projId,action.phId,action.tId);
+      if(!t||!Array.isArray(t.comments))break;
+      const i=action.commentIndex;
+      if(i<0||i>=t.comments.length)break;
+      Object.assign(t.comments[i],action.patch||{});
+      break;
+    }
     case"addProject":S.projects.push(action.proj);break;
     case"delProject":{
       S.projects=S.projects.filter(p=>p.id!==action.pid);
@@ -1313,6 +1352,8 @@ export default function App(){
   const mongoFlushRef=useRef(null);
   const loginUser=useLoginUser();
   const{toasts,toast}=useToasts();
+  const visibleProjects=useMemo(()=>filterProjectsForUser(state.projects,loginUser),[state.projects,loginUser]);
+  const assigneeRoster=useMemo(()=>buildAssigneeRoster(visibleProjects,state.departments,loginUser),[visibleProjects,state.departments,loginUser]);
   const curProj=state.projects.find(p=>p.id===curView);
   const viewSelectValue=curView==="mywork"||curView==="dashboard"||state.projects.some(p=>p.id===curView)?curView:"dashboard";
 
@@ -1436,9 +1477,9 @@ export default function App(){
 
       <main className="main">
         {curView==="dashboard"
-          ?<Dashboard projects={state.projects} cloudUrl={cloudUrl} setCloudUrl={setCloudUrl} toast={toast} onOpenProject={id=>setCurView(id)} onOpenMyWork={()=>setCurView("mywork")} onEditProject={openEditProject} onDeleteProject={confirmDeleteProject} onAddProject={()=>setModal("addProj")} onImportJson={importJSON} onImportExcel={importExcel} departments={state.departments}/>
+          ?<Dashboard projects={visibleProjects} cloudUrl={cloudUrl} setCloudUrl={setCloudUrl} toast={toast} onOpenProject={id=>setCurView(id)} onOpenMyWork={()=>setCurView("mywork")} onEditProject={openEditProject} onDeleteProject={confirmDeleteProject} onAddProject={()=>setModal("addProj")} onImportJson={importJSON} onImportExcel={importExcel} departments={state.departments}/>
           :curView==="mywork"
-          ?<MyWorkView projects={state.projects} loginUser={loginUser} departments={state.departments} onOpenProject={id=>{setCurView(id);setSubTab(p=>({...p,[id]:"tasks"}));}}/>
+          ?<MyWorkView projects={visibleProjects} loginUser={loginUser} departments={state.departments} dispatch={dispatch} toast={toast} onOpenProject={id=>{setCurView(id);setSubTab(p=>({...p,[id]:"tasks"}));}}/>
           :curProj?(()=>{
             const s=pStats(curProj);const sub=subTab[curProj.id]||"tasks";
             return(
@@ -1476,7 +1517,7 @@ export default function App(){
                     <button key={t} className={`stab${sub===t?" act":""}`} onClick={()=>sst(curProj.id,t)}>{l}</button>
                   ))}
                 </div>
-                {sub==="tasks"&&<TasksView proj={curProj} dispatch={dispatch} toast={toast} departments={state.departments} loginUser={loginUser}/>}
+                {sub==="tasks"&&<TasksView proj={curProj} dispatch={dispatch} toast={toast} departments={state.departments} loginUser={loginUser} assigneeRoster={assigneeRoster}/>}
                 {sub==="gantt"&&<GanttView proj={curProj}/>}
                 {sub==="regs"&&<RegView proj={curProj} regStatus={regStatus} setRegStatus={setRegStatus}/>}
               </div>

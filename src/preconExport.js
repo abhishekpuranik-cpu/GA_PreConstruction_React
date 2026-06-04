@@ -3,6 +3,7 @@ import { cDates } from './preconDates.js';
 import { taskStatus, statusLabel, ensureTaskStatus } from './preconTaskStatus.js';
 import { formatRoles } from './preconDepartments.js';
 import { formatCommentLine } from './preconComments.js';
+import { parseAssignees } from './preconAssignees.js';
 
 function commentsText(t) {
   if (!t.comments?.length) return '';
@@ -25,8 +26,7 @@ export function iterAllTasks(projects, fn) {
 export function collectAssignees(projects) {
   const set = new Set();
   iterAllTasks(projects, ({ t }) => {
-    const w = String(t.who || '').trim();
-    if (w) set.add(w);
+    parseAssignees(t.who).forEach((w) => set.add(w));
   });
   return [...set].sort((a, b) => a.localeCompare(b));
 }

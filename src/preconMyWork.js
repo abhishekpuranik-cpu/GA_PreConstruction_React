@@ -1,5 +1,7 @@
 import { cDates, dbDays } from './preconDates.js';
 import { taskStatus, todayIso } from './preconTaskStatus.js';
+import { getDepartmentForPhase } from './preconDepartments.js';
+import { assigneeMatches, nameMatches } from './preconAssignees.js';
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -16,94 +18,131 @@ function parseCommentTs(c) {
   return Number.isNaN(d.getTime()) ? 0 : d.getTime();
 }
 
-/** Latest comment that defines next action + date (most recent by comment timestamp). */
-export function getLatestNextAction(comments) {
+/** Earliest of next-action date and planned task end (for open tasks). */
+export function effectiveChronologyDate(task, dm, st) {
+  const next = getLatestNextActionEntry(task.comments);
+  const na = next?.nextActionDate;
+  const end = st !== 'completed' ? dm[task.id]?.e : null;
+  const candidates = [];
+  if (na) candidates.push(String(na).trim());
+  if (end) candidates.push(String(end).trim());
+  const valid = candidates.filter((d) => d && !Number.isNaN(new Date(d).getTime()));
+  if (!valid.length) return { sortDate: null, nextDate: na || null, dueDate: end || null };
+  valid.sort();
+  const sortDate = valid[0];
+  const source =
+    sortDate === na && sortDate === end
+      ? 'both'
+      : sortDate === na
+        ? 'next_action'
+        : 'planned_end';
+  return { sortDate, sortSource: source, nextDate: na || null, dueDate: end || null };
+}
+
+/** Latest comment with next action date. */
+export function getLatestNextActionEntry(comments) {
   let best = null;
   let bestScore = -1;
-  for (const c of comments || []) {
+  let commentIndex = -1;
+  (comments || []).forEach((c, i) => {
     const date = String(c.nextActionDate || '').trim();
-    if (!date) continue;
+    if (!date) return;
     const score = parseCommentTs(c);
     if (score >= bestScore) {
       bestScore = score;
+      commentIndex = i;
       best = {
         nextAction: String(c.nextAction || '').trim(),
         nextActionDate: date,
         commentSnippet: String(c.text || '').trim(),
         author: c.author || '',
+        text: String(c.text || '').trim(),
+        ts: c.ts || '',
+        flag: !!c.flag,
       };
     }
-  }
-  return best;
+  });
+  return best ? { ...best, commentIndex } : null;
 }
 
-/** Match task assignee to selected person (name or email fragment). */
-export function assigneeMatches(taskWho, person) {
-  const w = String(taskWho || '').trim().toLowerCase();
-  const p = String(person || '').trim().toLowerCase();
-  if (!p || p === 'user' || !w) return false;
-  if (w === p) return true;
-  const wParts = w.split(/\s+/);
-  const pParts = p.split(/\s+/);
-  if (wParts.some((x) => x && p.includes(x))) return true;
-  if (pParts.some((x) => x.length > 2 && w.includes(x))) return true;
-  return false;
+/** Comment to edit inline (latest with next action, else latest comment). */
+export function getEditableComment(task) {
+  const comments = task.comments || [];
+  if (!comments.length) return null;
+  const withNa = getLatestNextActionEntry(comments);
+  if (withNa) return { commentIndex: withNa.commentIndex, comment: comments[withNa.commentIndex] };
+  let bestIdx = 0;
+  let bestScore = -1;
+  comments.forEach((c, i) => {
+    const score = parseCommentTs(c);
+    if (score >= bestScore) {
+      bestScore = score;
+      bestIdx = i;
+    }
+  });
+  return { commentIndex: bestIdx, comment: comments[bestIdx] };
 }
 
-function pickSortMeta(task, dm, st) {
-  const next = getLatestNextAction(task.comments);
-  if (next?.nextActionDate && st !== 'completed') {
-    return {
-      sortDate: next.nextActionDate,
-      sortSource: 'next_action',
-      nextAction: next,
-      label: 'Next action',
-    };
-  }
-  const d = dm[task.id];
-  if (d?.e && st !== 'completed') {
-    return {
-      sortDate: d.e,
-      sortSource: 'planned_end',
-      nextAction: next,
-      label: 'Planned end',
-    };
-  }
-  if (d?.s) {
-    return {
-      sortDate: d.s,
-      sortSource: 'planned_start',
-      nextAction: next,
-      label: 'Planned start',
-    };
-  }
-  return {
-    sortDate: null,
-    sortSource: 'none',
-    nextAction: next,
-    label: 'No date',
+export function personLeadsDepartment(person, dept) {
+  return !!(dept && assigneeMatches(dept.head, person));
+}
+
+export function taskInPersonDepartment(ph, person, departments) {
+  const dept = getDepartmentForPhase(ph.name, departments);
+  return personLeadsDepartment(person, dept);
+}
+
+export function hasCommentByPerson(task, person) {
+  return (task.comments || []).some((c) => nameMatches(c.author, person));
+}
+
+/**
+ * @param {object} opts
+ * @param {object[]} opts.projects
+ * @param {string} opts.person
+ * @param {object} opts.departments
+ * @param {{ assigned?: boolean, myComments?: boolean, myDepartment?: boolean }} opts.scopes
+ * @param {string[]} opts.projectIds — empty = all visible projects
+ * @param {string} opts.statusFilter — task status code or ''
+ */
+export function buildMyWorkItems(projects, opts = {}) {
+  const person = String(opts.person || '').trim();
+  const departments = opts.departments || [];
+  const scopes = {
+    assigned: opts.scopes?.assigned !== false,
+    myComments: !!opts.scopes?.myComments,
+    myDepartment: !!opts.scopes?.myDepartment,
   };
-}
-
-export function buildMyWorkItems(projects, assigneeFilter) {
-  const person = String(assigneeFilter || '').trim();
+  const projectIds = opts.projectIds || [];
+  const statusFilter = opts.statusFilter || '';
   const todayStr = todayIso();
   const items = [];
+  const idSet = projectIds.length ? new Set(projectIds) : null;
 
   for (const proj of projects || []) {
+    if (idSet && !idSet.has(proj.id)) continue;
     const dm = cDates(proj);
     for (const ph of proj.phases || []) {
       for (const task of ph.tasks || []) {
-        if (!assigneeMatches(task.who, person)) continue;
         const st = taskStatus(task, dm);
-        const d = dm[task.id] || { s: '', e: '' };
-        const meta = pickSortMeta(task, dm, st);
-        const sortTs = meta.sortDate ? new Date(meta.sortDate).getTime() : 9e15;
+        if (statusFilter === 'overdue' && st !== 'overdue') continue;
+        else if (statusFilter && statusFilter !== 'overdue' && st !== statusFilter) continue;
+
+        let include = false;
+        if (scopes.assigned && assigneeMatches(task.who, person)) include = true;
+        if (scopes.myComments && hasCommentByPerson(task, person)) include = true;
+        if (scopes.myDepartment && taskInPersonDepartment(ph, person, departments)) include = true;
+        if (!include || !person) continue;
+
+        const dept = getDepartmentForPhase(ph.name, departments);
+        const chrono = effectiveChronologyDate(task, dm, st);
+        const nextEntry = getLatestNextActionEntry(task.comments);
+        const sortTs = chrono.sortDate ? new Date(chrono.sortDate).getTime() : 9e15;
         const overdueDays =
-          meta.sortDate && st !== 'completed' && meta.sortDate < todayStr
-            ? dbDays(meta.sortDate, todayStr)
-            : st === 'overdue' && d.e
-              ? dbDays(d.e, todayStr)
+          chrono.sortDate && st !== 'completed' && chrono.sortDate < todayStr
+            ? dbDays(chrono.sortDate, todayStr)
+            : st === 'overdue' && chrono.dueDate
+              ? dbDays(chrono.dueDate, todayStr)
               : 0;
 
         items.push({
@@ -111,8 +150,14 @@ export function buildMyWorkItems(projects, assigneeFilter) {
           ph,
           task,
           st,
-          d,
-          ...meta,
+          d: dm[task.id] || { s: '', e: '' },
+          dept,
+          sortDate: chrono.sortDate,
+          sortSource: chrono.sortSource,
+          nextDate: chrono.nextDate,
+          dueDate: chrono.dueDate,
+          nextAction: nextEntry,
+          editable: getEditableComment(task),
           sortTs: Number.isNaN(sortTs) ? 9e15 : sortTs,
           overdueDays,
           todayStr,
@@ -126,7 +171,7 @@ export function buildMyWorkItems(projects, assigneeFilter) {
     const bDone = b.st === 'completed' ? 1 : 0;
     if (aDone !== bDone) return aDone - bDone;
     if (a.sortTs !== b.sortTs) return a.sortTs - b.sortTs;
-    return (a.proj.name || '').localeCompare(b.proj.name || '');
+    return (a.proj.name || '').localeCompare(b.proj.name || '') || (a.task.name || '').localeCompare(b.task.name || '');
   });
 
   return { items, todayStr };
@@ -134,11 +179,11 @@ export function buildMyWorkItems(projects, assigneeFilter) {
 
 export function groupMyWorkItems(items, todayStr) {
   const groups = [
-    { id: 'overdue', title: 'Overdue', hint: 'Past due — act now', items: [] },
+    { id: 'overdue', title: 'Overdue', hint: 'Earliest due date in the past', items: [] },
     { id: 'today', title: 'Today', hint: todayStr, items: [] },
     { id: 'week', title: 'Next 7 days', hint: 'Coming up soon', items: [] },
     { id: 'later', title: 'Later', hint: 'Scheduled ahead', items: [] },
-    { id: 'nodate', title: 'No date set', hint: 'Add next action when you comment', items: [] },
+    { id: 'nodate', title: 'No date set', hint: 'Set next action or check schedule', items: [] },
     { id: 'done', title: 'Completed', hint: 'Closed tasks', items: [] },
   ];
   const map = Object.fromEntries(groups.map((g) => [g.id, g]));
@@ -148,7 +193,7 @@ export function groupMyWorkItems(items, todayStr) {
       map.done.items.push(it);
       continue;
     }
-    if (!it.sortDate || it.sortSource === 'none') {
+    if (!it.sortDate) {
       map.nodate.items.push(it);
       continue;
     }

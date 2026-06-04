@@ -1,9 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { collectAssignees } from './preconExport.js';
-import { getDepartmentForPhase } from './preconDepartments.js';
-import { statusLabel, statusBadgeClass } from './preconTaskStatus.js';
+import { assigneeMatches, buildAssigneeRoster } from './preconAssignees.js';
+import { validateCommentPayload } from './preconComments.js';
+import { statusLabel, statusBadgeClass, TASK_STATUS_OPTIONS } from './preconTaskStatus.js';
 import {
-  assigneeMatches,
   buildMyWorkItems,
   formatShortDate,
   groupMyWorkItems,
@@ -27,77 +26,234 @@ const GROUP_ACCENT = {
   done: '#1A6A3C',
 };
 
-function WorkCard({ item, onOpenProject }) {
-  const { proj, ph, task, st, sortDate, sortSource, label, nextAction, overdueDays } = item;
-  const accent = SCOL[st] || '#1A304A';
+function now() {
+  return new Date().toLocaleString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function WorkListRow({ item, person, dispatch, toast, onOpenProject, defaultExpanded }) {
+  const { proj, ph, task, st, sortDate, sortSource, nextDate, dueDate, nextAction, overdueDays, dept, editable } =
+    item;
+  const [expanded, setExpanded] = useState(defaultExpanded);
+  const [text, setText] = useState('');
+  const [nextAct, setNextAct] = useState('');
+  const [nextDateVal, setNextDateVal] = useState('');
+
+  useEffect(() => {
+    const c = editable?.comment;
+    setText(c?.text || '');
+    setNextAct(c?.nextAction || '');
+    setNextDateVal(c?.nextActionDate || '');
+  }, [editable?.comment, task.id, editable?.commentIndex]);
+
+  const saveComment = () => {
+    const err = validateCommentPayload({ text, nextAction: nextAct, nextActionDate: nextDateVal });
+    if (err) {
+      toast(err, 'err');
+      return;
+    }
+    const author = person || 'User';
+    const patch = {
+      text: text.trim(),
+      nextAction: nextAct.trim(),
+      nextActionDate: nextDateVal.trim(),
+      ts: now(),
+      flag: /issue|block|delay|risk/i.test(text),
+    };
+    if (editable) {
+      patch.author = editable.comment?.author || author;
+      dispatch({
+        type: 'updComment',
+        projId: proj.id,
+        phId: ph.id,
+        tId: task.id,
+        commentIndex: editable.commentIndex,
+        patch,
+      });
+    } else {
+      patch.author = author;
+      dispatch({
+        type: 'addComment',
+        projId: proj.id,
+        phId: ph.id,
+        tId: task.id,
+        comment: patch,
+      });
+    }
+    toast('Saved — updates appear on the project task', 'ok');
+  };
+
+  const chronologyLabel =
+    sortSource === 'next_action'
+      ? 'Next action'
+      : sortSource === 'planned_end'
+        ? 'Due (plan)'
+        : sortSource === 'both'
+          ? 'Next action & due'
+          : 'Schedule';
 
   return (
-    <article className="mw-card" style={{ '--mw-accent': accent }}>
-      <div className="mw-card-top">
-        <button
-          type="button"
-          className="mw-proj-link"
-          onClick={() => onOpenProject(proj.id)}
-          title={`Open ${proj.name}`}
-        >
-          {proj.name}
-        </button>
-        <span className={`badge ${statusBadgeClass(st)}`}>{statusLabel(st)}</span>
+    <li className="mw-row" style={{ '--mw-accent': SCOL[st] || '#1A304A' }}>
+      <div className="mw-row-date">
+        <span className="mw-row-date-val">{formatShortDate(sortDate)}</span>
+        <span className="mw-row-date-lbl">{chronologyLabel}</span>
+        {overdueDays > 0 ? <span className="mw-row-late">+{overdueDays}d</span> : null}
       </div>
-      <h3 className="mw-task-name">{task.name}</h3>
-      <div className="mw-meta-row">
-        <span className="mw-phase" style={{ borderColor: ph.col, color: ph.col }}>
-          {ph.name}
-        </span>
-        {proj.loc ? <span className="mw-loc">{proj.loc}</span> : null}
-      </div>
-      <div className="mw-date-row">
-        <span className="mw-date-lbl">{label}</span>
-        <span className={`mw-date-val${overdueDays > 0 ? ' mw-date-late' : ''}`}>
-          {formatShortDate(sortDate)}
-          {overdueDays > 0 ? ` · ${overdueDays}d late` : ''}
-        </span>
-        {sortSource === 'next_action' ? <span className="mw-date-tag">From comment</span> : null}
-      </div>
-      {nextAction?.nextAction ? (
-        <div className="mw-next">
-          <span className="mw-next-k">Next</span>
-          <span className="mw-next-v">{nextAction.nextAction}</span>
+      <div className="mw-row-body">
+        <div className="mw-row-head">
+          <button type="button" className="mw-proj-link" onClick={() => onOpenProject(proj.id)}>
+            {proj.name}
+          </button>
+          <span className={`badge ${statusBadgeClass(st)}`}>{statusLabel(st)}</span>
         </div>
-      ) : null}
-      {nextAction?.commentSnippet ? (
-        <p className="mw-snippet">{nextAction.commentSnippet}</p>
-      ) : null}
-      <button type="button" className="mw-open-btn" onClick={() => onOpenProject(proj.id)}>
-        Open in project →
-      </button>
-    </article>
+        <h3 className="mw-task-name">{task.name}</h3>
+        <div className="mw-row-meta">
+          <span className="mw-phase" style={{ borderColor: ph.col, color: ph.col }}>
+            {ph.name}
+          </span>
+          {dept ? <span className="mw-dept-tag">{dept.name}</span> : null}
+          {proj.loc ? <span className="mw-loc">{proj.loc}</span> : null}
+        </div>
+        <div className="mw-row-dates">
+          {nextDate ? (
+            <span>
+              <strong>Next action:</strong> {formatShortDate(nextDate)}
+            </span>
+          ) : null}
+          {dueDate ? (
+            <span>
+              <strong>Task due:</strong> {formatShortDate(dueDate)}
+            </span>
+          ) : null}
+        </div>
+        {nextAction?.nextAction ? (
+          <p className="mw-row-na">
+            <strong>Action:</strong> {nextAction.nextAction}
+          </p>
+        ) : null}
+        {nextAction?.commentSnippet ? (
+          <p className="mw-row-snippet">{nextAction.commentSnippet}</p>
+        ) : null}
+        <button type="button" className="mw-expand-btn" onClick={() => setExpanded((e) => !e)}>
+          {expanded ? 'Hide editor' : 'Edit comment & next action'}
+        </button>
+        {expanded ? (
+          <div className="mw-editor">
+            <label className="mw-ed-lbl">
+              Comment *
+              <textarea
+                className="cform-textarea"
+                rows={3}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="Progress, issue, or decision…"
+              />
+            </label>
+            <label className="mw-ed-lbl">
+              Next action *
+              <input
+                type="text"
+                className="cform-inp"
+                value={nextAct}
+                onChange={(e) => setNextAct(e.target.value)}
+                placeholder="What happens next?"
+              />
+            </label>
+            <label className="mw-ed-lbl">
+              Next action date *
+              <input
+                type="date"
+                className="cform-inp cform-inp-date"
+                value={nextDateVal}
+                onChange={(e) => setNextDateVal(e.target.value)}
+              />
+            </label>
+            <div className="mw-ed-actions">
+              <button type="button" className="btp" onClick={saveComment}>
+                Save
+              </button>
+              <button type="button" className="btg" onClick={() => onOpenProject(proj.id)}>
+                Open task in project
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </li>
   );
 }
 
-export function MyWorkView({ projects, loginUser, departments, onOpenProject }) {
-  const assignees = useMemo(() => collectAssignees(projects), [projects]);
+export function MyWorkView({ projects, loginUser, departments, dispatch, toast, onOpenProject }) {
   const defaultPerson = loginUser?.ready ? loginUser.name || '' : '';
   const [person, setPerson] = useState('');
-  const [showDone, setShowDone] = useState(false);
   const [hideCompleted, setHideCompleted] = useState(true);
+  const [scopeAssigned, setScopeAssigned] = useState(true);
+  const [scopeComments, setScopeComments] = useState(false);
+  const [scopeDepartment, setScopeDepartment] = useState(false);
+  const [projectFilter, setProjectFilter] = useState([]);
+  const [statusFilter, setStatusFilter] = useState('');
 
   useEffect(() => {
     if (loginUser?.ready && loginUser.name) setPerson(loginUser.name);
   }, [loginUser?.ready, loginUser?.name]);
 
+  const roster = useMemo(() => buildAssigneeRoster(projects, departments, loginUser), [projects, departments, loginUser]);
   const effectivePerson = person || defaultPerson;
+
   const { items, todayStr } = useMemo(
-    () => buildMyWorkItems(projects, effectivePerson),
-    [projects, effectivePerson]
+    () =>
+      buildMyWorkItems(projects, {
+        person: effectivePerson,
+        departments,
+        scopes: {
+          assigned: scopeAssigned,
+          myComments: scopeComments,
+          myDepartment: scopeDepartment,
+        },
+        projectIds: projectFilter,
+        statusFilter,
+      }),
+    [
+      projects,
+      effectivePerson,
+      departments,
+      scopeAssigned,
+      scopeComments,
+      scopeDepartment,
+      projectFilter,
+      statusFilter,
+    ]
   );
+
   const filtered = useMemo(
     () => (hideCompleted ? items.filter((i) => i.st !== 'completed') : items),
     [items, hideCompleted]
   );
   const groups = useMemo(() => groupMyWorkItems(filtered, todayStr), [filtered, todayStr]);
   const summary = useMemo(() => myWorkSummary(items, todayStr), [items, todayStr]);
-  const displayGroups = showDone ? groups : groups.filter((g) => g.id !== 'done');
+  const displayGroups = hideCompleted ? groups.filter((g) => g.id !== 'done') : groups;
+
+  const allProjectIds = useMemo(() => projects.map((p) => p.id), [projects]);
+  const toggleProject = (id) => {
+    setProjectFilter((prev) => {
+      if (prev.length === 0) return allProjectIds.filter((x) => x !== id);
+      if (prev.includes(id)) {
+        const next = prev.filter((x) => x !== id);
+        return next;
+      }
+      const next = [...prev, id];
+      return next.length >= allProjectIds.length ? [] : next;
+    });
+  };
+
+  const myDepts = useMemo(() => {
+    return (departments || []).filter((d) => assigneeMatches(d.head, effectivePerson));
+  }, [departments, effectivePerson]);
 
   return (
     <div className="mywork">
@@ -106,13 +262,25 @@ export function MyWorkView({ projects, loginUser, departments, onOpenProject }) 
           <p className="mw-eyebrow">Personal workboard</p>
           <h1 className="mw-title disp">My Work</h1>
           <p className="mw-sub">
-            Every task assigned to you, across all projects — ordered by next action date, then planned
-            due dates.
+            Chronological list sorted by the <strong>earlier</strong> of next-action date and task due date.
+            Edit comments here — changes sync to the project task.
           </p>
           {loginUser?.ready ? (
             <p className="mw-signed">
               Signed in as <strong>{loginUser.name}</strong>
               {loginUser.email ? ` · ${loginUser.email}` : ''}
+              {loginUser.allowedProjects?.length ? (
+                <span>
+                  {' '}
+                  · {loginUser.allowedProjects.length} assigned project
+                  {loginUser.allowedProjects.length !== 1 ? 's' : ''}
+                </span>
+              ) : null}
+            </p>
+          ) : null}
+          {myDepts.length ? (
+            <p className="mw-signed">
+              Your department{myDepts.length > 1 ? 's' : ''}: {myDepts.map((d) => d.name).join(', ')}
             </p>
           ) : null}
         </div>
@@ -131,54 +299,104 @@ export function MyWorkView({ projects, loginUser, departments, onOpenProject }) 
           </div>
           <div className="mw-stat">
             <span className="mw-stat-n disp">{summary.total}</span>
-            <span className="mw-stat-l">Open tasks</span>
-          </div>
-          <div className="mw-stat">
-            <span className="mw-stat-n disp">{summary.projects}</span>
-            <span className="mw-stat-l">Projects</span>
+            <span className="mw-stat-l">Open</span>
           </div>
         </div>
       </header>
 
       <div className="mw-toolbar card">
-        <div className="mw-toolbar-field">
-          <label htmlFor="mw-person">View work for</label>
-          <select
-            id="mw-person"
-            className="mw-select"
-            value={effectivePerson}
-            onChange={(e) => setPerson(e.target.value)}
-          >
-            {!assignees.includes(defaultPerson) && defaultPerson ? (
-              <option value={defaultPerson}>{defaultPerson} (you)</option>
-            ) : null}
-            {assignees.map((a) => (
-              <option key={a} value={a}>
-                {a}
-                {assigneeMatches(a, defaultPerson) ? ' (you)' : ''}
-              </option>
-            ))}
-          </select>
+        <div className="mw-filter-grid">
+          <div className="mw-toolbar-field">
+            <label htmlFor="mw-person">Person</label>
+            <select
+              id="mw-person"
+              className="mw-select"
+              value={effectivePerson}
+              onChange={(e) => setPerson(e.target.value)}
+            >
+              {!roster.includes(defaultPerson) && defaultPerson ? (
+                <option value={defaultPerson}>{defaultPerson} (you)</option>
+              ) : null}
+              {roster.map((a) => (
+                <option key={a} value={a}>
+                  {a}
+                  {assigneeMatches(a, defaultPerson) ? ' (you)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="mw-toolbar-field">
+            <label htmlFor="mw-status">Status</label>
+            <select
+              id="mw-status"
+              className="mw-select"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="">All statuses</option>
+              {TASK_STATUS_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+              <option value="overdue">Overdue</option>
+            </select>
+          </div>
         </div>
+        <fieldset className="mw-scope">
+          <legend>Show work</legend>
+          <label className="mw-check">
+            <input type="checkbox" checked={scopeAssigned} onChange={(e) => setScopeAssigned(e.target.checked)} />
+            Assigned to me
+          </label>
+          <label className="mw-check">
+            <input type="checkbox" checked={scopeComments} onChange={(e) => setScopeComments(e.target.checked)} />
+            My comments
+          </label>
+          <label className="mw-check">
+            <input
+              type="checkbox"
+              checked={scopeDepartment}
+              onChange={(e) => setScopeDepartment(e.target.checked)}
+            />
+            My department
+          </label>
+        </fieldset>
+        {projects.length > 1 ? (
+          <fieldset className="mw-scope mw-projects">
+            <legend>Projects {projectFilter.length ? `(${projectFilter.length} selected)` : '(all)'}</legend>
+            <div className="mw-proj-chips">
+              {projects.map((p) => (
+                <label key={p.id} className={`mw-proj-chip${projectFilter.includes(p.id) ? ' on' : ''}`}>
+                  <input
+                    type="checkbox"
+                    checked={projectFilter.length === 0 || projectFilter.includes(p.id)}
+                    onChange={() => toggleProject(p.id)}
+                  />
+                  {p.name}
+                </label>
+              ))}
+              {projectFilter.length ? (
+                <button type="button" className="ams-clear" onClick={() => setProjectFilter([])}>
+                  All projects
+                </button>
+              ) : null}
+            </div>
+          </fieldset>
+        ) : null}
         <label className="mw-check">
           <input type="checkbox" checked={hideCompleted} onChange={(e) => setHideCompleted(e.target.checked)} />
           Hide completed
         </label>
-        {!hideCompleted ? (
-          <label className="mw-check">
-            <input type="checkbox" checked={showDone} onChange={(e) => setShowDone(e.target.checked)} />
-            Show completed section
-          </label>
-        ) : null}
-        <span className="mw-toolbar-hint">
-          Tip: set <strong>Assignee</strong> on tasks and log <strong>Next action + date</strong> on comments
-          to drive this timeline.
-        </span>
       </div>
 
       {!effectivePerson ? (
         <div className="mw-empty card">
-          <p>Sign in via the platform vault to load your name, or pick an assignee above.</p>
+          <p>Sign in via the platform vault to load your name, or pick a person above.</p>
+        </div>
+      ) : !scopeAssigned && !scopeComments && !scopeDepartment ? (
+        <div className="mw-empty card">
+          <p>Select at least one filter under &quot;Show work&quot;.</p>
         </div>
       ) : filtered.length === 0 ? (
         <div className="mw-empty card">
@@ -186,10 +404,7 @@ export function MyWorkView({ projects, loginUser, departments, onOpenProject }) 
             ✓
           </div>
           <h2 className="disp">All clear</h2>
-          <p>
-            No open tasks are assigned to <strong>{effectivePerson}</strong> across {projects.length}{' '}
-            project{projects.length !== 1 ? 's' : ''}.
-          </p>
+          <p>No items match your filters for <strong>{effectivePerson}</strong>.</p>
         </div>
       ) : (
         <div className="mw-timeline">
@@ -202,21 +417,18 @@ export function MyWorkView({ projects, loginUser, departments, onOpenProject }) 
                 </div>
                 <span className="mw-group-count">{group.items.length}</span>
               </div>
-              <div className="mw-cards">
-                {group.items.map((item) => {
-                  const dept = getDepartmentForPhase(item.ph.name, departments);
-                  return (
-                    <div key={`${item.proj.id}-${item.task.id}`} className="mw-card-wrap">
-                      {dept ? (
-                        <span className="mw-dept" title={dept.head}>
-                          {dept.name}
-                        </span>
-                      ) : null}
-                      <WorkCard item={item} onOpenProject={onOpenProject} />
-                    </div>
-                  );
-                })}
-              </div>
+              <ul className="mw-list">
+                {group.items.map((item) => (
+                  <WorkListRow
+                    key={`${item.proj.id}-${item.task.id}`}
+                    item={item}
+                    person={effectivePerson}
+                    dispatch={dispatch}
+                    toast={toast}
+                    onOpenProject={onOpenProject}
+                  />
+                ))}
+              </ul>
             </section>
           ))}
         </div>

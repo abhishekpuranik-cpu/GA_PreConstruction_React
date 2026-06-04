@@ -51,6 +51,7 @@ export async function fetchLoginUser() {
           authenticated: true,
           name,
           email: String(data.user.email || '').trim(),
+          allowedProjects: Array.isArray(data.user.allowedProjects) ? data.user.allowedProjects : [],
         };
       }
     }
@@ -62,5 +63,6 @@ export async function fetchLoginUser() {
     authenticated: false,
     name: fallbackLoginName(),
     email: '',
+    allowedProjects: [],
   };
 }
