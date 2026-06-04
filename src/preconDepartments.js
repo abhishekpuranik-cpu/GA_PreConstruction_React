@@ -3,7 +3,16 @@
  * Role placeholders on tasks come from cemeLifecycle / Process sheet (task.roles).
  */
 
-export const DEPARTMENTS_VERSION = 1;
+export const DEPARTMENTS_VERSION = 2;
+
+/** Legacy default head — cleared on load so Abhishek is not auto-assigned to any department. */
+const LEGACY_ABHISHEK_HEADS = new Set(['abhishek', 'abhishek puranik']);
+
+function sanitizeDepartmentHead(head) {
+  const h = String(head || '').trim();
+  if (LEGACY_ABHISHEK_HEADS.has(h.toLowerCase())) return '';
+  return h;
+}
 
 /** @typedef {{ id: string, name: string, head: string, phaseSlugs: string[], phaseNames?: string[] }} Department */
 
@@ -42,7 +51,7 @@ export const DEFAULT_DEPARTMENTS = [
   {
     id: 'dept_execution',
     name: 'Execution & Commercial',
-    head: 'Abhishek',
+    head: '',
     phaseSlugs: [
       'site_preparation',
       'marketing_sales',
@@ -77,7 +86,7 @@ export function normalizeDepartments(raw) {
     return {
       id: d.id || def?.id || `dept_${Date.now()}`,
       name: d.name || def?.name || 'Department',
-      head: typeof d.head === 'string' ? d.head : def?.head || '',
+      head: sanitizeDepartmentHead(typeof d.head === 'string' ? d.head : def?.head || ''),
       phaseSlugs: d.phaseSlugs || def?.phaseSlugs || [],
       phaseNames: d.phaseNames || def?.phaseNames || [],
     };
@@ -161,6 +170,9 @@ export function ensureStateDepartments(state) {
     state.departmentsVersion = DEPARTMENTS_VERSION;
   } else {
     state.departments = normalizeDepartments(state.departments);
+  }
+  if ((state.departmentsVersion || 0) < DEPARTMENTS_VERSION) {
+    state.departmentsVersion = DEPARTMENTS_VERSION;
   }
   return state;
 }

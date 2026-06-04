@@ -1458,7 +1458,7 @@ export default function App(){
         </div>
         <div className={`nact${navOpen?" open":""}`}>
           <div className="nact-grp">
-            <button type="button" className="btg" onClick={()=>setModal("deptHeads")} title="Edit Minal / Amit / Abhishek department heads">Departments</button>
+            <button type="button" className="btg" onClick={()=>setModal("deptHeads")} title="Edit department heads (Design, Acquisition, Execution)">Departments</button>
             <button type="button" className="btp-add" onClick={()=>setModal("addProj")}>+ Add project</button>
             <label className="file-lbl" title="Replace workspace from JSON backup">Import JSON<input type="file" accept=".json,application/json" onChange={e=>{if(e.target.files?.[0])importJSON(e.target.files[0]);e.target.value="";}}/></label>
             <label className="file-lbl" title={curProj?`Merge tasks into "${curProj.name}" (Project column must match). Wait until Mongo shows ✓ before importing.`:"Merge all projects from Excel dump/report. Wait until Mongo shows ✓ before importing."}>Import Excel<input type="file" accept=".xlsx,.xls" disabled={cloudStatus==="loading"} onChange={e=>{if(e.target.files?.[0])importExcel(e.target.files[0]);e.target.value="";}}/></label>
