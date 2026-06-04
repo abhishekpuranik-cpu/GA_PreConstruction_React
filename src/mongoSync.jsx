@@ -30,9 +30,18 @@ export function MongoSyncAdapter({ state, dispatch, toast, flushRef, onSyncStatu
   const versionRef = useRef({ v: 0 });
   const notifiedRemoteVersion = useRef(0);
   const scheduleSaveRef = useRef(null);
+  const userEditedRef = useRef(false);
+  const initialStateJsonRef = useRef(null);
 
   useLayoutEffect(() => {
     stateRef.current = state;
+    try {
+      const json = JSON.stringify(state);
+      if (initialStateJsonRef.current === null) initialStateJsonRef.current = json;
+      else if (json !== initialStateJsonRef.current) userEditedRef.current = true;
+    } catch {
+      userEditedRef.current = true;
+    }
   }, [state]);
 
   useEffect(() => {
@@ -55,9 +64,16 @@ export function MongoSyncAdapter({ state, dispatch, toast, flushRef, onSyncStatu
         const res = await mongoGetState(APP_ID);
         if (ac.signal.aborted) return;
         if (res.ok && res.data && typeof res.data === 'object' && !Array.isArray(res.data)) {
-          dispatch({ type: 'loadState', state: res.data });
+          if (!userEditedRef.current) {
+            dispatch({ type: 'loadState', state: res.data });
+            try {
+              initialStateJsonRef.current = JSON.stringify(res.data);
+            } catch {
+              /* ignore */
+            }
+          }
           versionRef.current.v = res.version || 0;
-          setCloudStatus('synced');
+          setCloudStatus(userEditedRef.current ? 'dirty' : 'synced');
         } else if (res.status === 404) {
           versionRef.current.v = 0;
           setCloudStatus('new');
@@ -79,6 +95,14 @@ export function MongoSyncAdapter({ state, dispatch, toast, flushRef, onSyncStatu
     return undefined;
   }, [syncReady]);
 
+  const sameState = (a, b) => {
+    try {
+      return JSON.stringify(a) === JSON.stringify(b);
+    } catch {
+      return false;
+    }
+  };
+
   const flushSave = async () => {
     if (!canUseMongoState()) {
       toast('Mongo sync unavailable (open from platform URL)', 'err');
@@ -94,6 +118,18 @@ export function MongoSyncAdapter({ state, dispatch, toast, flushRef, onSyncStatu
       return true;
     }
     if (res.status === 409) {
+      // Auto-recover benign conflicts caused by overlapping autosave/manual save.
+      try {
+        const latest = await mongoGetState(APP_ID);
+        if (latest.ok && latest.data && sameState(latest.data, snap)) {
+          versionRef.current.v = latest.version || versionRef.current.v;
+          setCloudStatus('synced');
+          toast('Saved (version synced)', 'ok');
+          return true;
+        }
+      } catch {
+        /* ignore and keep conflict flow */
+      }
       setCloudStatus('conflict');
       toast('Save conflict — reload to get team data', 'err');
       return false;

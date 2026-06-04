@@ -1,0 +1,2126 @@
+{
+  "version": 1,
+  "phases": [
+    {
+      "name": "Land Acquisition & Feasibility",
+      "slug": "land_acquisition_feasibility",
+      "tasks": [
+        {
+          "id": "land_acquisition_feasibility_001",
+          "name": "Identify potential land parcels",
+          "workArea": "Scouting",
+          "subPhase": "Land Scouting",
+          "brief": "Search for suitable land to buy or develop",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [],
+          "par": null,
+          "phaseGroup": "Land Scouting"
+        },
+        {
+          "id": "land_acquisition_feasibility_002",
+          "name": "Check permissible FSI/FAR and setbacks",
+          "workArea": "Planning Control",
+          "subPhase": "Feasibility of Land",
+          "brief": "Confirm allowable build area & setbacks",
+          "dur": 2,
+          "offsetFromKo": 3,
+          "pred": [
+            "land_acquisition_feasibility_001"
+          ],
+          "par": null,
+          "phaseGroup": "Feasibility of Land"
+        },
+        {
+          "id": "land_acquisition_feasibility_003",
+          "name": "Conduct contour & topographic survey",
+          "workArea": "Private/Govt demarcation",
+          "subPhase": "Feasibility of Land",
+          "brief": "Measure levels and contours",
+          "dur": 10,
+          "offsetFromKo": null,
+          "pred": [
+            "land_acquisition_feasibility_002"
+          ],
+          "par": null,
+          "phaseGroup": "Feasibility of Land"
+        },
+        {
+          "id": "land_acquisition_feasibility_004",
+          "name": "To check FAR comsumability",
+          "workArea": "Tentative Project/layout Planning",
+          "subPhase": "Feasibility of Land",
+          "brief": "With architect",
+          "dur": 10,
+          "offsetFromKo": null,
+          "pred": [
+            "land_acquisition_feasibility_003"
+          ],
+          "par": null,
+          "phaseGroup": "Feasibility of Land"
+        },
+        {
+          "id": "land_acquisition_feasibility_005",
+          "name": "Conduct market feasibility study",
+          "workArea": "Feasibility 1",
+          "subPhase": "Feasibility of Land",
+          "brief": "Assess demand, competition, pricing",
+          "dur": 2,
+          "offsetFromKo": null,
+          "pred": [
+            "land_acquisition_feasibility_004"
+          ],
+          "par": null,
+          "phaseGroup": "Feasibility of Land"
+        },
+        {
+          "id": "land_acquisition_feasibility_006",
+          "name": "Perform financial feasibility analysis",
+          "workArea": "Feasibility 2",
+          "subPhase": "Feasibility of Land",
+          "brief": "Project cash flows, IRR, sensitivity",
+          "dur": 2,
+          "offsetFromKo": null,
+          "pred": [
+            "land_acquisition_feasibility_005"
+          ],
+          "par": null,
+          "phaseGroup": "Feasibility of Land"
+        },
+        {
+          "id": "land_acquisition_feasibility_007",
+          "name": "Negotiate final consideration",
+          "workArea": "Deal 1",
+          "subPhase": "Term sheet/MoU",
+          "brief": "Finalize price and key terms",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "land_acquisition_feasibility_006"
+          ],
+          "par": null,
+          "phaseGroup": "Term sheet/MoU"
+        },
+        {
+          "id": "land_acquisition_feasibility_008",
+          "name": "Draft MoU / Term Sheet",
+          "workArea": "Deal 2",
+          "subPhase": "Term sheet/MoU",
+          "brief": "Prepare preliminary deal document",
+          "dur": 25,
+          "offsetFromKo": null,
+          "pred": [
+            "land_acquisition_feasibility_007"
+          ],
+          "par": null,
+          "phaseGroup": "Term sheet/MoU"
+        },
+        {
+          "id": "land_acquisition_feasibility_009",
+          "name": "Appoint lawyer",
+          "workArea": "Advocate",
+          "subPhase": "Term sheet/MoU",
+          "brief": "",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "land_acquisition_feasibility_008"
+          ],
+          "par": null,
+          "phaseGroup": "Term sheet/MoU"
+        },
+        {
+          "id": "land_acquisition_feasibility_010",
+          "name": "Appoint CA",
+          "workArea": "CA",
+          "subPhase": "Term sheet/MoU",
+          "brief": "",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "land_acquisition_feasibility_009"
+          ],
+          "par": null,
+          "phaseGroup": "Term sheet/MoU"
+        },
+        {
+          "id": "land_acquisition_feasibility_011",
+          "name": "Identify partners of SPV & make partnership/LLP deed",
+          "workArea": "SPV Formation",
+          "subPhase": "Term sheet/MoU",
+          "brief": "Based on fund/skill contribution",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "land_acquisition_feasibility_010"
+          ],
+          "par": null,
+          "phaseGroup": "Term sheet/MoU"
+        },
+        {
+          "id": "land_acquisition_feasibility_012",
+          "name": "Own/Investor",
+          "workArea": "Identify fund source",
+          "subPhase": "Fund raising for Land acquisition",
+          "brief": "",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "land_acquisition_feasibility_011"
+          ],
+          "par": null,
+          "phaseGroup": "Fund raising for Land acquisition"
+        },
+        {
+          "id": "land_acquisition_feasibility_013",
+          "name": "Identify the fund source & block it",
+          "workArea": "If own",
+          "subPhase": "Fund raising for Land acquisition",
+          "brief": "",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "land_acquisition_feasibility_012"
+          ],
+          "par": null,
+          "phaseGroup": "Fund raising for Land acquisition"
+        },
+        {
+          "id": "land_acquisition_feasibility_014",
+          "name": "Make investor pitch & start Investor scouting/pitching",
+          "workArea": "if investor",
+          "subPhase": "Fund raising for Land acquisition",
+          "brief": "",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "land_acquisition_feasibility_013"
+          ],
+          "par": null,
+          "phaseGroup": "Fund raising for Land acquisition"
+        },
+        {
+          "id": "land_acquisition_feasibility_015",
+          "name": "Site visit, term sheet, Partnership/reconstitution deed of SPV",
+          "workArea": "",
+          "subPhase": "Fund raising for Land acquisition",
+          "brief": "",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "land_acquisition_feasibility_014"
+          ],
+          "par": null,
+          "phaseGroup": "Fund raising for Land acquisition"
+        },
+        {
+          "id": "land_acquisition_feasibility_016",
+          "name": "Collect city survey records and extracts",
+          "workArea": "Technical 1",
+          "subPhase": "Legal/Tehcnical due diligence",
+          "brief": "Gather official survey documents",
+          "dur": 30,
+          "offsetFromKo": null,
+          "pred": [
+            "land_acquisition_feasibility_015"
+          ],
+          "par": null,
+          "phaseGroup": "Legal/Tehcnical due diligence"
+        },
+        {
+          "id": "land_acquisition_feasibility_017",
+          "name": "Apply for DP remark / zoning confirmation",
+          "workArea": "Technical 2",
+          "subPhase": "Legal/Tehcnical due diligence",
+          "brief": "Request official zoning use confirmation",
+          "dur": 30,
+          "offsetFromKo": null,
+          "pred": [
+            "land_acquisition_feasibility_016"
+          ],
+          "par": null,
+          "phaseGroup": "Legal/Tehcnical due diligence"
+        },
+        {
+          "id": "land_acquisition_feasibility_018",
+          "name": "Verify zoning compliance",
+          "workArea": "Technical 3",
+          "subPhase": "Legal/Tehcnical due diligence",
+          "brief": "Ensure proposed use matches zoning",
+          "dur": 30,
+          "offsetFromKo": null,
+          "pred": [
+            "land_acquisition_feasibility_017"
+          ],
+          "par": null,
+          "phaseGroup": "Legal/Tehcnical due diligence"
+        },
+        {
+          "id": "land_acquisition_feasibility_019",
+          "name": "Collect 7/12 extracts and property cards",
+          "workArea": "Legal Liaison 1",
+          "subPhase": "Legal/Tehcnical due diligence",
+          "brief": "Obtain official land ownership documents",
+          "dur": 30,
+          "offsetFromKo": null,
+          "pred": [
+            "land_acquisition_feasibility_018"
+          ],
+          "par": null,
+          "phaseGroup": "Legal/Tehcnical due diligence"
+        },
+        {
+          "id": "land_acquisition_feasibility_020",
+          "name": "Collect mutation entries from revenue office",
+          "workArea": "Legal Liaison 2",
+          "subPhase": "Legal/Tehcnical due diligence",
+          "brief": "Fetch latest entries from revenue dept.",
+          "dur": 30,
+          "offsetFromKo": null,
+          "pred": [
+            "land_acquisition_feasibility_019"
+          ],
+          "par": null,
+          "phaseGroup": "Legal/Tehcnical due diligence"
+        },
+        {
+          "id": "land_acquisition_feasibility_021",
+          "name": "Obtain demarcation from city survey office",
+          "workArea": "Legal Liaison 3",
+          "subPhase": "Legal/Tehcnical due diligence",
+          "brief": "Get plot limits demarcated by authorities",
+          "dur": 30,
+          "offsetFromKo": null,
+          "pred": [
+            "land_acquisition_feasibility_020"
+          ],
+          "par": null,
+          "phaseGroup": "Legal/Tehcnical due diligence"
+        },
+        {
+          "id": "land_acquisition_feasibility_022",
+          "name": "Obtain title certificate from advocate",
+          "workArea": "Legal 1",
+          "subPhase": "Legal/Tehcnical due diligence",
+          "brief": "Get legal opinion on clear ownership",
+          "dur": 8,
+          "offsetFromKo": null,
+          "pred": [
+            "land_acquisition_feasibility_021"
+          ],
+          "par": null,
+          "phaseGroup": "Legal/Tehcnical due diligence"
+        },
+        {
+          "id": "land_acquisition_feasibility_023",
+          "name": "Check encumbrances and liens",
+          "workArea": "Legal 2",
+          "subPhase": "Legal/Tehcnical due diligence",
+          "brief": "Ensure no mortgages/claims exist on land",
+          "dur": 8,
+          "offsetFromKo": null,
+          "pred": [
+            "land_acquisition_feasibility_022"
+          ],
+          "par": null,
+          "phaseGroup": "Legal/Tehcnical due diligence"
+        },
+        {
+          "id": "land_acquisition_feasibility_024",
+          "name": "In case if company takeover.",
+          "workArea": "Financial due diligence",
+          "subPhase": "Legal/Tehcnical due diligence",
+          "brief": "",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "land_acquisition_feasibility_023"
+          ],
+          "par": null,
+          "phaseGroup": "Legal/Tehcnical due diligence"
+        }
+      ]
+    },
+    {
+      "name": "Project Finnancial Working",
+      "slug": "project_finnancial_working",
+      "tasks": [
+        {
+          "id": "project_finnancial_working_025",
+          "name": "Conduct demand–supply analysis",
+          "workArea": "Market Study 1",
+          "subPhase": "Legal/Tehcnical due diligence",
+          "brief": "Analyze catchment demand vs. supply",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [],
+          "par": null,
+          "phaseGroup": "Legal/Tehcnical due diligence"
+        },
+        {
+          "id": "project_finnancial_working_026",
+          "name": "Benchmark competing projects",
+          "workArea": "Market Study 2",
+          "subPhase": "Legal/Tehcnical due diligence",
+          "brief": "Study competitors’ specs and pricing",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "project_finnancial_working_025"
+          ],
+          "par": null,
+          "phaseGroup": "Legal/Tehcnical due diligence"
+        },
+        {
+          "id": "project_finnancial_working_027",
+          "name": "Define project positioning & USP",
+          "workArea": "Product Development",
+          "subPhase": "Legal/Tehcnical due diligence",
+          "brief": "Decide value proposition & target segment",
+          "dur": 30,
+          "offsetFromKo": null,
+          "pred": [
+            "project_finnancial_working_026"
+          ],
+          "par": null,
+          "phaseGroup": "Legal/Tehcnical due diligence"
+        },
+        {
+          "id": "project_finnancial_working_028",
+          "name": "Define unit mix",
+          "workArea": "Unit Mix",
+          "subPhase": "Legal/Tehcnical due diligence",
+          "brief": "Choose unit sizes & typologies",
+          "dur": 30,
+          "offsetFromKo": null,
+          "pred": [
+            "project_finnancial_working_027"
+          ],
+          "par": null,
+          "phaseGroup": "Legal/Tehcnical due diligence"
+        },
+        {
+          "id": "project_finnancial_working_029",
+          "name": "List proposed amenities",
+          "workArea": "Amenities",
+          "subPhase": "Legal/Tehcnical due diligence",
+          "brief": "Select club, gym, pool, play areas",
+          "dur": 30,
+          "offsetFromKo": null,
+          "pred": [
+            "project_finnancial_working_028"
+          ],
+          "par": null,
+          "phaseGroup": "Legal/Tehcnical due diligence"
+        },
+        {
+          "id": "project_finnancial_working_030",
+          "name": "Compute parking requirements",
+          "workArea": "Parking",
+          "subPhase": "Legal/Tehcnical due diligence",
+          "brief": "Calculate parking per norms & market",
+          "dur": 30,
+          "offsetFromKo": null,
+          "pred": [
+            "project_finnancial_working_029"
+          ],
+          "par": null,
+          "phaseGroup": "Legal/Tehcnical due diligence"
+        },
+        {
+          "id": "project_finnancial_working_031",
+          "name": "Project feasibility check to evaluate the efficiency",
+          "workArea": "Project feasibility check",
+          "subPhase": "Legal/Tehcnical due diligence",
+          "brief": "Project feasibility check to evaluate the efficiency (Builtup Vs Saleable)",
+          "dur": 30,
+          "offsetFromKo": null,
+          "pred": [
+            "project_finnancial_working_030"
+          ],
+          "par": null,
+          "phaseGroup": "Legal/Tehcnical due diligence"
+        },
+        {
+          "id": "project_finnancial_working_032",
+          "name": "Prepare concept massing",
+          "workArea": "Massing",
+          "subPhase": "Legal/Tehcnical due diligence",
+          "brief": "Draft site/block massing + 3Ds",
+          "dur": 30,
+          "offsetFromKo": null,
+          "pred": [
+            "project_finnancial_working_031"
+          ],
+          "par": null,
+          "phaseGroup": "Legal/Tehcnical due diligence"
+        },
+        {
+          "id": "project_finnancial_working_033",
+          "name": "Prepare cost estimate",
+          "workArea": "Costing",
+          "subPhase": "Legal/Tehcnical due diligence",
+          "brief": "Estimate construction, soft costs, TDR, Sanction cost (accurate)",
+          "dur": 14,
+          "offsetFromKo": null,
+          "pred": [
+            "project_finnancial_working_032"
+          ],
+          "par": null,
+          "phaseGroup": "Legal/Tehcnical due diligence"
+        },
+        {
+          "id": "project_finnancial_working_034",
+          "name": "Define pricing strategy",
+          "workArea": "Revenue",
+          "subPhase": "Legal/Tehcnical due diligence",
+          "brief": "Set pricing bands & launch strategy",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "project_finnancial_working_033"
+          ],
+          "par": null,
+          "phaseGroup": "Legal/Tehcnical due diligence"
+        },
+        {
+          "id": "project_finnancial_working_035",
+          "name": "Draft inflow and outflow schedule",
+          "workArea": "Cashflow",
+          "subPhase": "Legal/Tehcnical due diligence",
+          "brief": "Plan cash in/out across timeline",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "project_finnancial_working_034"
+          ],
+          "par": null,
+          "phaseGroup": "Legal/Tehcnical due diligence"
+        },
+        {
+          "id": "project_finnancial_working_036",
+          "name": "Calculate project profitability for the SPV and GAPL",
+          "workArea": "Profitability/IRR",
+          "subPhase": "Legal/Tehcnical due diligence",
+          "brief": "",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "project_finnancial_working_035"
+          ],
+          "par": null,
+          "phaseGroup": "Legal/Tehcnical due diligence"
+        },
+        {
+          "id": "project_finnancial_working_037",
+          "name": "Obtain internal approval",
+          "workArea": "Sign-off",
+          "subPhase": "Legal/Tehcnical due diligence",
+          "brief": "Board sign‑off to proceed",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "project_finnancial_working_036"
+          ],
+          "par": null,
+          "phaseGroup": "Legal/Tehcnical due diligence"
+        }
+      ]
+    },
+    {
+      "name": "Registration",
+      "slug": "registration",
+      "tasks": [
+        {
+          "id": "registration_038",
+          "name": "Register agreement at sub‑registrar/Reconstitution deed",
+          "workArea": "Registration",
+          "subPhase": "Legal/Tehcnical due diligence",
+          "brief": "Complete legal registration formalities",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [],
+          "par": null,
+          "phaseGroup": "Legal/Tehcnical due diligence"
+        }
+      ]
+    },
+    {
+      "name": "Design & Approvals",
+      "slug": "design_approvals",
+      "tasks": [
+        {
+          "id": "design_approvals_039",
+          "name": "Evaluate best project planning via presentations",
+          "workArea": "Architect Shortlisting",
+          "subPhase": "Team Creation",
+          "brief": "Shortlist lead architect",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [],
+          "par": null,
+          "phaseGroup": "Team Creation"
+        },
+        {
+          "id": "design_approvals_040",
+          "name": "Appoint architect",
+          "workArea": "Team",
+          "subPhase": "Team Creation",
+          "brief": "Hire lead architect",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "design_approvals_039"
+          ],
+          "par": null,
+          "phaseGroup": "Team Creation"
+        },
+        {
+          "id": "design_approvals_041",
+          "name": "Appoint PMC (if applicable)",
+          "workArea": "Team",
+          "subPhase": "Team Creation",
+          "brief": "Hire project management consultant",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "design_approvals_040"
+          ],
+          "par": null,
+          "phaseGroup": "Team Creation"
+        },
+        {
+          "id": "design_approvals_042",
+          "name": "Appoint structural consultant",
+          "workArea": "Team",
+          "subPhase": "Team Creation",
+          "brief": "Hire structural engineer",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "design_approvals_041"
+          ],
+          "par": null,
+          "phaseGroup": "Team Creation"
+        },
+        {
+          "id": "design_approvals_043",
+          "name": "Appoint MEP consultant",
+          "workArea": "Team",
+          "subPhase": "Team Creation",
+          "brief": "Hire MEP engineering firm",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "design_approvals_042"
+          ],
+          "par": null,
+          "phaseGroup": "Team Creation"
+        },
+        {
+          "id": "design_approvals_044",
+          "name": "Appoint landscape consultant",
+          "workArea": "Team",
+          "subPhase": "Team Creation",
+          "brief": "Hire landscape designer",
+          "dur": 14,
+          "offsetFromKo": null,
+          "pred": [
+            "design_approvals_043"
+          ],
+          "par": null,
+          "phaseGroup": "Team Creation"
+        },
+        {
+          "id": "design_approvals_045",
+          "name": "Conduct soil investigation",
+          "workArea": "Studies",
+          "subPhase": "Initial Studies",
+          "brief": "Test soil bearing capacity & Get geotech recommendations",
+          "dur": 30,
+          "offsetFromKo": 2,
+          "pred": [
+            "design_approvals_044"
+          ],
+          "par": null,
+          "phaseGroup": "Initial Studies"
+        },
+        {
+          "id": "design_approvals_046",
+          "name": "Prepare master plan",
+          "workArea": "Design",
+          "subPhase": "Design",
+          "brief": "Create overall site layout",
+          "dur": 15,
+          "offsetFromKo": null,
+          "pred": [
+            "design_approvals_045"
+          ],
+          "par": null,
+          "phaseGroup": "Design"
+        },
+        {
+          "id": "design_approvals_047",
+          "name": "Prepare building layouts",
+          "workArea": "Design",
+          "subPhase": "Design",
+          "brief": "Draft block & floor plans",
+          "dur": 15,
+          "offsetFromKo": null,
+          "pred": [
+            "design_approvals_046"
+          ],
+          "par": null,
+          "phaseGroup": "Design"
+        },
+        {
+          "id": "design_approvals_048",
+          "name": "Develop structural system",
+          "workArea": "Design",
+          "subPhase": "Design",
+          "brief": "Select structural scheme",
+          "dur": 15,
+          "offsetFromKo": null,
+          "pred": [
+            "design_approvals_047"
+          ],
+          "par": null,
+          "phaseGroup": "Design"
+        },
+        {
+          "id": "design_approvals_049",
+          "name": "Freeze unit plans",
+          "workArea": "Design",
+          "subPhase": "Design",
+          "brief": "Finalize unit layouts",
+          "dur": 15,
+          "offsetFromKo": null,
+          "pred": [
+            "design_approvals_048"
+          ],
+          "par": null,
+          "phaseGroup": "Design"
+        },
+        {
+          "id": "design_approvals_050",
+          "name": "Design MEP schematics",
+          "workArea": "Design",
+          "subPhase": "Design",
+          "brief": "Create electrical, plumbing, HVAC schemes",
+          "dur": 8,
+          "offsetFromKo": null,
+          "pred": [
+            "design_approvals_049"
+          ],
+          "par": null,
+          "phaseGroup": "Design"
+        },
+        {
+          "id": "design_approvals_051",
+          "name": "Plan fire & life safety systems",
+          "workArea": "Design",
+          "subPhase": "Design",
+          "brief": "Plan exits, sprinklers, hydrants",
+          "dur": 8,
+          "offsetFromKo": null,
+          "pred": [
+            "design_approvals_050"
+          ],
+          "par": null,
+          "phaseGroup": "Design"
+        },
+        {
+          "id": "design_approvals_052",
+          "name": "Submit drawings to municipal authority",
+          "workArea": "Regulatory Approvals",
+          "subPhase": "Approvals",
+          "brief": "File drawings for sanction",
+          "dur": 7,
+          "offsetFromKo": 2,
+          "pred": [
+            "design_approvals_051"
+          ],
+          "par": null,
+          "phaseGroup": "Approvals"
+        },
+        {
+          "id": "design_approvals_053",
+          "name": "Obtain IOD",
+          "workArea": "Regulatory Approvals",
+          "subPhase": "Approvals",
+          "brief": "",
+          "dur": 15,
+          "offsetFromKo": 2,
+          "pred": [
+            "design_approvals_052"
+          ],
+          "par": null,
+          "phaseGroup": "Approvals"
+        },
+        {
+          "id": "design_approvals_054",
+          "name": "Obtain IOD fire NOC for EC",
+          "workArea": "Regulatory Approvals",
+          "subPhase": "Approvals",
+          "brief": "Secure fire department clearance",
+          "dur": 10,
+          "offsetFromKo": 2,
+          "pred": [
+            "design_approvals_053"
+          ],
+          "par": null,
+          "phaseGroup": "Approvals"
+        },
+        {
+          "id": "design_approvals_055",
+          "name": "Garden Noc",
+          "workArea": "Regulatory Approvals",
+          "subPhase": "Approvals",
+          "brief": "",
+          "dur": 15,
+          "offsetFromKo": 2,
+          "pred": [
+            "design_approvals_054"
+          ],
+          "par": null,
+          "phaseGroup": "Approvals"
+        },
+        {
+          "id": "design_approvals_056",
+          "name": "MSEB Noc",
+          "workArea": "Regulatory Approvals",
+          "subPhase": "Approvals",
+          "brief": "",
+          "dur": 30,
+          "offsetFromKo": null,
+          "pred": [
+            "design_approvals_055"
+          ],
+          "par": null,
+          "phaseGroup": "Approvals"
+        },
+        {
+          "id": "design_approvals_057",
+          "name": "Swatch noc for e waste",
+          "workArea": "Regulatory Approvals",
+          "subPhase": "Approvals",
+          "brief": "",
+          "dur": 5,
+          "offsetFromKo": 150,
+          "pred": [
+            "design_approvals_056"
+          ],
+          "par": null,
+          "phaseGroup": "Approvals"
+        },
+        {
+          "id": "design_approvals_058",
+          "name": "Obtain airport height clearance (if reqd)",
+          "workArea": "Regulatory Approvals",
+          "subPhase": "Approvals",
+          "brief": "Get AAI/NOC for height",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "design_approvals_057"
+          ],
+          "par": null,
+          "phaseGroup": "Approvals"
+        },
+        {
+          "id": "design_approvals_059",
+          "name": "Initiate environmental clearance (EC)",
+          "workArea": "Regulatory Approvals Preparation",
+          "subPhase": "Approvals",
+          "brief": "",
+          "dur": 45,
+          "offsetFromKo": null,
+          "pred": [
+            "design_approvals_058"
+          ],
+          "par": null,
+          "phaseGroup": "Approvals"
+        },
+        {
+          "id": "design_approvals_060",
+          "name": "Obtain environmental clearance (EC)",
+          "workArea": "Regulatory Approvals",
+          "subPhase": "Approvals",
+          "brief": "Obtain EC for threshold projects",
+          "dur": 90,
+          "offsetFromKo": null,
+          "pred": [
+            "design_approvals_059"
+          ],
+          "par": null,
+          "phaseGroup": "Approvals"
+        },
+        {
+          "id": "design_approvals_061",
+          "name": "Obtain MPCB Consent to Establish",
+          "workArea": "Regulatory Approvals",
+          "subPhase": "Approvals",
+          "brief": "Get pollution board consent",
+          "dur": 90,
+          "offsetFromKo": null,
+          "pred": [
+            "design_approvals_060"
+          ],
+          "par": null,
+          "phaseGroup": "Approvals"
+        },
+        {
+          "id": "design_approvals_062",
+          "name": "Obtain water supply NOC",
+          "workArea": "Regulatory Approvals",
+          "subPhase": "Approvals",
+          "brief": "Get municipal water NOC",
+          "dur": 10,
+          "offsetFromKo": null,
+          "pred": [
+            "design_approvals_061"
+          ],
+          "par": null,
+          "phaseGroup": "Approvals"
+        },
+        {
+          "id": "design_approvals_063",
+          "name": "Obtain sewer/storm water NOC",
+          "workArea": "Regulatory Approvals",
+          "subPhase": "Approvals",
+          "brief": "Get drainage connection NOC",
+          "dur": 8,
+          "offsetFromKo": 20,
+          "pred": [
+            "design_approvals_062"
+          ],
+          "par": null,
+          "phaseGroup": "Approvals"
+        },
+        {
+          "id": "design_approvals_064",
+          "name": "Obtain traffic/NH NOC (if applicable)",
+          "workArea": "Regulatory Approvals",
+          "subPhase": "Approvals",
+          "brief": "Clear access/egress with traffic dept.",
+          "dur": 10,
+          "offsetFromKo": 20,
+          "pred": [
+            "design_approvals_063"
+          ],
+          "par": null,
+          "phaseGroup": "Approvals"
+        },
+        {
+          "id": "design_approvals_065",
+          "name": "Obtain building plan sanction (EC applicable)",
+          "workArea": "Regulatory Approvals",
+          "subPhase": "Approvals",
+          "brief": "Receive building permission",
+          "dur": 60,
+          "offsetFromKo": null,
+          "pred": [
+            "design_approvals_064"
+          ],
+          "par": null,
+          "phaseGroup": "Approvals"
+        },
+        {
+          "id": "design_approvals_066",
+          "name": "Obtain building plan sanction (EC not applicable)",
+          "workArea": "Regulatory Approvals",
+          "subPhase": "Approvals",
+          "brief": "Receive building permission",
+          "dur": 60,
+          "offsetFromKo": null,
+          "pred": [
+            "design_approvals_065"
+          ],
+          "par": null,
+          "phaseGroup": "Approvals"
+        },
+        {
+          "id": "design_approvals_067",
+          "name": "Agreement and plot details where excavated material are dumped",
+          "workArea": "Regulatory Obligations/Requirements",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Either identify and engage the authorized vendor or get the agreement done with the plot owner",
+          "dur": 7,
+          "offsetFromKo": 20,
+          "pred": [
+            "design_approvals_066"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "design_approvals_068",
+          "name": "Geo tagging For trees",
+          "workArea": "Regulatory Obligations/Requirements",
+          "subPhase": "Regulatory Obligations",
+          "brief": "",
+          "dur": 15,
+          "offsetFromKo": null,
+          "pred": [
+            "design_approvals_067"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "design_approvals_069",
+          "name": "Plantation details and land location where remaining trees to be planted",
+          "workArea": "Regulatory Obligations/Requirements",
+          "subPhase": "Regulatory Obligations",
+          "brief": "",
+          "dur": 15,
+          "offsetFromKo": null,
+          "pred": [
+            "design_approvals_068"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "design_approvals_070",
+          "name": "Nearby Chamber locations and invert level",
+          "workArea": "Regulatory Obligations/Requirements",
+          "subPhase": "Regulatory Obligations",
+          "brief": "",
+          "dur": 2,
+          "offsetFromKo": null,
+          "pred": [
+            "design_approvals_069"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "design_approvals_071",
+          "name": "Contour need excavated quantities used for backfilling as well as which we are transferring outside of plot",
+          "workArea": "Regulatory Obligations/Requirements",
+          "subPhase": "Regulatory Obligations",
+          "brief": "",
+          "dur": 5,
+          "offsetFromKo": null,
+          "pred": [
+            "design_approvals_070"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "design_approvals_072",
+          "name": "Initiate RERA documentation",
+          "workArea": "Initiate RERA documentation",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Preparation",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "design_approvals_071"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "design_approvals_073",
+          "name": "Register project with RERA",
+          "workArea": "RERA Registration",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Complete RERA registration",
+          "dur": 60,
+          "offsetFromKo": null,
+          "pred": [
+            "design_approvals_072"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        }
+      ]
+    },
+    {
+      "name": "Financing & Pre-Construction",
+      "slug": "financing_pre_construction",
+      "tasks": [
+        {
+          "id": "financing_pre_construction_074",
+          "name": "Detailed Cashflow",
+          "workArea": "Finance",
+          "subPhase": "Regulatory Obligations",
+          "brief": "To evaluate",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "financing_pre_construction_075",
+          "name": "Finalize Sales-debt mix",
+          "workArea": "Finance",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Decide sales revenue vs Investor finance",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "financing_pre_construction_074"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "financing_pre_construction_076",
+          "name": "Obtain loan sanction",
+          "workArea": "Finance",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Get project loan approval",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "financing_pre_construction_075"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "financing_pre_construction_077",
+          "name": "Set up escrow/RERA accounts",
+          "workArea": "Finance",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Open and configure escrow",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "financing_pre_construction_076"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "financing_pre_construction_078",
+          "name": "Approve detailed budget",
+          "workArea": "Budget",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Approve WBS‑wise budget",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "financing_pre_construction_077"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "financing_pre_construction_079",
+          "name": "Obtain project insurance",
+          "workArea": "Insurance",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Cover CAR/workmen policies",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "financing_pre_construction_078"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "financing_pre_construction_080",
+          "name": "Issue civil works tender",
+          "workArea": "Tendering",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Invite bids from contractors",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "financing_pre_construction_079"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "financing_pre_construction_081",
+          "name": "Conduct pre‑bid meeting",
+          "workArea": "Tendering",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Clarify scope with bidders",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "financing_pre_construction_080"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "financing_pre_construction_082",
+          "name": "Evaluate bids & negotiate",
+          "workArea": "Tendering",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Compare tech/price; negotiate",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "financing_pre_construction_081"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "financing_pre_construction_083",
+          "name": "Sign contractor agreements",
+          "workArea": "Contracts",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Execute contracts & LOAs",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "financing_pre_construction_082"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "financing_pre_construction_084",
+          "name": "Release mobilization advance",
+          "workArea": "Mobilization",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Pay advance per contract",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "financing_pre_construction_083"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "financing_pre_construction_085",
+          "name": "Finalize the list of items and vendors including long-lead MEP items",
+          "workArea": "Procurement",
+          "subPhase": "Regulatory Obligations",
+          "brief": "",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "financing_pre_construction_084"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "financing_pre_construction_086",
+          "name": "Establish site office & labs",
+          "workArea": "Setup",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Set up admin/site QA labs",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "financing_pre_construction_085"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "financing_pre_construction_087",
+          "name": "Set up labour camp",
+          "workArea": "Setup",
+          "subPhase": "Regulatory Obligations",
+          "brief": "",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "financing_pre_construction_086"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "financing_pre_construction_088",
+          "name": "Ground Breaking / Bhumi Pujan",
+          "workArea": "Ceremony",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Ceremonial start of construction",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "financing_pre_construction_087"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        }
+      ]
+    },
+    {
+      "name": "Site Preparation",
+      "slug": "site_preparation",
+      "tasks": [
+        {
+          "id": "construction_execution_089",
+          "name": "Erect hoardings and barricades",
+          "workArea": "Site Prep",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Secure site perimeter",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [],
+          "par": null
+        },
+        {
+          "id": "construction_execution_090",
+          "name": "Set out grid & benchmarks",
+          "workArea": "Site Prep",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Mark building gridlines",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "construction_execution_089"
+          ],
+          "par": null
+        },
+        {
+          "id": "construction_execution_091",
+          "name": "Install temporary power",
+          "workArea": "Site Prep",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Set up construction power",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "construction_execution_090"
+          ],
+          "par": null
+        },
+        {
+          "id": "construction_execution_092",
+          "name": "Install temporary water",
+          "workArea": "Site Prep",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Set up construction water",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "construction_execution_091"
+          ],
+          "par": null
+        },
+        {
+          "id": "construction_execution_093",
+          "name": "Install Temporary Water Supply",
+          "workArea": "Site Prep",
+          "subPhase": "Regulatory Obligations",
+          "brief": "",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "construction_execution_092"
+          ],
+          "par": null
+        }
+      ]
+    },
+    {
+      "name": "Marketing & Sales",
+      "slug": "marketing_sales",
+      "tasks": [
+        {
+          "id": "marketing_sales_094",
+          "name": "Shortlist Marketing and creative agency",
+          "workArea": "Agency",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Shortlist and finalize marketing agency",
+          "dur": 7,
+          "offsetFromKo": 15,
+          "pred": [],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "marketing_sales_095",
+          "name": "Onboard agency & share requirements",
+          "workArea": "Kickoff",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Brief and share assets",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "marketing_sales_094"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "marketing_sales_096",
+          "name": "Finalize theme/brand positioning & Define brand identity",
+          "workArea": "Branding & Positioning",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Approve brand theme & story, Create name, logo, visual language",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "marketing_sales_095"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "marketing_sales_097",
+          "name": "Site Branding post plot aquisition",
+          "workArea": "Branding",
+          "subPhase": "Regulatory Obligations",
+          "brief": "",
+          "dur": 7,
+          "offsetFromKo": 15,
+          "pred": [
+            "marketing_sales_096"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "marketing_sales_098",
+          "name": "Finalize marketing plan",
+          "workArea": "Marketing Plan",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Finalize marketing plan (itemized and time bound)",
+          "dur": 7,
+          "offsetFromKo": 15,
+          "pred": [
+            "marketing_sales_097"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "marketing_sales_099",
+          "name": "Project setup on CRM",
+          "workArea": "Sales CRM",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Create project in CRM",
+          "dur": 7,
+          "offsetFromKo": 3,
+          "pred": [
+            "marketing_sales_098"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "marketing_sales_100",
+          "name": "Finalize marketing budget",
+          "workArea": "Budget",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Freeze media & creative budgets",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "marketing_sales_099"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "marketing_sales_101",
+          "name": "Design collaterals & website/social pages",
+          "workArea": "Design",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Design collaterals & website",
+          "dur": 7,
+          "offsetFromKo": 15,
+          "pred": [
+            "marketing_sales_100"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "marketing_sales_102",
+          "name": "Launch website & social pages",
+          "workArea": "Digital",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Publish website and social handles",
+          "dur": 7,
+          "offsetFromKo": 15,
+          "pred": [
+            "marketing_sales_101"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "marketing_sales_103",
+          "name": "Print brochures/hoardings/ different forms",
+          "workArea": "Collateral",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Produce all marketing collateral",
+          "dur": 7,
+          "offsetFromKo": 15,
+          "pred": [
+            "marketing_sales_102"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "marketing_sales_104",
+          "name": "Share site/office branding plan",
+          "workArea": "Branding",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Provide branding drawings to site",
+          "dur": 7,
+          "offsetFromKo": 15,
+          "pred": [
+            "marketing_sales_103"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "marketing_sales_105",
+          "name": "develop sales pitch and train executives",
+          "workArea": "Sales pitch",
+          "subPhase": "Regulatory Obligations",
+          "brief": "",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "marketing_sales_104"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "marketing_sales_106",
+          "name": "Start teaser/lead-gen campaign",
+          "workArea": "Soft-Launch",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Run digital to collect leads",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "marketing_sales_105"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "marketing_sales_107",
+          "name": "Execute launch campaign",
+          "workArea": "Launch",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Go live with full funnel marketing",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "marketing_sales_106"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "marketing_sales_108",
+          "name": "Manage CRM leads",
+          "workArea": "Leads",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Capture & qualify leads in CRM",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "marketing_sales_107"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "marketing_sales_109",
+          "name": "Booking",
+          "workArea": "Sales",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Convert prospects to bookings",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "marketing_sales_108"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        }
+      ]
+    },
+    {
+      "name": "Sales Office Setup",
+      "slug": "sales_office_setup",
+      "tasks": [
+        {
+          "id": "sales_office_setup_110",
+          "name": "Plan sales office requirements",
+          "workArea": "Requirement Planning",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Define size, rooms, IT, furniture",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "sales_office_setup_111",
+          "name": "Get drawings from architect/interior",
+          "workArea": "Architect Drawings",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Obtain layout & interior drawings",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "sales_office_setup_110"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "sales_office_setup_112",
+          "name": "Validate drawings",
+          "workArea": "Validation",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Check drawings meet requirements",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "sales_office_setup_111"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "sales_office_setup_113",
+          "name": "Shortlist contractors/vendors",
+          "workArea": "Vendor Shortlist",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Identify capable vendors",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "sales_office_setup_112"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "sales_office_setup_114",
+          "name": "Finalize contractors/vendors",
+          "workArea": "Vendor Finalization",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Award work orders",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "sales_office_setup_113"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "sales_office_setup_115",
+          "name": "Complete office construction & handover",
+          "workArea": "Completion",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Build-out and handover office",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "sales_office_setup_114"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        }
+      ]
+    },
+    {
+      "name": "Handover & Post-Sales",
+      "slug": "handover_post_sales",
+      "tasks": [
+        {
+          "id": "handover_post_sales_116",
+          "name": "Project setup on CRM",
+          "workArea": "Post Sales CRM",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Create project & inventory in CRM",
+          "dur": 7,
+          "offsetFromKo": 2,
+          "pred": [],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "handover_post_sales_117",
+          "name": "Initiate Project APF from various banks",
+          "workArea": "Finance",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Obtain APF from banks",
+          "dur": 7,
+          "offsetFromKo": 2,
+          "pred": [
+            "handover_post_sales_116"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "handover_post_sales_118",
+          "name": "Conclude bank loan tie-ups / connector codes",
+          "workArea": "Finance",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Set up tie-ups and codes",
+          "dur": 7,
+          "offsetFromKo": 45,
+          "pred": [
+            "handover_post_sales_117"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "handover_post_sales_119",
+          "name": "Seek booking approval from the director",
+          "workArea": "Booking approval",
+          "subPhase": "Regulatory Obligations",
+          "brief": "",
+          "dur": 7,
+          "offsetFromKo": 2,
+          "pred": [
+            "handover_post_sales_118"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "handover_post_sales_120",
+          "name": "Validate realization of the booking amount",
+          "workArea": "Booking amount realization",
+          "subPhase": "Regulatory Obligations",
+          "brief": "",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "handover_post_sales_119"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "handover_post_sales_121",
+          "name": "Welcome call to the customer",
+          "workArea": "Welcome Customer",
+          "subPhase": "Regulatory Obligations",
+          "brief": "",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "handover_post_sales_120"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "handover_post_sales_122",
+          "name": "Bank loan sanction (customer)",
+          "workArea": "Finance",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Coordinate buyer home loans",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "handover_post_sales_121"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "handover_post_sales_123",
+          "name": "Agreement draft / RERA consent letters",
+          "workArea": "Legal",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Prepare agreement & RERA letters",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "handover_post_sales_122"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "handover_post_sales_124",
+          "name": "Regular updates to customers",
+          "workArea": "Customer Comms",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Send construction/progress updates",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "handover_post_sales_123"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "handover_post_sales_125",
+          "name": "Timely collection as per milestones",
+          "workArea": "Collections",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Raise demands & collect payments",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "handover_post_sales_124"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "handover_post_sales_126",
+          "name": "Conduct final inspections",
+          "workArea": "Snagging",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Check units for defects",
+          "dur": 7,
+          "offsetFromKo": 1,
+          "pred": [
+            "handover_post_sales_125"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "handover_post_sales_127",
+          "name": "Rectify defects",
+          "workArea": "Snagging",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Close all snags",
+          "dur": 7,
+          "offsetFromKo": 1,
+          "pred": [
+            "handover_post_sales_126"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "handover_post_sales_128",
+          "name": "Final account clearance",
+          "workArea": "Finance",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Settle all dues and maintainance",
+          "dur": 7,
+          "offsetFromKo": 10,
+          "pred": [
+            "handover_post_sales_127"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "handover_post_sales_129",
+          "name": "Checklist for possession",
+          "workArea": "Checklist",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Call customer for the flat inpection",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "handover_post_sales_128"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "handover_post_sales_130",
+          "name": "Parking plan & allotment",
+          "workArea": "Possession",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Map and allot parking",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "handover_post_sales_129"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "handover_post_sales_131",
+          "name": "Possession deed & parking allotment drafts",
+          "workArea": "Possession",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Prepare possession documents",
+          "dur": 7,
+          "offsetFromKo": 15,
+          "pred": [
+            "handover_post_sales_130"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "handover_post_sales_132",
+          "name": "Possession handover (photos, ceremony)",
+          "workArea": "Possession",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Conduct formal handover ceremony",
+          "dur": 7,
+          "offsetFromKo": 15,
+          "pred": [
+            "handover_post_sales_131"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "handover_post_sales_133",
+          "name": "Apply for property tax assessment",
+          "workArea": "Regulatory Liaison",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Initiate property tax process",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "handover_post_sales_132"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "handover_post_sales_134",
+          "name": "Ensure unit-wise tax mutation",
+          "workArea": "Regulatory Liaison",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Complete mutation for each unit",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "handover_post_sales_133"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "handover_post_sales_135",
+          "name": "CHS agency",
+          "workArea": "Society",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Shortlist and finalize the CHS formation agency",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "handover_post_sales_134"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "handover_post_sales_136",
+          "name": "Initiate CHS formation",
+          "workArea": "Society",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Initiate documentation of the CHS formation",
+          "dur": 7,
+          "offsetFromKo": 15,
+          "pred": [
+            "handover_post_sales_135"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "handover_post_sales_137",
+          "name": "CHS formation",
+          "workArea": "Society",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Register cooperative housing society",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "handover_post_sales_136"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "handover_post_sales_138",
+          "name": "CHS account opening",
+          "workArea": "Society",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Open society bank account",
+          "dur": 7,
+          "offsetFromKo": 45,
+          "pred": [
+            "handover_post_sales_137"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "handover_post_sales_139",
+          "name": "Transfer maintenance collection in CHS account",
+          "workArea": "Society",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Transfer balance maintainance collection in the CHS account",
+          "dur": 7,
+          "offsetFromKo": 2,
+          "pred": [
+            "handover_post_sales_138"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "handover_post_sales_140",
+          "name": "Set up helpdesk / call center",
+          "workArea": "Support",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Provide post-possession support",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "handover_post_sales_139"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "handover_post_sales_141",
+          "name": "Manage defects liability period",
+          "workArea": "DLP",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Attend warranty complaints",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "handover_post_sales_140"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        }
+      ]
+    },
+    {
+      "name": "Closure & Exit",
+      "slug": "closure_exit",
+      "tasks": [
+        {
+          "id": "closure_exit_142",
+          "name": "Reconcile final project costs",
+          "workArea": "Finance",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Close cost reports & ledgers",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "closure_exit_143",
+          "name": "Close project loans",
+          "workArea": "Finance",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Repay and close loan accounts",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "closure_exit_142"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "closure_exit_144",
+          "name": "Distribute investor returns",
+          "workArea": "Investors",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Pay IRR/dividends as per terms",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "closure_exit_143"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "closure_exit_145",
+          "name": "Close RERA compliance & updates",
+          "workArea": "RERA",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Submit final updates/closure",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "closure_exit_144"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "closure_exit_146",
+          "name": "Conduct statutory & tax audit",
+          "workArea": "Audit",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Complete all audits and filings",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "closure_exit_145"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "closure_exit_147",
+          "name": "Archive contracts & approvals",
+          "workArea": "Legal",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Digitally archive documents",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "closure_exit_146"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "closure_exit_148",
+          "name": "Document lessons learned",
+          "workArea": "Lessons",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Record what to improve next time",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "closure_exit_147"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        },
+        {
+          "id": "closure_exit_149",
+          "name": "Handover O&M to FM team",
+          "workArea": "FM Transition",
+          "subPhase": "Regulatory Obligations",
+          "brief": "Transfer manuals, keys, spares",
+          "dur": 7,
+          "offsetFromKo": null,
+          "pred": [
+            "closure_exit_148"
+          ],
+          "par": null,
+          "phaseGroup": "Regulatory Obligations"
+        }
+      ]
+    }
+  ]
+}

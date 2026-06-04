@@ -1,6 +1,23 @@
-import React, { useState, useEffect, useRef, useCallback, useReducer } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useReducer, useMemo } from 'react';
 import { MongoSyncAdapter } from "./mongoSync.jsx";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { cDates, dbDays } from "./preconDates.js";
+import { downloadPreconExcel, collectAssignees, iterAllTasks } from "./preconExport.js";
+import { importExcelIntoState, parseJsonState } from "./preconImport.js";
+import {
+  buildLifecyclePhasesForProject,
+  mergeLifecycleIntoState,
+  applyKickoffOffsets,
+} from "./preconLifecycle.js";
+import {
+  taskStatus,
+  taskStatusSelectValue,
+  statusLabel,
+  statusBadgeClass,
+  todayDate,
+  todayIso,
+  TASK_STATUS_OPTIONS,
+} from "./preconTaskStatus.js";
 
 // ── TOKENS ────────────────────────────────────────────────
 const C = {
@@ -15,11 +32,11 @@ const C = {
   org:"#AE6418",orgbg:"#FDF3E8",orgbd:"#E8C490",
   gray:"#6A6560",graybg:"#F5F3EE",
 };
-const SCOL={completed:"#1A6A3C",inprogress:"#1B5E9E",overdue:"#B32E1E",upcoming:"#9A9590",blocked:"#AE6418"};
+const SCOL={completed:"#1A6A3C",inprogress:"#1B5E9E",overdue:"#B32E1E",upcoming:"#9A9590",notstarted:"#9A9590",paused:"#AE6418",blocked:"#AE6418"};
 const PCOL=["#1B5E9E","#6B3FA0","#B45309","#1A6A3C","#B32E1E","#2A6E7A","#7A3A2A","#8A5A2A"];
-const TODAY=new Date("2026-04-14");
+const TODAY=todayDate();
 const GS=new Date("2025-11-01");
-const GE=new Date("2026-10-31");
+const GE=new Date("2027-04-30");
 const GDAYS=Math.round((GE-GS)/864e5);
 const DPX=3.1;
 const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -30,7 +47,7 @@ const iso=d=>{const dt=new Date(d);return `${dt.getFullYear()}-${String(dt.getMo
 const fmt=d=>{if(!d)return"—";const dt=new Date(d);return `${dt.getDate()} ${MON[dt.getMonth()]} ${String(dt.getFullYear()).slice(2)}`;};
 const db=(a,b)=>Math.round((new Date(b)-new Date(a))/864e5);
 const now=()=>new Date().toLocaleString("en-IN",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"});
-const mkT=(id,nm,dur,pred=[],par=null,ex={})=>({id,name:nm,dur,pred,par,ms:null,who:"",comments:[],as:null,ae:null,...ex});
+const mkT=(id,nm,dur,pred=[],par=null,ex={})=>({id,name:nm,dur,pred,par,ms:null,who:"",comments:[],as:null,ae:null,status:"notstarted",...ex});
 const uid=()=>"t_"+Date.now()+"_"+Math.random().toString(36).slice(2,6);
 
 // ── PHASE TEMPLATES ──────────────────────────────────────
@@ -65,13 +82,53 @@ function mkPhasesFor(pid){
   return{so,cp};
 }
 
+/** Golden HQ — follow-up sheet before work start (31 May 2026). Target dates from client tracker. */
+function ghqPreWorkStartPhase(){
+  const note=(text)=>text?[{author:"Follow-up sheet",text}]:[];
+  const t=(id,name,ms,who,remark,dur=1,pred=[])=>mkT(id,name,dur,pred,null,{ms,who:who||"",comments:note(remark)});
+  return{
+    id:"pws",
+    name:"Pre-Work Start Follow-up (Before Site Works)",
+    col:"#7A3A2A",
+    open:true,
+    tasks:[
+      t("ws01","Demolition order","2026-06-02","Amit & Ashish","With sanction may receive; confirm if separate permission is required."),
+      t("ws02","Plan sanction","2026-06-15"),
+      t("ws03","MSEDCL franchise model review","2026-06-20","Amit & Minal"),
+      t("ws04","Shore pile vendor finalization","2026-06-24","","First step before excavation."),
+      t("ws05","On-site demolition completion","2026-06-30","","On-site demolition completion.",1,["ws01"]),
+      t("ws06","Royalty order (permissions & licences with GA)","2026-07-06","Amit & Minal","Contractor scope — retain all permissions and licences."),
+      t("ws07","Tree cutting permission (final order)","2026-07-15","Amit & Minal"),
+      t("ws08","Parking vendor — parking management","2026-07-16","Minal"),
+      t("ws09","Plantation contract with vendor","2026-07-20","Amit & Minal","7-year maintenance contract; six-monthly reports."),
+      t("ws10","Blasting permission","2026-07-25","Amit & Minal","Contractor scope — retain all permissions and licences."),
+      t("ws11","P.T. drawing costing (final quantities)","2026-07-30","Amar, Minal, Namdeo","Costing received; reconcile after drawing finalization."),
+      t("ws12","Transformer shifting","2026-08-10","Mahesh Bhusare","Permission valid till September; complete before blasting works."),
+      t("ws13","Construction meter sanction","2026-10-05","Ashish & Minal","After transformer shifting.",1,["ws12"]),
+      t("ws14","Dry-type transformer sanction","2027-03-15","Amit & Minal","Stand-by transformer required for dry-type approval."),
+    ],
+  };
+}
+
+function mergeGhqPreWorkPhase(state){
+  const s=typeof state==="object"&&state?JSON.parse(JSON.stringify(state)):state;
+  const ghq=(s.projects||[]).find(p=>p.id==="ghq");
+  if(!ghq||ghq.phases.some(ph=>ph.id==="pws")) return s;
+  const pws=JSON.parse(JSON.stringify(ghqPreWorkStartPhase()));
+  const idx=ghq.phases.findIndex(ph=>/sales office setup/i.test(ph.name||""));
+  if(idx>=0) ghq.phases.splice(idx,0,pws);
+  else ghq.phases.push(pws);
+  return s;
+}
+
 // ── INITIAL DATA ────────────────────────────────────────
 function buildInit(){
   const{so:ghqSO,cp:ghqCP}=mkPhasesFor("ghq");
+  const ghqPWS=ghqPreWorkStartPhase();
   const{so:nkwSO,cp:nkwCP}=mkPhasesFor("nkw");
   const{so:wgaSO,cp:wgaCP}=mkPhasesFor("wga");
   const{so:parSO,cp:parCP}=mkPhasesFor("par");
-  return{
+  const init={
     cloudUrl:"",
     projects:[
       {id:"ghq",name:"Golden HQ",loc:"PCMC, Pune",type:"Grade-A Commercial Tower",floors:33,status:"Pre-Construction",ko:"2025-11-11",col:"#1A304A",phases:[
@@ -115,6 +172,7 @@ function buildInit(){
           mkT("re15","Environmental Clearance (SEIAA)",90,["re14"]),mkT("re16","MPCB Consent to Establish",90,["re15"]),
           mkT("re17","Building Plan Sanction",60,["re15","re11","re12"]),mkT("re18","RERA Registration",60,["re17"]),
         ]},
+        ghqPWS,
         ghqSO, ghqCP,
       ]},
       {id:"nkw",name:"NKG Wakad",loc:"Wakad, Pune",type:"Residential",floors:14,status:"Pipeline",ko:"2026-06-01",col:"#1A5A30",phases:[
@@ -134,39 +192,18 @@ function buildInit(){
       ]},
     ]
   };
+  return mergeLifecycleIntoState(init).state;
 }
 
-// ── DATE ENGINE ──────────────────────────────────────────
-function cDates(proj){
-  const all=[];proj.phases.forEach(ph=>ph.tasks.forEach(t=>all.push(t)));
-  const map={};const ko=new Date(proj.ko);
-  for(const t of all){
-    let s;
-    if(t.ms) s=new Date(t.ms);
-    else if(t.par&&map[t.par]) s=new Date(map[t.par].s);
-    else if(t.pred?.length){
-      let mx=new Date(ko);
-      t.pred.forEach(p=>{if(map[p]){const e=new Date(map[p].e);if(e>mx)mx=e;}});
-      s=aD(mx,1);
-    }else s=new Date(ko);
-    map[t.id]={s:iso(s),e:iso(aD(s,Math.max(t.dur-1,0)))};
-  }
-  return map;
-}
-function gSt(t,dm){
-  if(t.ae)return"completed";if(t.as&&!t.ae)return"inprogress";
-  const d=dm[t.id];if(!d)return"upcoming";
-  if(new Date(d.e)<TODAY)return"overdue";
-  if(new Date(d.s)<=TODAY)return"inprogress";
-  return"upcoming";
-}
+const gSt=(t,dm)=>taskStatus(t,dm);
 function pStats(proj){
-  const dm=cDates(proj);let tot=0,comp=0,ip=0,ov=0,up=0;
+  const dm=cDates(proj);let tot=0,comp=0,ip=0,ov=0,up=0,paused=0;
   proj.phases.forEach(ph=>ph.tasks.forEach(t=>{
-    tot++;const st=gSt(t,dm);
-    if(st==="completed")comp++;else if(st==="inprogress")ip++;else if(st==="overdue")ov++;else up++;
+    tot++;const st=taskStatus(t,dm);
+    if(st==="completed")comp++;else if(st==="inprogress")ip++;else if(st==="overdue")ov++;
+    else if(st==="paused")paused++;else up++;
   }));
-  return{tot,comp,ip,ov,up,pct:tot?Math.round(comp/tot*100):0};
+  return{tot,comp,ip,ov,up,paused,pct:tot?Math.round(comp/tot*100):0};
 }
 
 // ── REGULATIONS DATA ─────────────────────────────────────
@@ -188,16 +225,23 @@ const STYLES=`
 *{box-sizing:border-box;margin:0;padding:0}
 body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .disp{font-family:'Cormorant Garamond',serif}
-.tnav{position:fixed;top:0;left:0;right:0;z-index:200;height:52px;background:#fff;border-bottom:1.5px solid #E2DDD4;display:flex;align-items:center;padding:0 18px;gap:0;box-shadow:0 1px 8px rgba(0,0,0,.05)}
+.tnav{position:fixed;top:0;left:0;right:0;z-index:200;min-height:52px;background:#fff;border-bottom:1.5px solid #E2DDD4;display:flex;align-items:center;flex-wrap:wrap;padding:8px 18px;gap:6px 0;box-shadow:0 1px 8px rgba(0,0,0,.05)}
+.main{margin-top:64px;padding:22px;max-width:1440px;margin-left:auto;margin-right:auto}
 .nlogo{width:30px;height:30px;background:#1A304A;color:#C89A3A;border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:15px;font-weight:700;flex-shrink:0}
-.ntabs{display:flex;align-items:center;gap:2px;flex:1;overflow-x:auto;scrollbar-width:none;padding:0 12px}
-.ntabs::-webkit-scrollbar{display:none}
-.ntab{padding:5px 13px;border-radius:5px;border:none;background:none;color:#55504A;font-size:12px;font-weight:500;white-space:nowrap;cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif}
-.ntab:hover{background:#F3F0EA;color:#1A1815}
-.ntab.act{background:#1A304A;color:#fff}
-.ntab.dash{color:#9A6E20}.ntab.dash.act{background:#FBF7EE;border:1px solid #E8D4A0;color:#9A6E20}
-.ntab.addp{color:#96918A;border:1px dashed #CEC8BB}
-.nact{display:flex;align-items:center;gap:5px;padding-left:12px;border-left:1.5px solid #E2DDD4;flex-shrink:0}
+.proj-sel-wrap{display:flex;align-items:center;gap:8px;flex:1;min-width:140px;padding:0 12px}
+.proj-sel-lbl{font-size:10px;font-weight:600;color:#96918A;text-transform:uppercase;letter-spacing:.4px;flex-shrink:0}
+.proj-sel{flex:1;min-width:0;max-width:min(360px,100%);padding:8px 36px 8px 12px;border:1.5px solid #E2DDD4;border-radius:6px;font-size:13px;font-weight:600;color:#1A304A;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2355504A' d='M2 4l4 4 4-4'/%3E%3C/svg%3E") no-repeat right 12px center;font-family:'DM Sans',sans-serif;cursor:pointer;appearance:none;-webkit-appearance:none}
+.proj-sel:focus{outline:none;border-color:#C89A3A;box-shadow:0 0 0 2px rgba(200,154,58,.25)}
+.proj-sel option{font-weight:500}
+.nact{display:flex;align-items:center;gap:6px;padding-left:12px;border-left:1.5px solid #E2DDD4;flex-shrink:0;flex-wrap:wrap;max-width:min(520px,42vw)}
+.nact-grp{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.nact-sep{width:1px;height:22px;background:#E2DDD4;flex-shrink:0}
+.btp-add{padding:6px 14px;background:#9A6E20;color:#fff;border:none;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap}
+.btp-add:hover{background:#7A5618}
+.file-lbl{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border:1px solid #E2DDD4;border-radius:5px;font-size:11px;font-weight:600;color:#55504A;background:#fff;cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif}
+.file-lbl:hover{border-color:#1A304A;color:#1A304A}
+.file-lbl input{display:none}
+.dash-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;margin-bottom:4px}
 .bti{width:28px;height:28px;border-radius:5px;border:1px solid #E2DDD4;background:#fff;color:#55504A;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer}
 .bti:hover{background:#F3F0EA;border-color:#CEC8BB}
 .btp{padding:5px 13px;background:#1A304A;color:#fff;border:none;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif}
@@ -207,7 +251,6 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .btd{padding:4px 11px;background:none;border:1px solid #EFBAB0;color:#B32E1E;border-radius:5px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif}
 .bts{padding:2px 8px;font-size:11px;border-radius:4px;border:1px solid #E2DDD4;background:#fff;color:#55504A;cursor:pointer;font-family:'DM Sans',sans-serif}
 .bts:hover{border-color:#1A304A;color:#1A304A}
-.main{margin-top:52px;padding:22px;max-width:1440px;margin-left:auto;margin-right:auto}
 .card{background:#fff;border:1px solid #E2DDD4;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06),0 4px 12px rgba(0,0,0,.04)}
 .badge{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;white-space:nowrap}
 .badge::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor}
@@ -215,6 +258,12 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .bip{background:#EEF4FC;color:#1B5E9E;border:1px solid #B5D0EF}
 .bov{background:#FCECEA;color:#B32E1E;border:1px solid #EFBAB0}
 .bup{background:#F5F3EE;color:#6A6560;border:1px solid #E2DDD4}
+.bpa{background:#FDF3E8;color:#AE6418;border:1px solid #E8C490}
+.fbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px;padding:8px 10px;background:#F3F0EA;border:1px solid #E2DDD4;border-radius:6px}
+.fbar label{font-size:10px;font-weight:600;color:#96918A;text-transform:uppercase;letter-spacing:.4px}
+.fbar select,.fbar .fbtn{padding:4px 8px;border:1px solid #E2DDD4;border-radius:4px;font-size:11px;background:#fff;font-family:'DM Sans',sans-serif}
+.fbtn{cursor:pointer;background:#fff;color:#55504A}
+.fbtn.on{background:#1A304A;color:#fff;border-color:#1A304A}
 .bbl{background:#FDF3E8;color:#AE6418;border:1px solid #E8C490}
 .kgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px}
 .kcard{background:#fff;border:1px solid #E2DDD4;border-radius:8px;padding:14px 16px;position:relative;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05)}
@@ -290,7 +339,130 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .codebox{background:#12131A;color:#E8D49A;padding:13px;border-radius:5px;font-family:monospace;font-size:10.5px;line-height:1.6;max-height:210px;overflow-y:auto;white-space:pre-wrap;word-break:break-all}
 .ppbar{height:3px;background:#E2DDD4;border-radius:2px;width:70px;overflow:hidden;display:inline-block;vertical-align:middle}
 .ppfill{height:100%;border-radius:2px}
+.tnav-brand{display:flex;align-items:center;gap:9px;flex-shrink:0}
+.tnav-row{display:contents}
+.tnav-menu-btn{display:none;align-items:center;justify-content:center;padding:8px 12px;border:1px solid #E2DDD4;border-radius:6px;background:#fff;color:#1A304A;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;margin-left:auto}
+.ttable-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -2px}
+.ttable-wrap .ttable{min-width:720px}
+.task-tip{flex:1;min-width:0}
+.stabs{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.stabs::-webkit-scrollbar{display:none}
+.pjhdr-stats{text-align:right;flex-shrink:0}
+@media (max-width:960px){
+  .kgrid{grid-template-columns:repeat(3,1fr)}
+  .pgrid{grid-template-columns:repeat(2,1fr)}
+  .nact{max-width:100%}
+}
+@media (max-width:768px){
+  .tnav{position:sticky;top:0;flex-direction:column;align-items:stretch;padding:10px 12px;gap:8px}
+  .tnav-row{display:flex;align-items:center;width:100%;gap:8px;min-width:0}
+  .tnav-brand{border-right:none;padding-right:0;margin-right:0;flex:1;min-width:0}
+  .tnav-menu-btn{display:inline-flex;flex-shrink:0}
+  .proj-sel-wrap{width:100%;padding:0}
+  .proj-sel{max-width:none;width:100%;min-height:44px;font-size:14px}
+  .nact{display:none;flex-direction:column;align-items:stretch;width:100%;padding:10px 0 4px;border-left:none;border-top:1.5px solid #E2DDD4;gap:10px}
+  .nact.open{display:flex}
+  .nact-grp{width:100%;justify-content:flex-start}
+  .nact-sep{display:none}
+  .file-lbl,.btg,.btp,.btp-add{min-height:44px;padding:10px 12px;font-size:13px}
+  .main{margin-top:0;padding:12px 10px calc(24px + env(safe-area-inset-bottom,0px))}
+  .kgrid{grid-template-columns:repeat(2,1fr);gap:8px}
+  .pgrid{grid-template-columns:1fr}
+  .dg2{grid-template-columns:1fr}
+  .fgrid{grid-template-columns:1fr}
+  .rgrid{grid-template-columns:1fr}
+  .pjhdr{flex-direction:column;align-items:stretch;padding:14px 16px;gap:14px}
+  .pjhdr-stats{text-align:left}
+  .pjhdr-stats .disp{font-size:32px}
+  .pjhdr-actions{justify-content:flex-start!important}
+  .stabs{margin-bottom:14px}
+  .stab{padding:10px 14px;font-size:13px;min-height:44px;white-space:nowrap}
+  .psh{flex-wrap:wrap;gap:8px;padding:12px}
+  .task-tip{display:none}
+  .tact{opacity:1}
+  .abt,.bts,.btg{min-height:40px;min-width:40px}
+  .di{width:100%;max-width:140px}
+  .ni{width:64px}
+  .gsplit{flex-direction:column;max-height:none}
+  .gnames{width:100%;max-height:min(220px,35vh);border-right:none;border-bottom:1.5px solid #E2DDD4}
+  .gchart{min-height:240px}
+  .mbox{width:calc(100vw - 20px);max-height:min(88vh,100dvh - 24px)}
+  .mbox.wide{width:calc(100vw - 20px)}
+  .tarea{bottom:max(12px,env(safe-area-inset-bottom,12px));right:12px;left:12px;align-items:stretch}
+  .toast{text-align:center}
+  .disp[style*="fontSize:30"]{font-size:24px!important}
+  .disp[style*="fontSize:24"]{font-size:20px!important}
+  .disp[style*="fontSize:40"]{font-size:32px!important}
+}
+@media (max-width:480px){
+  .kgrid{grid-template-columns:1fr}
+  .fbar{flex-direction:column;align-items:stretch}
+  .fbar select,.fbar .fbtn{width:100%}
+  .pcard{flex-direction:column;align-items:flex-start}
+  .pch,.psh{font-size:11px}
+  .ttable-wrap .ttable{min-width:640px}
+}
 `;
+
+function ActionFilters({ horizonDays, setHorizonDays, statusFilter, setStatusFilter, assigneeFilter, setAssigneeFilter, assignees, showHorizon = true, allowAllHorizon = false }) {
+  return (
+    <div className="fbar">
+      {showHorizon && (
+        <>
+          <label>Actions in</label>
+          {allowAllHorizon && (
+            <button type="button" className={`fbtn${horizonDays == null ? ' on' : ''}`} onClick={() => setHorizonDays(null)}>
+              All
+            </button>
+          )}
+          {[7, 15, 30].map((n) => (
+            <button key={n} type="button" className={`fbtn${horizonDays === n ? ' on' : ''}`} onClick={() => setHorizonDays(n)}>
+              {n} days
+            </button>
+          ))}
+        </>
+      )}
+      <label style={{ marginLeft: showHorizon ? 8 : 0 }}>Status</label>
+      <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+        <option value="">All</option>
+        {TASK_STATUS_OPTIONS.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+        <option value="overdue">Overdue</option>
+      </select>
+      <label>Assignee</label>
+      <select value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value)}>
+        <option value="">All</option>
+        {assignees.map((a) => (
+          <option key={a} value={a}>
+            {a}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function taskPassesFilters(t, dm, { statusFilter, assigneeFilter, horizonDays, todayStr }) {
+  if (assigneeFilter && String(t.who || '').trim() !== assigneeFilter) return false;
+  const st = taskStatus(t, dm);
+  if (statusFilter) {
+    if (statusFilter === 'overdue' ? st !== 'overdue' : st !== statusFilter) return false;
+  }
+  if (horizonDays != null && horizonDays > 0) {
+    const d = dm[t.id];
+    if (!d) return false;
+    if (st === 'completed') return false;
+    const dsStart = dbDays(todayStr, d.s);
+    const dsEnd = dbDays(todayStr, d.e);
+    const inWindow =
+      (dsStart >= 0 && dsStart <= horizonDays) || (dsEnd >= 0 && dsEnd <= horizonDays);
+    if (!inWindow) return false;
+  }
+  return true;
+}
 
 // ── TOAST HOOK ───────────────────────────────────────────
 function useToasts(){
@@ -440,6 +612,12 @@ function TasksView({proj,dispatch,toast}){
   const dm=cDates(proj);
   const[expandedC,setExpandedC]=useState({});
   const[expandedPh,setExpandedPh]=useState({});
+  const[horizonDays,setHorizonDays]=useState(null);
+  const[statusFilter,setStatusFilter]=useState("");
+  const[assigneeFilter,setAssigneeFilter]=useState("");
+  const assignees=useMemo(()=>collectAssignees([proj]),[proj]);
+  const todayStr=todayIso();
+  const filters={statusFilter,assigneeFilter,horizonDays,todayStr};
   const addComment=(phId,tId)=>{
     const txt=document.getElementById(`ct_${tId}`)?.value?.trim();
     const auth=document.getElementById(`cn_${tId}`)?.value?.trim()||"Anonymous";
@@ -451,20 +629,27 @@ function TasksView({proj,dispatch,toast}){
   };
   return(
     <div>
+      <ActionFilters horizonDays={horizonDays} setHorizonDays={setHorizonDays} statusFilter={statusFilter} setStatusFilter={setStatusFilter} assigneeFilter={assigneeFilter} setAssigneeFilter={setAssigneeFilter} assignees={assignees} allowAllHorizon/>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}}>
-        <span style={{fontSize:12,color:C.tx3}}>💡 Edit name inline · Change Start to cascade dates · Dur(days) auto-updates end</span>
+        <span className="task-tip" style={{fontSize:12,color:C.tx3}}>💡 Edit name inline · Status dropdown · Filters narrow visible rows</span>
         <div style={{display:"flex",gap:7}}>
           <button className="btg" onClick={()=>dispatch({type:"addPhase",projId:proj.id})}>+ Phase</button>
           <button className="btg" onClick={()=>{
-            const dm2=cDates(proj);let csv="Phase,Task,Start,End,Dur,Assignee,Status\n";
-            proj.phases.forEach(ph=>ph.tasks.forEach(t=>{const d=dm2[t.id]||{s:"",e:""};csv+=`"${ph.name}","${t.name}","${d.s}","${d.e}","${t.dur}","${t.who||""}","${gSt(t,dm2)}"\n`;}));
+            const dm2=cDates(proj);let csv="Phase,Task,Start,End,Dur,Assignee,Status,Comments\n";
+            proj.phases.forEach(ph=>ph.tasks.forEach(t=>{
+              if(!taskPassesFilters(t,dm2,filters))return;
+              const d=dm2[t.id]||{s:"",e:""};
+              const cm=(t.comments||[]).map(c=>`${c.author}: ${c.text}`).join(" | ");
+              csv+=`"${ph.name}","${t.name}","${d.s}","${d.e}","${t.dur}","${t.who||""}","${statusLabel(taskStatus(t,dm2))}","${cm.replace(/"/g,'""')}"\n`;
+            }));
             const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download=proj.name.replace(/\s+/g,"_")+"_Schedule.csv";a.click();toast("CSV exported","ok");
           }}>Export CSV</button>
         </div>
       </div>
       {proj.phases.map((ph,pi)=>{
-        const comp=ph.tasks.filter(t=>gSt(t,dm)==="completed").length;
-        const pct=ph.tasks.length?Math.round(comp/ph.tasks.length*100):0;
+        const visible=ph.tasks.filter(t=>taskPassesFilters(t,dm,filters));
+        const comp=visible.filter(t=>taskStatus(t,dm)==="completed").length;
+        const pct=visible.length?Math.round(comp/visible.length*100):0;
         const isOpen=expandedPh[ph.id]!==false;
         return(
           <div key={ph.id} className="ps">
@@ -472,7 +657,7 @@ function TasksView({proj,dispatch,toast}){
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 <div style={{width:9,height:9,borderRadius:"50%",background:ph.col,flexShrink:0}}/>
                 <span style={{fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:".5px",color:ph.col}}>{ph.name}</span>
-                <span style={{fontSize:11,color:C.tx3}}>{ph.tasks.length} tasks</span>
+                <span style={{fontSize:11,color:C.tx3}}>{visible.length}{visible.length!==ph.tasks.length?` / ${ph.tasks.length}`:""} tasks</span>
                 <div className="ppbar"><div className="ppfill" style={{width:`${pct}%`,background:ph.col}}/></div>
                 <span style={{fontSize:11,color:C.tx3}}>{pct}%</span>
               </div>
@@ -481,15 +666,15 @@ function TasksView({proj,dispatch,toast}){
                 <button className="bts" onClick={()=>{if(confirm(`Delete phase "${ph.name}"?`))dispatch({type:"delPhase",projId:proj.id,phId:ph.id});}}>✕</button>
               </div>
             </div>
-            {isOpen&&<table className="ttable">
+            {isOpen&&<div className="ttable-wrap"><table className="ttable">
               <thead><tr>
                 <th style={{width:26}}>#</th><th>Task</th><th>Start ✏️</th><th>Dur</th><th>End</th>
                 <th>Assignee</th><th>Status</th><th>Log</th><th>Actions</th>
               </tr></thead>
               <tbody>
-                {ph.tasks.map((t,ti)=>{
-                  const d=dm[t.id]||{s:"",e:""};const st=gSt(t,dm);const od=st==="overdue"?db(d.e,"2026-04-14"):0;
-                  const sc=st.slice(0,2);const cc=t.comments.length;
+                {visible.map((t,ti)=>{
+                  const d=dm[t.id]||{s:"",e:""};const st=taskStatus(t,dm);const od=st==="overdue"?dbDays(d.e,todayStr):0;
+                  const cc=t.comments.length;
                   const showC=expandedC[t.id];
                   return(
                     <React.Fragment key={t.id}>
@@ -505,7 +690,14 @@ function TasksView({proj,dispatch,toast}){
                         <td><input type="number" className="ni" defaultValue={t.dur} min={1} max={999} onChange={e=>dispatch({type:"updTask",projId:proj.id,phId:ph.id,tId:t.id,f:"dur",v:parseInt(e.target.value)||1})}/></td>
                         <td style={{color:C.tx2,fontSize:12,whiteSpace:"nowrap"}}>{fmt(d.e)}</td>
                         <td><input type="text" className="ti" defaultValue={t.who||""} placeholder="Assignee" style={{width:118}} onBlur={e=>dispatch({type:"updTask",projId:proj.id,phId:ph.id,tId:t.id,f:"who",v:e.target.value})}/></td>
-                        <td><span className={`badge b${sc}`}>{st}{od>0&&` +${od}d`}</span></td>
+                        <td>
+                          <select className="bts" style={{minWidth:118,fontWeight:600,color:SCOL[st]||C.gray}}
+                            value={taskStatusSelectValue(t)}
+                            onChange={e=>dispatch({type:"setTaskStatus",projId:proj.id,phId:ph.id,tId:t.id,v:e.target.value})}>
+                            {TASK_STATUS_OPTIONS.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}
+                          </select>
+                          {st==="overdue"&&<span className="badge bov" style={{marginLeft:4}}>+{od}d</span>}
+                        </td>
                         <td><button className="bts" onClick={()=>setExpandedC(p=>({...p,[t.id]:!p[t.id]}))}>💬{cc||""}</button></td>
                         <td><div className="tact">
                           <button className="abt" title="Done" onClick={()=>{dispatch({type:"markDone",projId:proj.id,phId:ph.id,tId:t.id});toast("Marked complete","ok");}}>✓</button>
@@ -538,7 +730,7 @@ function TasksView({proj,dispatch,toast}){
                   );
                 })}
               </tbody>
-            </table>}
+            </table></div>}
           </div>
         );
       })}
@@ -566,31 +758,47 @@ function ProjectFormFields({form,setForm}){
   );
 }
 
-function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onEditProject,onDeleteProject}){
+function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onEditProject,onDeleteProject,onAddProject,onImportJson,onImportExcel}){
+  const[horizonDays,setHorizonDays]=useState(30);
+  const[statusFilter,setStatusFilter]=useState("");
+  const[assigneeFilter,setAssigneeFilter]=useState("");
+  const assignees=useMemo(()=>collectAssignees(projects),[projects]);
+  const todayStr=todayIso();
+  const filters={statusFilter,assigneeFilter,horizonDays,todayStr};
   const allStats=projects.map(p=>({p,s:pStats(p)}));
   const tT=allStats.reduce((a,x)=>a+x.s.tot,0),tC=allStats.reduce((a,x)=>a+x.s.comp,0),
         tO=allStats.reduce((a,x)=>a+x.s.ov,0),tI=allStats.reduce((a,x)=>a+x.s.ip,0);
   const op=tT?Math.round(tC/tT*100):0;
-  const statusData=[{name:"Completed",v:tC,c:"#1A6A3C"},{name:"In Progress",v:tI,c:"#1B5E9E"},{name:"Overdue",v:tO,c:"#B32E1E"},{name:"Upcoming",v:allStats.reduce((a,x)=>a+x.s.up,0),c:"#9A9590"}];
+  const statusData=[{name:"Completed",v:tC,c:"#1A6A3C"},{name:"In Progress",v:tI,c:"#1B5E9E"},{name:"Overdue",v:tO,c:"#B32E1E"},{name:"Not Started",v:allStats.reduce((a,x)=>a+x.s.up,0),c:"#9A9590"}];
   const ghq=projects.find(p=>p.id==="ghq");
-  const phaseData=ghq?ghq.phases.map(ph=>{const dm=cDates(ghq);const c=ph.tasks.filter(t=>gSt(t,dm)==="completed").length;return{name:ph.name.substring(0,12),pct:ph.tasks.length?Math.round(c/ph.tasks.length*100):0,col:ph.col};}):[];
-  const up30=[],iss=[];
+  const phaseData=ghq?ghq.phases.map(ph=>{const dm=cDates(ghq);const c=ph.tasks.filter(t=>taskStatus(t,dm)==="completed").length;return{name:ph.name.substring(0,12),pct:ph.tasks.length?Math.round(c/ph.tasks.length*100):0,col:ph.col};}):[];
+  const upcoming=[],iss=[];
   projects.forEach(proj=>{
     const dm=cDates(proj);
     proj.phases.forEach(ph=>ph.tasks.forEach(t=>{
-      const d=dm[t.id];if(!d)return;const st=gSt(t,dm);
-      if(st==="overdue")iss.push({proj,ph,t,d,dy:db(d.e,"2026-04-14")});
-      if((st==="upcoming"||st==="inprogress")&&db("2026-04-14",d.s)>=0&&db("2026-04-14",d.s)<=30)
-        up30.push({proj,t,d,ds:db("2026-04-14",d.s),st});
+      const d=dm[t.id];if(!d)return;const st=taskStatus(t,dm);
+      if(st==="overdue")iss.push({proj,ph,t,d,dy:dbDays(d.e,todayStr)});
+      const isAction=st==="inprogress"||st==="notstarted"||st==="upcoming"||st==="paused";
+      if(isAction&&taskPassesFilters(t,dm,filters)){
+        const dsStart=dbDays(todayStr,d.s);
+        const dsEnd=dbDays(todayStr,d.e);
+        const ds=Math.min(dsStart>=0?dsStart:999,dsEnd>=0?dsEnd:999);
+        upcoming.push({proj,ph,t,d,ds,st});
+      }
       t.comments.forEach(c=>{if(c.flag)iss.push({proj,ph,t,d,com:c});});
     }));
   });
-  up30.sort((a,b)=>a.ds-b.ds);
+  upcoming.sort((a,b)=>a.ds-b.ds);
   return(
     <div>
       <div style={{marginBottom:20}}>
         <h1 className="disp" style={{fontSize:30,fontWeight:600,color:C.navy,lineHeight:1.1}}>Pre-Construction Command Centre</h1>
-        <p style={{color:C.tx2,fontSize:13,marginTop:4}}>Golden Abodes · {projects.length} Projects · {fmt("2026-04-14")}</p>
+        <p style={{color:C.tx2,fontSize:13,marginTop:4}}>Golden Abodes · {projects.length} Projects · {fmt(todayStr)}</p>
+        <div className="dash-actions">
+          {onAddProject?<button type="button" className="btp-add" onClick={onAddProject}>+ Add project</button>:null}
+          {onImportJson?<label className="file-lbl">Import JSON<input type="file" accept=".json,application/json" onChange={e=>{const f=e.target.files?.[0];if(f)onImportJson(f);e.target.value="";}}/></label>:null}
+          {onImportExcel?<label className="file-lbl">Import Excel<input type="file" accept=".xlsx,.xls" onChange={e=>{const f=e.target.files?.[0];if(f)onImportExcel(f);e.target.value="";}}/></label>:null}
+        </div>
       </div>
       <div className="kgrid">
         {[{l:"Total Tasks",v:tT,c:C.navy},{l:"Completed",v:tC,c:C.green,sub:`${op}% overall`},{l:"In Progress",v:tI,c:C.blue},{l:"Overdue",v:tO,c:C.red,sub:tO>0?"Needs attention":"All on track"},{l:"Projects",v:projects.length,c:C.gold}].map((k,i)=>(
@@ -605,7 +813,7 @@ function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onEditProj
         {allStats.map(({p,s})=>{
           const r=34,circ=2*Math.PI*r,off=circ*(1-s.pct/100);
           const dm=cDates(p);let nxt=null;
-          for(const ph of p.phases)for(const t of ph.tasks){const st=gSt(t,dm);if(st==="inprogress"||st==="upcoming"){nxt=t;break;}if(nxt)break;}
+          for(const ph of p.phases)for(const t of ph.tasks){const st=taskStatus(t,dm);if(st==="inprogress"||st==="notstarted"){nxt=t;break;}if(nxt)break;}
           return(
             <div key={p.id} className="pcard" style={{cursor:onOpenProject?"pointer":"default"}} onClick={()=>onOpenProject&&onOpenProject(p.id)}>
               <svg width="64" height="64" viewBox="0 0 80 80" style={{flexShrink:0}}>
@@ -632,6 +840,7 @@ function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onEditProj
           );
         })}
       </div>
+      <ActionFilters horizonDays={horizonDays} setHorizonDays={setHorizonDays} statusFilter={statusFilter} setStatusFilter={setStatusFilter} assigneeFilter={assigneeFilter} setAssigneeFilter={setAssigneeFilter} assignees={assignees}/>
       <div className="dg2">
         <div className="card">
           <div style={{padding:"13px 18px",borderBottom:`1px solid ${C.bd}`}}><span className="disp" style={{fontSize:15,fontWeight:600,color:C.navy}}>Status Breakdown</span></div>
@@ -657,18 +866,18 @@ function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onEditProj
       </div>
       <div className="dg2">
         <div className="card">
-          <div style={{padding:"13px 18px",borderBottom:`1px solid ${C.bd}`}}><span className="disp" style={{fontSize:15,fontWeight:600,color:C.navy}}>Upcoming Actions <span style={{fontSize:12,fontWeight:400,color:C.tx3}}>(30 days)</span></span></div>
+          <div style={{padding:"13px 18px",borderBottom:`1px solid ${C.bd}`}}><span className="disp" style={{fontSize:15,fontWeight:600,color:C.navy}}>Upcoming Actions <span style={{fontSize:12,fontWeight:400,color:C.tx3}}>(next {horizonDays} days)</span></span></div>
           <div style={{padding:"0 18px",maxHeight:260,overflowY:"auto"}}>
-            {up30.length?up30.slice(0,10).map((x,i)=>(
-              <div key={i} style={{display:"flex",alignItems:"flex-start",gap:9,padding:"8px 0",borderBottom:i<up30.length-1?`1px solid ${C.bd}`:"none"}}>
-                <div style={{width:7,height:7,borderRadius:"50%",background:SCOL[x.st],marginTop:4,flexShrink:0}}/>
+            {upcoming.length?upcoming.slice(0,15).map((x,i)=>(
+              <div key={i} style={{display:"flex",alignItems:"flex-start",gap:9,padding:"8px 0",borderBottom:i<upcoming.length-1?`1px solid ${C.bd}`:"none"}}>
+                <div style={{width:7,height:7,borderRadius:"50%",background:SCOL[x.st]||C.gray,marginTop:4,flexShrink:0}}/>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:12,fontWeight:500}}>{x.t.name}</div>
-                  <div style={{fontSize:11,color:C.tx3,marginTop:1}}>{x.proj.name} · {x.ds===0?"Today":x.ds+"d away"} · Due {fmt(x.d.e)}</div>
+                  <div style={{fontSize:11,color:C.tx3,marginTop:1}}>{x.proj.name} · {x.t.who?`${x.t.who} · `:""}{x.ds<=0?"Today / due":`${x.ds}d to start`} · End {fmt(x.d.e)}</div>
                 </div>
-                <span className={`badge b${x.st.slice(0,2)}`} style={{flexShrink:0}}>{x.st}</span>
+                <span className={`badge ${statusBadgeClass(x.st)}`} style={{flexShrink:0}}>{statusLabel(x.st)}</span>
               </div>
-            )):<p style={{padding:"16px 0",color:C.tx3,fontSize:12}}>No upcoming tasks in next 30 days</p>}
+            )):<p style={{padding:"16px 0",color:C.tx3,fontSize:12}}>No actions match filters in the next {horizonDays} days</p>}
           </div>
         </div>
         <div className="card">
@@ -708,10 +917,23 @@ function reducer(state,action){
   const fph=(pid,phid)=>fp(pid)?.phases.find(ph=>ph.id===phid);
   const ft=(pid,phid,tid)=>fph(pid,phid)?.tasks.find(t=>t.id===tid);
   switch(action.type){
-    case"setKO":{const p=fp(action.pid);if(p)p.ko=action.v;break;}
+    case"setKO":{
+      const p=fp(action.pid);
+      if(p){p.ko=action.v;applyKickoffOffsets(p);}
+      break;
+    }
     case"updTask":{const t=ft(action.projId,action.phId,action.tId);if(t)t[action.f]=action.v;break;}
     case"setMS":{const t=ft(action.projId,action.phId,action.tId);if(t)t.ms=action.v;break;}
-    case"markDone":{const t=ft(action.projId,action.phId,action.tId);if(t){t.ae="2026-04-14";if(!t.as)t.as="2026-04-14";}break;}
+    case"setTaskStatus":{
+      const t=ft(action.projId,action.phId,action.tId);if(!t)break;
+      const td=todayIso();const v=action.v;
+      t.status=v;
+      if(v==="completed"){t.ae=td;if(!t.as)t.as=td;}
+      else if(v==="inprogress"){t.ae=null;if(!t.as)t.as=td;}
+      else{t.ae=null;t.as=null;}
+      break;
+    }
+    case"markDone":{const t=ft(action.projId,action.phId,action.tId);if(t){const td=todayIso();t.status="completed";t.ae=td;if(!t.as)t.as=td;}break;}
     case"delTask":{const ph=fph(action.projId,action.phId);if(ph)ph.tasks=ph.tasks.filter(t=>t.id!==action.tId);break;}
     case"addTask":{
       const ph=fph(action.projId,action.phId);if(!ph)break;
@@ -740,7 +962,22 @@ function reducer(state,action){
       break;
     }
     case"setCloudUrl":S.cloudUrl=action.v;break;
-    case"loadState":return action.state;
+    case"loadState":{
+      const s=mergeGhqPreWorkPhase(action.state);
+      const{state:merged,totalAdded}=mergeLifecycleIntoState(s);
+      (merged.projects||[]).forEach(proj=>{
+        (proj.phases||[]).forEach(ph=>{
+          (ph.tasks||[]).forEach(t=>{
+            if(!t.status){
+              if(t.ae)t.status="completed";
+              else if(t.as)t.status="inprogress";
+              else t.status="notstarted";
+            }
+          });
+        });
+      });
+      return merged;
+    }
     default:break;
   }
   return S;
@@ -773,11 +1010,13 @@ export default function App(){
   const[subTab,setSubTab]=useState({});
   const[regStatus,setRegStatus]=useState({});
   const[modal,setModal]=useState(null);
+  const[navOpen,setNavOpen]=useState(false);
   const[editProjId,setEditProjId]=useState(null);
   const[cloudStatus,setCloudStatus]=useState("loading");
   const mongoFlushRef=useRef(null);
   const{toasts,toast}=useToasts();
   const curProj=state.projects.find(p=>p.id===curView);
+  const viewSelectValue=curView==="dashboard"||!state.projects.some(p=>p.id===curView)?"dashboard":curView;
 
   // inject styles
   useEffect(()=>{
@@ -794,7 +1033,34 @@ export default function App(){
     const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="GA_PreConstruction_"+iso(new Date())+".json";a.click();toast("JSON exported","ok");
   };
   const importJSON=(file)=>{
-    const r=new FileReader();r.onload=e=>{try{const d=JSON.parse(e.target.result);dispatch({type:"loadState",state:d});toast("Imported","ok");}catch{toast("Invalid JSON","err");}};r.readAsText(file);
+    const r=new FileReader();
+    r.onload=e=>{
+      try{
+        const d=parseJsonState(e.target.result);
+        dispatch({type:"loadState",state:d});
+        toast("Workspace imported from JSON","ok");
+      }catch(err){toast(err?.message||"Invalid JSON","err");}
+    };
+    r.readAsText(file);
+  };
+  const importExcel=(file)=>{
+    if(cloudStatus==="loading"){
+      toast("Wait for Mongo sync to finish, then import again","err");
+      return;
+    }
+    const scope=curProj?{scopeProjectId:curProj.id,scopeProjectName:curProj.name}:null;
+    const r=new FileReader();
+    r.onload=e=>{
+      try{
+        const{state:imported,summary}=importExcelIntoState(state,e.target.result,scope||{});
+        dispatch({type:"loadState",state:imported});
+        const scopeNote=summary.scopeProject?` into ${summary.scopeProject}`:"";
+        const skipNote=summary.rowsSkipped?`, ${summary.rowsSkipped} rows for other projects skipped`:"";
+        toast(`Excel imported${scopeNote}: ${summary.tasksUpdated} updated, ${summary.tasksAdded} new${skipNote}`,"ok");
+        void mongoFlushRef.current?.();
+      }catch(err){toast(err?.message||"Excel import failed","err");}
+    };
+    r.readAsArrayBuffer(file);
   };
 
   const[newProj,setNewProj]=useState(emptyProjForm);
@@ -817,29 +1083,52 @@ export default function App(){
     <div style={{minHeight:"100vh",background:C.bg}}>
       <MongoSyncAdapter state={state} dispatch={dispatch} toast={toast} flushRef={mongoFlushRef} onSyncStatus={setCloudStatus}/>
       <nav className="tnav">
-        <div style={{display:"flex",alignItems:"center",gap:9,paddingRight:18,borderRight:`1.5px solid ${C.bd}`,marginRight:2,flexShrink:0}}>
-          <div className="nlogo">GA</div>
-          <div>
-            <div className="disp" style={{fontSize:14,fontWeight:600,color:C.navy}}>Command Centre</div>
-            <div style={{fontSize:10,color:C.tx3,letterSpacing:".5px",textTransform:"uppercase"}}>Pre-Construction</div>
+        <div className="tnav-row">
+          <div className="tnav-brand" style={{borderRight:`1.5px solid ${C.bd}`,paddingRight:12,marginRight:2}}>
+            <div className="nlogo">GA</div>
+            <div style={{minWidth:0}}>
+              <div className="disp" style={{fontSize:14,fontWeight:600,color:C.navy}}>Command Centre</div>
+              <div style={{fontSize:10,color:C.tx3,letterSpacing:".5px",textTransform:"uppercase"}}>Pre-Construction</div>
+            </div>
           </div>
+          <button type="button" className="tnav-menu-btn" aria-expanded={navOpen} onClick={()=>setNavOpen(o=>!o)}>
+            {navOpen?"Close":"Menu"}
+          </button>
         </div>
-        <div className="ntabs">
-          <button className={`ntab dash${curView==="dashboard"?" act":""}`} onClick={()=>sv("dashboard")}>📊 Dashboard</button>
-          {state.projects.map(p=><button key={p.id} className={`ntab${curView===p.id?" act":""}`} onClick={()=>sv(p.id)}>{p.name}</button>)}
-          <button className="ntab addp" onClick={()=>setModal("addProj")}>+ Project</button>
+        <div className="proj-sel-wrap">
+          <label className="proj-sel-lbl" htmlFor="ga-precon-view">Project</label>
+          <select
+            id="ga-precon-view"
+            className="proj-sel"
+            value={viewSelectValue}
+            onChange={e=>{sv(e.target.value);setNavOpen(false);}}
+            aria-label="Select dashboard or project"
+          >
+            <option value="dashboard">Dashboard — all projects</option>
+            {state.projects.map(p=><option key={p.id} value={p.id}>{p.name}{p.loc?` · ${p.loc}`:""}</option>)}
+          </select>
         </div>
-        <div className="nact">
-          <button className="bti" title="Export JSON" onClick={exportJSON}>⬇️</button>
-          <label className="bti" title="Import JSON" style={{cursor:"pointer"}}>⬆️<input type="file" accept=".json" style={{display:"none"}} onChange={e=>{if(e.target.files[0])importJSON(e.target.files[0]);e.target.value="";}}/></label>
-          <span style={{fontSize:10,color:C.tx3,padding:"0 6px"}} title="MongoDB sync">{CLOUD_LABELS[cloudStatus]||cloudStatus}</span>
-          <button className="btp" onClick={()=>{if(mongoFlushRef.current)mongoFlushRef.current();else toast("Cloud save unavailable","err");}}>💾 Save</button>
+        <div className={`nact${navOpen?" open":""}`}>
+          <div className="nact-grp">
+            <button type="button" className="btp-add" onClick={()=>setModal("addProj")}>+ Add project</button>
+            <label className="file-lbl" title="Replace workspace from JSON backup">Import JSON<input type="file" accept=".json,application/json" onChange={e=>{if(e.target.files?.[0])importJSON(e.target.files[0]);e.target.value="";}}/></label>
+            <label className="file-lbl" title={curProj?`Merge tasks into "${curProj.name}" (Project column must match). Wait until Mongo shows ✓ before importing.`:"Merge all projects from Excel dump/report. Wait until Mongo shows ✓ before importing."}>Import Excel<input type="file" accept=".xlsx,.xls" disabled={cloudStatus==="loading"} onChange={e=>{if(e.target.files?.[0])importExcel(e.target.files[0]);e.target.value="";}}/></label>
+          </div>
+          <span className="nact-sep" aria-hidden="true"/>
+          <div className="nact-grp">
+            <button type="button" className="btg" title="Excel — current stored fields" onClick={()=>{try{downloadPreconExcel(state,"snapshot");toast("Excel dump downloaded","ok");}catch{toast("Excel export failed","err");}}}>Export dump</button>
+            <button type="button" className="btg" title="Excel — computed dates, status, comments" onClick={()=>{try{downloadPreconExcel(state,"report");toast("Excel report downloaded","ok");}catch{toast("Excel export failed","err");}}}>Export report</button>
+            <button type="button" className="btg" title="Download full workspace JSON" onClick={exportJSON}>Export JSON</button>
+          </div>
+          <span className="nact-sep" aria-hidden="true"/>
+          <span style={{fontSize:10,color:C.tx3,padding:"0 4px",whiteSpace:"nowrap"}} title="MongoDB sync">{CLOUD_LABELS[cloudStatus]||cloudStatus}</span>
+          <button type="button" className="btp" onClick={()=>{if(mongoFlushRef.current)mongoFlushRef.current();else toast("Cloud save unavailable","err");}}>Save</button>
         </div>
       </nav>
 
       <main className="main">
         {curView==="dashboard"
-          ?<Dashboard projects={state.projects} cloudUrl={cloudUrl} setCloudUrl={setCloudUrl} toast={toast} onOpenProject={id=>setCurView(id)} onEditProject={openEditProject} onDeleteProject={confirmDeleteProject}/>
+          ?<Dashboard projects={state.projects} cloudUrl={cloudUrl} setCloudUrl={setCloudUrl} toast={toast} onOpenProject={id=>setCurView(id)} onEditProject={openEditProject} onDeleteProject={confirmDeleteProject} onAddProject={()=>setModal("addProj")} onImportJson={importJSON} onImportExcel={importExcel}/>
           :curProj?(()=>{
             const s=pStats(curProj);const sub=subTab[curProj.id]||"tasks";
             return(
@@ -858,14 +1147,14 @@ export default function App(){
                       <span style={{fontSize:11,color:C.tx3}}>↳ cascades to all auto-dates</span>
                     </div>
                   </div>
-                  <div style={{textAlign:"right",flexShrink:0}}>
+                  <div className="pjhdr-stats">
                     <div className="disp" style={{fontSize:40,fontWeight:600,color:C.navy,lineHeight:1}}>{s.pct}%</div>
                     <div style={{fontSize:11,color:C.tx3,textTransform:"uppercase",letterSpacing:".6px"}}>Complete</div>
-                    <div style={{display:"flex",gap:8,marginTop:6,fontSize:11,justifyContent:"flex-end"}}>
+                    <div className="pjhdr-actions" style={{display:"flex",gap:8,marginTop:6,fontSize:11,justifyContent:"flex-end"}}>
                       <span style={{color:C.green}}>✓{s.comp}</span><span style={{color:C.blue}}>{s.ip} active</span>
                       <span style={{color:C.red}}>{s.ov} late</span><span style={{color:C.gray}}>{s.up} upcoming</span>
                     </div>
-                    <div style={{display:"flex",gap:5,marginTop:9,justifyContent:"flex-end"}}>
+                    <div className="pjhdr-actions" style={{display:"flex",gap:5,marginTop:9,justifyContent:"flex-end",flexWrap:"wrap"}}>
                       <button className="bts" onClick={()=>setModal("addPhase_"+curProj.id)}>+ Phase</button>
                       <button className="bts" onClick={()=>openEditProject(curProj)}>Edit</button>
                       <button className="btd bts" onClick={()=>confirmDeleteProject(curProj)}>Delete</button>
@@ -893,9 +1182,14 @@ export default function App(){
           <button className="btp" onClick={()=>{
             if(!newProj.name.trim()){toast("Name required","err");return;}
             const pid="prj_"+Date.now();
-            const{so,cp}=mkPhasesFor(pid);
-            dispatch({type:"addProject",proj:{...newProj,id:pid,phases:[{id:"pl",name:"Land Acquisition",col:PCOL[0],open:true,tasks:[mkT(uid(),"Scouting",21,[],null)]},so,cp]}});
-            setModal(null);setNewProj(emptyProjForm());setCurView(pid);toast("Project created","ok");
+            const phases=buildLifecyclePhasesForProject(pid);
+            const{cp}=mkPhasesFor(pid);
+            phases.push(cp);
+            applyKickoffOffsets({...newProj,ko:newProj.ko,phases});
+            dispatch({type:"addProject",proj:{...newProj,id:pid,phases}});
+            const taskN=phases.reduce((s,ph)=>s+(ph.tasks?.length||0),0);
+            setModal(null);setNewProj(emptyProjForm());setCurView(pid);
+            toast(`Project created — ${taskN} activities scheduled from kickoff ${newProj.ko}`,"ok");
           }}>Create</button></>}>
         <ProjectFormFields form={newProj} setForm={setNewProj}/>
       </Modal>
