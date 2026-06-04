@@ -90,59 +90,76 @@ function WorkListRow({ item, person, dispatch, toast, onOpenProject, defaultExpa
 
   const chronologyLabel =
     sortSource === 'next_action'
-      ? 'Next action'
+      ? 'Next'
       : sortSource === 'planned_end'
-        ? 'Due (plan)'
+        ? 'Due'
         : sortSource === 'both'
-          ? 'Next action & due'
-          : 'Schedule';
+          ? 'Next & due'
+          : 'Date';
+
+  const showNextDate =
+    nextDate && (!sortDate || formatShortDate(nextDate) !== formatShortDate(sortDate));
+  const showDueDate =
+    dueDate && (!sortDate || formatShortDate(dueDate) !== formatShortDate(sortDate));
 
   return (
     <li className="mw-row" style={{ '--mw-accent': SCOL[st] || '#1A304A' }}>
-      <div className="mw-row-date">
-        <span className="mw-row-date-val">{formatShortDate(sortDate)}</span>
-        <span className="mw-row-date-lbl">{chronologyLabel}</span>
-        {overdueDays > 0 ? <span className="mw-row-late">+{overdueDays}d</span> : null}
-      </div>
-      <div className="mw-row-body">
-        <div className="mw-row-head">
-          <button type="button" className="mw-proj-link" onClick={() => onOpenProject(proj.id)}>
-            {proj.name}
-          </button>
-          <span className={`badge ${statusBadgeClass(st)}`}>{statusLabel(st)}</span>
+      <div className="mw-row-top">
+        <div className="mw-row-date" title={chronologyLabel}>
+          <span className="mw-row-date-val">{formatShortDate(sortDate)}</span>
+          <span className="mw-row-date-lbl">{chronologyLabel}</span>
+          {overdueDays > 0 ? <span className="mw-row-late">+{overdueDays}d</span> : null}
         </div>
-        <h3 className="mw-task-name">{task.name}</h3>
-        <div className="mw-row-meta">
-          <span className="mw-phase" style={{ borderColor: ph.col, color: ph.col }}>
-            {ph.name}
-          </span>
-          {dept ? <span className="mw-dept-tag">{dept.name}</span> : null}
-          {proj.loc ? <span className="mw-loc">{proj.loc}</span> : null}
-        </div>
-        <div className="mw-row-dates">
-          {nextDate ? (
-            <span>
-              <strong>Next action:</strong> {formatShortDate(nextDate)}
+        <div className="mw-row-body">
+          <div className="mw-row-line1">
+            <button type="button" className="mw-proj-link" onClick={() => onOpenProject(proj.id)}>
+              {proj.name}
+            </button>
+            <span className={`badge mw-row-badge ${statusBadgeClass(st)}`}>{statusLabel(st)}</span>
+            <span className="mw-task-name" title={task.name}>
+              {task.name}
             </span>
-          ) : null}
-          {dueDate ? (
-            <span>
-              <strong>Task due:</strong> {formatShortDate(dueDate)}
+          </div>
+          <div className="mw-row-line2">
+            <span className="mw-phase" style={{ borderColor: ph.col, color: ph.col }}>
+              {ph.name}
             </span>
+            {dept ? <span className="mw-dept-tag">{dept.name}</span> : null}
+            {proj.loc ? <span className="mw-loc">{proj.loc}</span> : null}
+            {showNextDate ? (
+              <span className="mw-row-extra">
+                Next {formatShortDate(nextDate)}
+              </span>
+            ) : null}
+            {showDueDate ? (
+              <span className="mw-row-extra">
+                Due {formatShortDate(dueDate)}
+              </span>
+            ) : null}
+          </div>
+          {nextAction?.nextAction || nextAction?.commentSnippet ? (
+            <p className="mw-row-preview" title={[nextAction?.nextAction, nextAction?.commentSnippet].filter(Boolean).join(' — ')}>
+              {nextAction?.nextAction ? (
+                <span>
+                  <strong>Next:</strong> {nextAction.nextAction}
+                </span>
+              ) : null}
+              {nextAction?.commentSnippet ? (
+                <span className="mw-row-preview-cmt">{nextAction.commentSnippet}</span>
+              ) : null}
+            </p>
           ) : null}
         </div>
-        {nextAction?.nextAction ? (
-          <p className="mw-row-na">
-            <strong>Action:</strong> {nextAction.nextAction}
-          </p>
-        ) : null}
-        {nextAction?.commentSnippet ? (
-          <p className="mw-row-snippet">{nextAction.commentSnippet}</p>
-        ) : null}
-        <button type="button" className="mw-expand-btn" onClick={() => setExpanded((e) => !e)}>
-          {expanded ? 'Hide editor' : 'Edit comment & next action'}
+        <button
+          type="button"
+          className="mw-expand-btn"
+          onClick={() => setExpanded((e) => !e)}
+          aria-expanded={expanded}
+        >
+          {expanded ? 'Hide' : 'Edit'}
         </button>
-        {expanded ? (
+      </div>
+      {expanded ? (
           <div className="mw-editor">
             <label className="mw-ed-lbl">
               Comment *
@@ -183,7 +200,6 @@ function WorkListRow({ item, person, dispatch, toast, onOpenProject, defaultExpa
             </div>
           </div>
         ) : null}
-      </div>
     </li>
   );
 }
