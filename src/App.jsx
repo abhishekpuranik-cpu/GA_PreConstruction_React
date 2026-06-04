@@ -881,6 +881,10 @@ function TasksView({proj,dispatch,toast,departments,loginUser}){
                             Posting as <strong style={{color:C.navy}}>{authorName||"…"}</strong>
                             {loginUser?.email?<span style={{color:C.tx3}}> · {loginUser.email}</span>:null}
                           </p>
+                          <label className="cform-field" htmlFor={`ct_${t.id}`}>
+                            <span className="cform-lbl">Comment *</span>
+                            <textarea id={`ct_${t.id}`} className="cform-textarea" placeholder="Progress update, issue, or decision…" rows={3}/>
+                          </label>
                           <label className="cform-field" htmlFor={`na_${t.id}`}>
                             <span className="cform-lbl">Next action *</span>
                             <input id={`na_${t.id}`} type="text" className="cform-inp" placeholder="What needs to happen next?" autoComplete="off"/>
@@ -888,10 +892,6 @@ function TasksView({proj,dispatch,toast,departments,loginUser}){
                           <label className="cform-field" htmlFor={`nad_${t.id}`}>
                             <span className="cform-lbl">Next action date *</span>
                             <input id={`nad_${t.id}`} type="date" className="cform-inp cform-inp-date" required/>
-                          </label>
-                          <label className="cform-field" htmlFor={`ct_${t.id}`}>
-                            <span className="cform-lbl">Comment *</span>
-                            <textarea id={`ct_${t.id}`} className="cform-textarea" placeholder="Progress update, issue, or decision…" rows={3}/>
                           </label>
                           <div className="cform-foot">
                             <button type="button" className="btp" onClick={()=>addComment(ph.id,t.id)}>Post comment</button>
