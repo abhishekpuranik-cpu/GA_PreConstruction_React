@@ -469,6 +469,11 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .nrp-no-email{font-size:9px;color:#AE6418}
 .nrp-loading,.nrp-err,.nrp-empty{font-size:11px;color:#96918A;margin:0}
 .nrp-err{color:#B32E1E}
+.nrp-auto-banner{font-size:11px;line-height:1.45;padding:8px 10px;background:#EEF4FC;border:1px solid #C5D9ED;border-radius:6px;color:#1A304A;margin-bottom:4px}
+.nrp-auto-banner strong{color:#1B5E9E}
+.nrp-auto-names{color:#55504A;font-weight:400}
+.nrp-auto-warn{background:#FDF3E8;border-color:#E8C490;color:#AE6418}
+.nrp-extras{margin-top:0}
 .task-files{margin:10px 0;padding:10px 12px;background:#fff;border:1px solid #E2DDD4;border-radius:8px}
 .task-files-head{margin-bottom:8px}
 .task-files-title{font-size:11px;font-weight:700;color:#1A304A;display:block}
@@ -1020,10 +1025,12 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                             </div>
                           ))}
                         </div>:<div style={{fontSize:12,color:C.tx3,fontStyle:"italic",marginBottom:10}}>No comments yet</div>}
-                        <TaskActivityFiles proj={proj} task={t} dispatch={dispatch} toast={toast}/>
+                        <TaskActivityFiles proj={proj} ph={ph} task={t} dispatch={dispatch} toast={toast} authorName={authorName}/>
                         <CommentForm
                           projectId={proj.id}
                           taskId={t.id}
+                          taskWho={t.who||""}
+                          departments={departments}
                           authorName={authorName}
                           authorEmail={loginUser?.email}
                           projectName={proj.name}

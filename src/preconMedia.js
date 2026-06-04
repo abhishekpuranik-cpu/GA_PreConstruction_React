@@ -17,9 +17,13 @@ export function formatFileSize(bytes) {
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export async function fetchNotifyRecipients(projectId) {
-  const q = projectId ? `?projectId=${encodeURIComponent(projectId)}` : '';
-  const res = await fetch(`/api/preconstruction/notify-recipients${q}`, {
+export async function fetchNotifyRecipients(projectId, { phaseName, taskWho } = {}) {
+  const q = new URLSearchParams();
+  if (projectId) q.set('projectId', projectId);
+  if (phaseName) q.set('phaseName', phaseName);
+  if (taskWho) q.set('taskWho', taskWho);
+  const suffix = q.toString() ? `?${q}` : '';
+  const res = await fetch(`/api/preconstruction/notify-recipients${suffix}`, {
     credentials: 'include',
     cache: 'no-store',
   });

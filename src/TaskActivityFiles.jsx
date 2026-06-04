@@ -1,11 +1,20 @@
 import React, { useState } from 'react';
 import { AttachmentLinks, AttachmentPicker } from './AttachmentPicker.jsx';
 import { uploadAttachments } from './preconMedia.js';
+import { loadExtraRecipients } from './preconAutoNotify.js';
+import { notifyPreconUpdate } from './preconNotify.js';
 
 /**
- * Files linked to the activity (task), not tied to a single comment.
+ * Files linked to the activity (task); emails leadership & dept heads automatically on upload.
  */
-export function TaskActivityFiles({ proj, task, dispatch, toast }) {
+export function TaskActivityFiles({
+  proj,
+  ph,
+  task,
+  dispatch,
+  toast,
+  authorName,
+}) {
   const [staged, setStaged] = useState([]);
   const [busy, setBusy] = useState(false);
   const attachments = task.attachments || [];
@@ -36,8 +45,34 @@ export function TaskActivityFiles({ proj, task, dispatch, toast }) {
         tId: task.id,
         attachments: uploaded,
       });
+
+      try {
+        const labels = uploaded.map((a) => a.label || a.fileName);
+        const emailRes = await notifyPreconUpdate({
+          kind: 'activity',
+          projectId: proj.id,
+          phaseName: ph?.name || '',
+          taskWho: task.who || '',
+          projectName: proj.name,
+          taskName: task.name,
+          author: authorName || 'Team',
+          text: `New file(s): ${labels.join(', ')}`,
+          nextAction: 'Review uploaded activity files',
+          nextActionDate: '',
+          attachmentIds: uploaded.map((a) => a.id),
+          taskAttachmentIds: [],
+          extraRecipients: loadExtraRecipients(proj.id),
+        });
+        if (emailRes.ok) {
+          toast(`Uploaded & emailed ${emailRes.recipientCount || 'team'}`, 'ok');
+        } else {
+          toast(`Uploaded — email: ${emailRes.error || 'failed'}`, 'err');
+        }
+      } catch (e) {
+        toast(`Uploaded — email failed: ${e?.message || ''}`, 'err');
+      }
+
       setStaged([]);
-      toast('Activity files saved', 'ok');
     } catch (e) {
       toast(e?.message || 'Upload failed', 'err');
     } finally {
@@ -49,13 +84,13 @@ export function TaskActivityFiles({ proj, task, dispatch, toast }) {
     <div className="task-files">
       <div className="task-files-head">
         <span className="task-files-title">Activity files</span>
-        <span className="task-files-sub">Photos, videos & documents for this task</span>
+        <span className="task-files-sub">Uploads email dept heads, leadership & assignees automatically</span>
       </div>
       {attachments.length ? <AttachmentLinks attachments={attachments} /> : null}
       <AttachmentPicker items={staged} onChange={setStaged} disabled={busy} compact />
       {staged.length ? (
         <button type="button" className="btg" disabled={busy} onClick={upload}>
-          {busy ? 'Uploading…' : 'Upload to activity'}
+          {busy ? 'Uploading & emailing…' : 'Upload to activity'}
         </button>
       ) : null}
     </div>

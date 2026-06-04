@@ -27,7 +27,7 @@ const GROUP_ACCENT = {
   done: '#1A6A3C',
 };
 
-function WorkListRow({ item, person, loginUser, dispatch, toast, onOpenProject, defaultExpanded }) {
+function WorkListRow({ item, person, loginUser, departments, dispatch, toast, onOpenProject, defaultExpanded }) {
   const { proj, ph, task, st, sortDate, sortSource, nextDate, dueDate, nextAction, overdueDays, dept, editable } =
     item;
   const [expanded, setExpanded] = useState(defaultExpanded);
@@ -117,6 +117,8 @@ function WorkListRow({ item, person, loginUser, dispatch, toast, onOpenProject, 
             key={`${task.id}-${editable?.commentIndex ?? 'new'}`}
             projectId={proj.id}
             taskId={task.id}
+            taskWho={task.who || ''}
+            departments={departments}
             authorName={authorName}
             authorEmail={loginUser?.email}
             projectName={proj.name}
@@ -404,6 +406,7 @@ export function MyWorkView({ projects, loginUser, departments, dispatch, toast, 
                     item={item}
                     person={effectivePerson}
                     loginUser={loginUser}
+                    departments={departments}
                     dispatch={dispatch}
                     toast={toast}
                     onOpenProject={onOpenProject}
