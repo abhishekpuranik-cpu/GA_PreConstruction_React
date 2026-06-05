@@ -109,7 +109,7 @@ export function notifyResultFromPoll(poll, emailRes) {
   const err =
     poll?.error ||
     poll?.result?.error ||
-    'Email failed — set SMTP_PORT=465 and Google App password on Render';
+    'Email failed — configure Resend on Render (EMAIL_PROVIDER=resend, RESEND_API_KEY)';
   return {
     patch: {
       emailQueued: false,

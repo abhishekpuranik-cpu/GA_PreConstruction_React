@@ -69,6 +69,7 @@ export function CommentForm({
   const [autoRecipients, setAutoRecipients] = useState([]);
 
   const [emailEnabled, setEmailEnabled] = useState(false);
+  const [emailConfig, setEmailConfig] = useState(null);
 
   const [whatsappEnabled, setWhatsappEnabled] = useState(false);
 
@@ -91,6 +92,7 @@ export function CommentForm({
         if (!alive) return;
 
         setEmailEnabled(!!data.emailEnabled);
+        setEmailConfig(data.emailConfig || null);
 
         setWhatsappEnabled(!!data.whatsappEnabled);
 
@@ -463,33 +465,31 @@ export function CommentForm({
 
       </p>
 
-      {emailEnabled || whatsappEnabled ? (
-
-        <div className="nrp-auto-banner">
-
-          <strong>✉ Sends automatically</strong> to department heads, leadership, and assignees
-
-          {emailEnabled ? <span className="nrp-auto-names"> · email</span> : null}
-
-          {whatsappEnabled ? <span className="nrp-auto-names"> · WhatsApp (phones in Admin)</span> : null}
-
-          {allRecipientsPreview.length ? (
-
-            <span className="nrp-auto-names"> ({allRecipientsPreview.map((r) => r.name).join(', ')})</span>
-
-          ) : (
-
-            <span className="nrp-auto-names"> — add email &amp; WhatsApp phone per user in Admin</span>
-
-          )}
-
+      {emailConfig?.setupRequired && !emailEnabled ? (
+        <div className="nrp-auto-banner nrp-auto-warn">
+          <strong>Email needs setup on Render</strong> — use Resend: verify goldenabodes.com, set EMAIL_PROVIDER=resend
+          and RESEND_API_KEY. Comments still save.
         </div>
-
-      ) : (
-
+      ) : null}
+      {emailEnabled || whatsappEnabled ? (
+        <div className="nrp-auto-banner">
+          <strong>✉ Sends automatically</strong> to department heads, leadership, and assignees
+          {emailEnabled ? (
+            <span className="nrp-auto-names">
+              {' '}
+              · email{emailConfig?.provider ? ` (${emailConfig.provider})` : ''}
+            </span>
+          ) : null}
+          {whatsappEnabled ? <span className="nrp-auto-names"> · WhatsApp (phones in Admin)</span> : null}
+          {allRecipientsPreview.length ? (
+            <span className="nrp-auto-names"> ({allRecipientsPreview.map((r) => r.name).join(', ')})</span>
+          ) : (
+            <span className="nrp-auto-names"> — add email &amp; WhatsApp phone per user in Admin</span>
+          )}
+        </div>
+      ) : !emailConfig?.setupRequired ? (
         <div className="nrp-auto-banner nrp-auto-warn">Email/WhatsApp not configured on server — comment saves locally only</div>
-
-      )}
+      ) : null}
 
       <label className="cform-field">
 
