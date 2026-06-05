@@ -1021,7 +1021,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                               <AttachmentLinks attachments={cm.attachments}/>
                               {cm.attachmentsPending?<div className="c-email-meta">📎 Uploading attachments…</div>:cm.attachmentError?<div className="c-email-meta">📎 Attachment failed: {cm.attachmentError}</div>:null}
                               {cm.notifyRecipients?.length?<div className="c-email-meta">
-                                {cm.emailSent?`✉ Sent to ${cm.notifyRecipients.map(r=>r.name||r.email).join(", ")}`:cm.emailError?`✉ Email failed: ${cm.emailError}`:cm.notifyPending!==false?"✉ Sending notifications…":"✉ Notify pending"}
+                                {cm.emailSent?`✉ Sent to ${cm.notifyRecipients.map(r=>r.name||r.email).join(", ")}`:cm.emailQueued?`✉ Email queued for ${cm.notifyRecipients.map(r=>r.name||r.email).join(", ")}`:cm.emailError?`✉ Email failed: ${cm.emailError}`:cm.notifyPending!==false?"✉ Sending notifications…":"✉ Notify pending"}
                               </div>:null}
                             </div>
                           ))}

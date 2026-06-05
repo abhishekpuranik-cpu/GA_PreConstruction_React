@@ -57,6 +57,9 @@ export async function sendCommentNotification(payload) {
     body: JSON.stringify(payload),
   });
   const data = await res.json().catch(() => ({}));
+  if (res.status === 202 || data?.queued) {
+    return { ok: true, queued: true, ...data };
+  }
   if (!res.ok) {
     return { ok: false, error: data?.error || `Notify failed (${res.status})`, ...data };
   }
