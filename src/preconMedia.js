@@ -57,7 +57,9 @@ export async function sendCommentNotification(payload) {
     body: JSON.stringify(payload),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.error || `Email failed (${res.status})`);
+  if (!res.ok) {
+    return { ok: false, error: data?.error || `Notify failed (${res.status})`, ...data };
+  }
   return data;
 }
 

@@ -128,7 +128,7 @@ function WorkListRow({ item, person, loginUser, departments, dispatch, toast, on
             initial={initial}
             submitLabel={editable ? 'Save changes' : 'Post comment'}
             toast={toast}
-            onSaved={async (comment) => {
+            onSaved={(comment) => {
               if (editable) {
                 dispatch({
                   type: 'updComment',
@@ -146,19 +146,32 @@ function WorkListRow({ item, person, loginUser, departments, dispatch, toast, on
                       ...(comment.attachments || []),
                     ],
                     notifyRecipients: comment.notifyRecipients,
+                    notifyPending: comment.notifyPending,
                     emailSent: comment.emailSent,
                     emailError: comment.emailError,
                   },
                 });
-              } else {
-                dispatch({
-                  type: 'addComment',
-                  projId: proj.id,
-                  phId: ph.id,
-                  tId: task.id,
-                  comment,
-                });
+                return editable.commentIndex;
               }
+              const idx = (task.comments || []).length;
+              dispatch({
+                type: 'addComment',
+                projId: proj.id,
+                phId: ph.id,
+                tId: task.id,
+                comment,
+              });
+              return idx;
+            }}
+            onNotifyComplete={(patch, commentIndex) => {
+              dispatch({
+                type: 'updComment',
+                projId: proj.id,
+                phId: ph.id,
+                tId: task.id,
+                commentIndex,
+                patch,
+              });
             }}
           />
           <button type="button" className="btg mw-open-task" onClick={() => onOpenProject(proj.id)}>

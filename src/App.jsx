@@ -1019,8 +1019,9 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                                 {cm.nextActionDate?<span style={{color:C.tx2}}> · Due {fmt(cm.nextActionDate)}</span>:null}
                               </div>:null}
                               <AttachmentLinks attachments={cm.attachments}/>
+                              {cm.attachmentsPending?<div className="c-email-meta">📎 Uploading attachments…</div>:cm.attachmentError?<div className="c-email-meta">📎 Attachment failed: {cm.attachmentError}</div>:null}
                               {cm.notifyRecipients?.length?<div className="c-email-meta">
-                                {cm.emailSent?`✉ Sent to ${cm.notifyRecipients.map(r=>r.name||r.email).join(", ")}`:cm.emailError?`✉ Email failed: ${cm.emailError}`:"✉ Notify pending"}
+                                {cm.emailSent?`✉ Sent to ${cm.notifyRecipients.map(r=>r.name||r.email).join(", ")}`:cm.emailError?`✉ Email failed: ${cm.emailError}`:cm.notifyPending!==false?"✉ Sending notifications…":"✉ Notify pending"}
                               </div>:null}
                             </div>
                           ))}
@@ -1038,11 +1039,15 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                           taskName={t.name}
                           taskAttachmentIds={(t.attachments||[]).map(a=>a.id).filter(Boolean)}
                           toast={toast}
-                          onSaved={(comment)=>new Promise((resolve)=>{
+                          onSaved={(comment)=>{
+                            const idx=t.comments.length;
                             dispatch({type:"addComment",projId:proj.id,phId:ph.id,tId:t.id,comment});
                             setTimeout(()=>setExpandedC(p=>({...p,[t.id]:true})),50);
-                            resolve();
-                          })}
+                            return idx;
+                          }}
+                          onNotifyComplete={(patch,commentIndex)=>{
+                            dispatch({type:"updComment",projId:proj.id,phId:ph.id,tId:t.id,commentIndex,patch});
+                          }}
                         />
                         </div>
                       </td></tr>}
