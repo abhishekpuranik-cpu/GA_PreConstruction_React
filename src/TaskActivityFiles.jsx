@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 
 import { AttachmentLinks, AttachmentPicker } from './AttachmentPicker.jsx';
 
-import { uploadAttachments } from './preconMedia.js';
+import { notifyResultFromPoll, pollNotifyJob, uploadAttachments } from './preconMedia.js';
 
 import { loadExtraRecipients } from './preconAutoNotify.js';
 
@@ -134,18 +134,19 @@ export function TaskActivityFiles({
 
           });
 
-          if (emailRes.queued) {
-            toast('Notifications queued — check inbox in a minute', 'ok');
-          } else {
+          if (emailRes.queued && emailRes.jobId) {
+            toast('Sending notifications…', 'ok');
+            const poll = await pollNotifyJob(emailRes.jobId);
+            const { toastOk, toastErr } = notifyResultFromPoll(poll, emailRes);
+            toast(toastOk || toastErr, toastOk ? 'ok' : 'err');
+          } else if (emailRes.ok || emailRes.whatsapp?.ok) {
             const wa = emailRes.whatsappCount || 0;
-            if (emailRes.ok || emailRes.whatsapp?.ok) {
-              const parts = [];
-              if (emailRes.ok) parts.push(`email ${emailRes.recipientCount || 0}`);
-              if (emailRes.whatsapp?.ok && wa) parts.push(`WhatsApp ${wa}`);
-              toast(`Notifications sent (${parts.join(', ') || 'ok'})`, 'ok');
-            } else {
-              toast(`Notifications failed: ${emailRes.error || emailRes.whatsapp?.error || 'check SMTP/Twilio'}`, 'err');
-            }
+            const parts = [];
+            if (emailRes.ok) parts.push(`email ${emailRes.recipientCount || 0}`);
+            if (emailRes.whatsapp?.ok && wa) parts.push(`WhatsApp ${wa}`);
+            toast(`Notifications sent (${parts.join(', ') || 'ok'})`, 'ok');
+          } else {
+            toast(`Notifications failed: ${emailRes.error || emailRes.whatsapp?.error || 'check SMTP/Twilio'}`, 'err');
           }
 
         } catch (e) {

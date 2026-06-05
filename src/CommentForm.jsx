@@ -6,7 +6,7 @@ import { NotifyRecipientPicker } from './NotifyRecipientPicker.jsx';
 
 import { validateCommentPayload } from './preconComments.js';
 
-import { uploadAttachments } from './preconMedia.js';
+import { notifyResultFromPoll, pollNotifyJob, uploadAttachments } from './preconMedia.js';
 
 import { loadExtraRecipients, mergeRecipients, saveExtraRecipients } from './preconAutoNotify.js';
 
@@ -248,26 +248,32 @@ export function CommentForm({
 
 
 
-        const patch = emailRes.queued
-          ? {
-              emailQueued: true,
-              emailSent: false,
-              emailError: '',
-              notifyRecipients: emailRes.recipients || notifyRecipients,
-              notifyPending: false,
-            }
-          : {
-              emailSent: !!emailRes.ok,
-              emailError: emailRes.ok ? '' : emailRes.error || 'Email failed',
-              notifyRecipients: emailRes.recipients || notifyRecipients,
-              notifyPending: false,
-            };
-
-        if (commentIndex != null && onNotifyComplete) onNotifyComplete(patch, commentIndex);
-
-        if (emailRes.queued) {
-          toast('Notifications queued — check inbox in a minute', 'ok');
+        if (emailRes.queued && emailRes.jobId) {
+          if (commentIndex != null && onNotifyComplete) {
+            onNotifyComplete(
+              {
+                emailQueued: true,
+                emailSent: false,
+                emailError: '',
+                notifyRecipients: emailRes.recipients || notifyRecipients,
+                notifyPending: true,
+              },
+              commentIndex
+            );
+          }
+          toast('Sending notifications…', 'ok');
+          const poll = await pollNotifyJob(emailRes.jobId);
+          const { patch, toastOk, toastErr } = notifyResultFromPoll(poll, emailRes);
+          if (commentIndex != null && onNotifyComplete) onNotifyComplete(patch, commentIndex);
+          toast(toastOk || toastErr, toastOk ? 'ok' : 'err');
         } else {
+          const patch = {
+            emailSent: !!emailRes.ok,
+            emailError: emailRes.ok ? '' : emailRes.error || 'Email failed',
+            notifyRecipients: emailRes.recipients || notifyRecipients,
+            notifyPending: false,
+          };
+          if (commentIndex != null && onNotifyComplete) onNotifyComplete(patch, commentIndex);
           const waOk = emailRes?.whatsapp?.ok;
           const waCount = emailRes?.whatsappCount || 0;
           const parts = [];

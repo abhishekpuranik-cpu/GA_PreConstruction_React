@@ -66,6 +66,62 @@ export async function sendCommentNotification(payload) {
   return data;
 }
 
+/** Poll background notify job until sent/failed or timeout. */
+export async function pollNotifyJob(jobId, { maxMs = 50_000, intervalMs = 2_000 } = {}) {
+  if (!jobId) return null;
+  const start = Date.now();
+  while (Date.now() - start < maxMs) {
+    const res = await fetch(`/api/preconstruction/notify-status/${encodeURIComponent(jobId)}`, {
+      credentials: 'include',
+      cache: 'no-store',
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { status: 'failed', error: data?.error || `Status failed (${res.status})` };
+    if (data.status === 'sent' || data.status === 'failed') return data;
+    await new Promise((r) => setTimeout(r, intervalMs));
+  }
+  return { status: 'timeout', error: 'Notification still processing — check inbox shortly' };
+}
+
+export function notifyResultFromPoll(poll, emailRes) {
+  const recipients = emailRes?.recipients || poll?.result?.recipients || [];
+  const emailSent = Boolean(poll?.result?.sentTo?.length || poll?.result?.via);
+  const waOk = poll?.result?.whatsapp?.ok;
+  const waCount = poll?.result?.whatsappCount || 0;
+  const anyOk = poll?.status === 'sent' && (emailSent || waOk);
+
+  if (anyOk) {
+    const parts = [];
+    if (emailSent) parts.push(`email ${poll.result.sentTo?.length || recipients.length}`);
+    if (waOk && waCount) parts.push(`WhatsApp ${waCount}`);
+    return {
+      patch: {
+        emailQueued: false,
+        emailSent: !!emailSent,
+        emailError: emailSent ? '' : poll?.result?.error || '',
+        notifyRecipients: recipients,
+        notifyPending: false,
+      },
+      toastOk: `Notifications sent (${parts.join(', ') || 'ok'})`,
+    };
+  }
+
+  const err =
+    poll?.error ||
+    poll?.result?.error ||
+    'Email failed — set SMTP_PORT=465 and Google App password on Render';
+  return {
+    patch: {
+      emailQueued: false,
+      emailSent: false,
+      emailError: err,
+      notifyRecipients: recipients,
+      notifyPending: false,
+    },
+    toastErr: `Notifications failed: ${err}`,
+  };
+}
+
 export function attachmentUrl(att) {
   if (att?.url) return att.url;
   if (att?.id) return `/api/preconstruction/attachments/${att.id}`;
