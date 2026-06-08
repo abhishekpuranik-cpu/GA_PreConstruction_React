@@ -22,9 +22,9 @@ import { PortfolioRagMatrix } from "./PortfolioRagMatrix.jsx";
 import { ensureCommentCreatedAt, formatCommentLine, sortCommentsChronologically } from "./preconComments.js";
 import { useLoginUser } from "./useLoginUser.js";
 import { MyWorkView } from "./MyWorkView.jsx";
-import { CommentForm } from "./CommentForm.jsx";
-import { AttachmentLinks } from "./AttachmentPicker.jsx";
 import { TaskActivityFiles } from "./TaskActivityFiles.jsx";
+import { TaskCommentPanel } from "./TaskCommentPanel.jsx";
+import { StatusFilterChips } from "./StatusFilterChips.jsx";
 import { AssigneeMultiSelect } from "./AssigneeMultiSelect.jsx";
 import { filterProjectsForUser, buildAssigneeRoster, assigneeMatches, projectsForAssigneeRoster } from "./preconAssignees.js";
 import { migratePreWorkFollowUpState, applyGhqPreWorkToPhases } from "./preconGhqPreWorkMigrate.js";
@@ -36,6 +36,7 @@ import {
   todayDate,
   todayIso,
   TASK_STATUS_OPTIONS,
+  taskMatchesStatusFilters,
 } from "./preconTaskStatus.js";
 
 // ── TOKENS ────────────────────────────────────────────────
@@ -314,6 +315,7 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .mw-stat-today .mw-stat-n{color:#E8D4A0}
 .mw-toolbar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px 18px;padding:14px 16px;margin-bottom:18px}
 .mw-toolbar-field{display:flex;flex-direction:column;gap:4px;min-width:min(100%,220px)}
+.mw-toolbar-status{flex:1 1 100%;min-width:min(100%,320px)}
 .mw-toolbar-field label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.45px;color:#96918A}
 .mw-select{padding:10px 12px;border:1.5px solid #E2DDD4;border-radius:6px;font-size:14px;font-family:'DM Sans',sans-serif;min-height:44px;background:#fff;max-width:100%}
 .mw-check{display:flex;align-items:center;gap:8px;font-size:12px;color:#55504A;cursor:pointer;min-height:44px}
@@ -482,6 +484,11 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .mw-comment-history{margin-bottom:12px}
 .mw-comment-history-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#9A6E20;margin-bottom:8px}
 .mw-ch-item{margin-bottom:7px}
+.st-filter{display:inline-flex;flex-wrap:wrap;gap:5px;align-items:center;max-width:min(520px,100%)}
+.st-chip input{position:absolute;opacity:0;width:0;height:0}
+.st-chip label{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:4px 9px;border-radius:4px;border:1px solid #E2DDD4;background:#fff;cursor:pointer;user-select:none;white-space:nowrap}
+.st-chip.on label{background:#EEF4FC;border-color:#1A304A;color:#1A304A;font-weight:600}
+.st-chip-clear{font-size:10px;color:#1B5E9E;background:none;border:none;cursor:pointer;padding:2px 6px;text-decoration:underline}
 .mw-open-task{margin-top:8px}
 .citem{background:#fff;border:1px solid #E2DDD4;border-radius:5px;padding:9px 11px;margin-bottom:7px}
 .citem:last-child{margin-bottom:0}
@@ -608,8 +615,8 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 function ActionFilters({
   horizonDays,
   setHorizonDays,
-  statusFilter,
-  setStatusFilter,
+  statusFilters,
+  setStatusFilters,
   assigneeFilter,
   setAssigneeFilter,
   assignees,
@@ -640,15 +647,7 @@ function ActionFilters({
         </>
       )}
       <label style={{ marginLeft: showHorizon ? 8 : 0 }}>Status</label>
-      <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-        <option value="">All</option>
-        {TASK_STATUS_OPTIONS.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-        <option value="overdue">Overdue</option>
-      </select>
+      <StatusFilterChips value={statusFilters} onChange={setStatusFilters} />
       <label>Assignee</label>
       <select value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value)}>
         <option value="">All</option>
@@ -688,14 +687,12 @@ function ActionFilters({
   );
 }
 
-function taskPassesFilters(t, dm, phaseName, { statusFilter, assigneeFilter, departmentFilter, departments, roleFilter, horizonDays, todayStr }) {
+function taskPassesFilters(t, dm, phaseName, { statusFilters, assigneeFilter, departmentFilter, departments, roleFilter, horizonDays, todayStr }) {
   if (assigneeFilter && !assigneeMatches(t.who, assigneeFilter)) return false;
   if (!taskMatchesDepartment(t, phaseName, departmentFilter, departments)) return false;
   if (!taskMatchesRoleFilter(t, roleFilter)) return false;
   const st = taskStatus(t, dm);
-  if (statusFilter) {
-    if (statusFilter === 'overdue' ? st !== 'overdue' : st !== statusFilter) return false;
-  }
+  if (!taskMatchesStatusFilters(st, statusFilters)) return false;
   if (horizonDays != null && horizonDays > 0) {
     const d = dm[t.id];
     if (!d) return false;
@@ -862,15 +859,15 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
   const[dragTask,setDragTask]=useState(null);
   const[dragOverId,setDragOverId]=useState(null);
   const[horizonDays,setHorizonDays]=useState(null);
-  const[statusFilter,setStatusFilter]=useState("");
+  const[statusFilters,setStatusFilters]=useState([]);
   const[assigneeFilter,setAssigneeFilter]=useState("");
   const[departmentFilter,setDepartmentFilter]=useState("");
   const[roleFilter,setRoleFilter]=useState("");
   const assignees=useMemo(()=>collectAssignees([proj]),[proj]);
   const roleOptions=useMemo(()=>collectAllRoles([proj]),[proj]);
   const todayStr=todayIso();
-  const filters={statusFilter,assigneeFilter,departmentFilter,departments,roleFilter,horizonDays,todayStr};
-  const filtersActive=!!(statusFilter||assigneeFilter||departmentFilter||roleFilter||horizonDays!=null);
+  const filters={statusFilters,assigneeFilter,departmentFilter,departments,roleFilter,horizonDays,todayStr};
+  const filtersActive=!!(statusFilters.length||assigneeFilter||departmentFilter||roleFilter||horizonDays!=null);
   const expandAll=()=>{
     const next={};
     proj.phases.forEach(ph=>{next[phaseExpandKey(proj.id,ph.id)]=true;});
@@ -895,7 +892,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
   const authorName=loginUser?.ready?(loginUser.name||"User"):"";
   return(
     <div>
-      <ActionFilters horizonDays={horizonDays} setHorizonDays={setHorizonDays} statusFilter={statusFilter} setStatusFilter={setStatusFilter} assigneeFilter={assigneeFilter} setAssigneeFilter={setAssigneeFilter} assignees={assignees} departmentFilter={departmentFilter} setDepartmentFilter={setDepartmentFilter} departments={departments} roleFilter={roleFilter} setRoleFilter={setRoleFilter} roleOptions={roleOptions} allowAllHorizon/>
+      <ActionFilters horizonDays={horizonDays} setHorizonDays={setHorizonDays} statusFilters={statusFilters} setStatusFilters={setStatusFilters} assigneeFilter={assigneeFilter} setAssigneeFilter={setAssigneeFilter} assignees={assignees} departmentFilter={departmentFilter} setDepartmentFilter={setDepartmentFilter} departments={departments} roleFilter={roleFilter} setRoleFilter={setRoleFilter} roleOptions={roleOptions} allowAllHorizon/>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}}>
         <span className="task-tip" style={{fontSize:12,color:C.tx3}}>💡 Drag ⋮⋮ to set chronology · {filtersActive?"Clear filters to reorder":"Expand phases below"}</span>
         <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
@@ -943,7 +940,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
               <thead><tr>
                 <th style={{width:22}} aria-label="Reorder"/>
                 <th style={{width:26}}>#</th><th>Task</th><th>Roles (Process)</th><th>Start ✏️</th><th>Dur</th><th>End</th>
-                <th>Assignee</th><th>Status</th><th>Log</th><th>Actions</th>
+                <th>Assignee</th><th>Status</th><th>Comments</th><th>Actions</th>
               </tr></thead>
               <tbody>
                 {visible.map((t)=>{
@@ -997,7 +994,10 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                           </select>
                           {st==="overdue"&&<span className="badge bov" style={{marginLeft:4}}>+{od}d</span>}
                         </td>
-                        <td><button className="bts" onClick={()=>setExpandedC(p=>({...p,[t.id]:!p[t.id]}))}>💬{cc||""}</button></td>
+                        <td style={{whiteSpace:"nowrap"}}>
+                          <button type="button" className="bts" title="Post comment" onClick={()=>setExpandedC(p=>({...p,[t.id]:true}))}>Post{cc?` (${cc})`:""}</button>
+                          {showC?<button type="button" className="bts" style={{marginLeft:4}} title="Hide comments" onClick={()=>setExpandedC(p=>({...p,[t.id]:false}))}>▴</button>:null}
+                        </td>
                         <td><div className="tact">
                           <button type="button" className="abt" title="Move up" disabled={filtersActive||seqIdx<=1} onClick={()=>moveTaskByStep(ph,t.id,-1)}>↑</button>
                           <button type="button" className="abt" title="Move down" disabled={filtersActive||seqIdx>=ph.tasks.length} onClick={()=>moveTaskByStep(ph,t.id,1)}>↓</button>
@@ -1009,48 +1009,16 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                       {showC&&<tr className="cexp-tr"><td colSpan={11} className="cexp">
                         <div className="cexp-inner">
                         <div style={{fontSize:11,fontWeight:600,textTransform:"uppercase",letterSpacing:".5px",color:C.gold,marginBottom:10}}>Comments — {t.name}</div>
-                        {t.comments.length>0?<div style={{marginBottom:12}}>
-                          {sortCommentsChronologically(t.comments).map(({comment:cm,index:ci})=>(
-                            <div key={`${ci}-${cm.createdAt||cm.ts||''}`} className="citem">
-                              <div style={{display:"flex",flexWrap:"wrap",justifyContent:"space-between",gap:4,marginBottom:3}}>
-                                <span style={{fontSize:11,fontWeight:600,color:C.navy}}>{cm.author||"Anon"}</span>
-                                <span style={{fontSize:10,color:C.tx3}}>{cm.ts}</span>
-                              </div>
-                              <div style={{fontSize:12,color:C.tx,lineHeight:1.5}}>{cm.text}</div>
-                              {(cm.nextAction||cm.nextActionDate)?<div style={{fontSize:11,color:C.navy,marginTop:6,lineHeight:1.45}}>
-                                <span style={{fontWeight:600}}>Next action:</span> {cm.nextAction||"—"}
-                                {cm.nextActionDate?<span style={{color:C.tx2}}> · Due {fmt(cm.nextActionDate)}</span>:null}
-                              </div>:null}
-                              <AttachmentLinks attachments={cm.attachments}/>
-                              {cm.attachmentsPending?<div className="c-email-meta">📎 Uploading attachments…</div>:cm.attachmentError?<div className="c-email-meta">📎 Attachment failed: {cm.attachmentError}</div>:null}
-                              {cm.notifyRecipients?.length?<div className="c-email-meta">
-                                {cm.emailSent?`✉ Sent to ${cm.notifyRecipients.map(r=>r.name||r.email).join(", ")}`:cm.emailQueued?`✉ Email queued for ${cm.notifyRecipients.map(r=>r.name||r.email).join(", ")}`:cm.emailError?`✉ Email failed: ${cm.emailError}`:cm.notifyPending!==false?"✉ Sending notifications…":"✉ Notify pending"}
-                              </div>:null}
-                            </div>
-                          ))}
-                        </div>:<div style={{fontSize:12,color:C.tx3,fontStyle:"italic",marginBottom:10}}>No comments yet</div>}
                         <TaskActivityFiles proj={proj} ph={ph} task={t} dispatch={dispatch} toast={toast} authorName={authorName}/>
-                        <CommentForm
-                          projectId={proj.id}
-                          taskId={t.id}
-                          taskWho={t.who||""}
-                          departments={departments}
+                        <TaskCommentPanel
+                          proj={proj}
+                          ph={ph}
+                          task={t}
+                          dispatch={dispatch}
+                          toast={toast}
                           authorName={authorName}
                           authorEmail={loginUser?.email}
-                          projectName={proj.name}
-                          phaseName={ph.name}
-                          taskName={t.name}
-                          taskAttachmentIds={(t.attachments||[]).map(a=>a.id).filter(Boolean)}
-                          toast={toast}
-                          onSaved={(comment)=>{
-                            const idx=t.comments.length;
-                            dispatch({type:"addComment",projId:proj.id,phId:ph.id,tId:t.id,comment});
-                            setTimeout(()=>setExpandedC(p=>({...p,[t.id]:true})),50);
-                            return idx;
-                          }}
-                          onNotifyComplete={(patch,commentIndex)=>{
-                            dispatch({type:"updComment",projId:proj.id,phId:ph.id,tId:t.id,commentIndex,patch});
-                          }}
+                          departments={departments}
                         />
                         </div>
                       </td></tr>}
@@ -1088,14 +1056,14 @@ function ProjectFormFields({form,setForm}){
 
 function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWork,onEditProject,onDeleteProject,onAddProject,onImportJson,onImportExcel,departments}){
   const[horizonDays,setHorizonDays]=useState(30);
-  const[statusFilter,setStatusFilter]=useState("");
+  const[statusFilters,setStatusFilters]=useState([]);
   const[assigneeFilter,setAssigneeFilter]=useState("");
   const[departmentFilter,setDepartmentFilter]=useState("");
   const[roleFilter,setRoleFilter]=useState("");
   const assignees=useMemo(()=>collectAssignees(projects),[projects]);
   const roleOptions=useMemo(()=>collectAllRoles(projects),[projects]);
   const todayStr=todayIso();
-  const filters={statusFilter,assigneeFilter,departmentFilter,departments,roleFilter,horizonDays,todayStr};
+  const filters={statusFilters,assigneeFilter,departmentFilter,departments,roleFilter,horizonDays,todayStr};
   const allStats=projects.map(p=>({p,s:pStats(p)}));
   const tT=allStats.reduce((a,x)=>a+x.s.tot,0),tC=allStats.reduce((a,x)=>a+x.s.comp,0),
         tO=allStats.reduce((a,x)=>a+x.s.ov,0),tI=allStats.reduce((a,x)=>a+x.s.ip,0);
@@ -1173,7 +1141,7 @@ function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWo
           );
         })}
       </div>
-      <ActionFilters horizonDays={horizonDays} setHorizonDays={setHorizonDays} statusFilter={statusFilter} setStatusFilter={setStatusFilter} assigneeFilter={assigneeFilter} setAssigneeFilter={setAssigneeFilter} assignees={assignees} departmentFilter={departmentFilter} setDepartmentFilter={setDepartmentFilter} departments={departments} roleFilter={roleFilter} setRoleFilter={setRoleFilter} roleOptions={roleOptions}/>
+      <ActionFilters horizonDays={horizonDays} setHorizonDays={setHorizonDays} statusFilters={statusFilters} setStatusFilters={setStatusFilters} assigneeFilter={assigneeFilter} setAssigneeFilter={setAssigneeFilter} assignees={assignees} departmentFilter={departmentFilter} setDepartmentFilter={setDepartmentFilter} departments={departments} roleFilter={roleFilter} setRoleFilter={setRoleFilter} roleOptions={roleOptions}/>
       <div className="dg2">
         <div className="card">
           <div style={{padding:"13px 18px",borderBottom:`1px solid ${C.bd}`}}><span className="disp" style={{fontSize:15,fontWeight:600,color:C.navy}}>Status Breakdown</span></div>

@@ -1,5 +1,5 @@
 import { cDates, dbDays } from './preconDates.js';
-import { taskStatus, todayIso } from './preconTaskStatus.js';
+import { taskMatchesStatusFilters, taskStatus, todayIso } from './preconTaskStatus.js';
 import { getDepartmentForPhase } from './preconDepartments.js';
 import { assigneeMatches, nameMatches } from './preconAssignees.js';
 import { commentSortKey } from './preconComments.js';
@@ -102,7 +102,7 @@ export function hasCommentByPerson(task, person) {
  * @param {object} opts.departments
  * @param {{ assigned?: boolean, myComments?: boolean, myDepartment?: boolean }} opts.scopes
  * @param {string[]} opts.projectIds — empty = all visible projects
- * @param {string} opts.statusFilter — task status code or ''
+ * @param {string[]} opts.statusFilters — task status codes; empty = all
  */
 export function buildMyWorkItems(projects, opts = {}) {
   const person = String(opts.person || '').trim();
@@ -113,7 +113,7 @@ export function buildMyWorkItems(projects, opts = {}) {
     myDepartment: !!opts.scopes?.myDepartment,
   };
   const projectIds = opts.projectIds || [];
-  const statusFilter = opts.statusFilter || '';
+  const statusFilters = opts.statusFilters || [];
   const todayStr = todayIso();
   const items = [];
   const idSet = projectIds.length ? new Set(projectIds) : null;
@@ -124,8 +124,7 @@ export function buildMyWorkItems(projects, opts = {}) {
     for (const ph of proj.phases || []) {
       for (const task of ph.tasks || []) {
         const st = taskStatus(task, dm);
-        if (statusFilter === 'overdue' && st !== 'overdue') continue;
-        else if (statusFilter && statusFilter !== 'overdue' && st !== statusFilter) continue;
+        if (!taskMatchesStatusFilters(st, statusFilters)) continue;
 
         let include = false;
         if (scopes.assigned && assigneeMatches(task.who, person)) include = true;

@@ -7,6 +7,15 @@ export const TASK_STATUS_OPTIONS = [
   { value: 'paused', label: 'Paused' },
 ];
 
+/** Status options for multi-select filters (includes computed overdue). */
+export const STATUS_FILTER_OPTIONS = [...TASK_STATUS_OPTIONS, { value: 'overdue', label: 'Overdue' }];
+
+/** @param {string} st — taskStatus() result @param {string[]} filters — empty = all */
+export function taskMatchesStatusFilters(st, filters) {
+  if (!filters?.length) return true;
+  return filters.some((f) => (f === 'overdue' ? st === 'overdue' : st === f));
+}
+
 export function todayDate() {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
