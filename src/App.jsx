@@ -19,7 +19,7 @@ import {
   collectAllRoles,
 } from "./preconDepartments.js";
 import { PortfolioRagMatrix } from "./PortfolioRagMatrix.jsx";
-import { formatCommentLine } from "./preconComments.js";
+import { ensureCommentCreatedAt, formatCommentLine, sortCommentsChronologically } from "./preconComments.js";
 import { useLoginUser } from "./useLoginUser.js";
 import { MyWorkView } from "./MyWorkView.jsx";
 import { CommentForm } from "./CommentForm.jsx";
@@ -479,6 +479,9 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .task-files-title{font-size:11px;font-weight:700;color:#1A304A;display:block}
 .task-files-sub{font-size:10px;color:#96918A}
 .mw-editor-wrap{margin-top:8px;padding-top:8px;border-top:1px solid #E2DDD4}
+.mw-comment-history{margin-bottom:12px}
+.mw-comment-history-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#9A6E20;margin-bottom:8px}
+.mw-ch-item{margin-bottom:7px}
 .mw-open-task{margin-top:8px}
 .citem{background:#fff;border:1px solid #E2DDD4;border-radius:5px;padding:9px 11px;margin-bottom:7px}
 .citem:last-child{margin-bottom:0}
@@ -904,7 +907,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
             proj.phases.forEach(ph=>ph.tasks.forEach(t=>{
               if(!taskPassesFilters(t,dm2,ph.name,filters))return;
               const d=dm2[t.id]||{s:"",e:""};
-              const cm=(t.comments||[]).map(c=>formatCommentLine(c)).join(" | ");
+              const cm=sortCommentsChronologically(t.comments).map(({comment:c})=>formatCommentLine(c)).join(" | ");
               csv+=`"${ph.name}","${t.name}","${d.s}","${d.e}","${t.dur}","${formatRoles(t)}","${t.who||""}","${statusLabel(taskStatus(t,dm2))}","${cm.replace(/"/g,'""')}"\n`;
             }));
             const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download=proj.name.replace(/\s+/g,"_")+"_Schedule.csv";a.click();toast("CSV exported","ok");
@@ -1007,8 +1010,8 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                         <div className="cexp-inner">
                         <div style={{fontSize:11,fontWeight:600,textTransform:"uppercase",letterSpacing:".5px",color:C.gold,marginBottom:10}}>Comments — {t.name}</div>
                         {t.comments.length>0?<div style={{marginBottom:12}}>
-                          {t.comments.map((cm,ci)=>(
-                            <div key={ci} className="citem">
+                          {sortCommentsChronologically(t.comments).map(({comment:cm,index:ci})=>(
+                            <div key={`${ci}-${cm.createdAt||cm.ts||''}`} className="citem">
                               <div style={{display:"flex",flexWrap:"wrap",justifyContent:"space-between",gap:4,marginBottom:3}}>
                                 <span style={{fontSize:11,fontWeight:600,color:C.navy}}>{cm.author||"Anon"}</span>
                                 <span style={{fontSize:10,color:C.tx3}}>{cm.ts}</span>
@@ -1297,7 +1300,7 @@ function reducer(state,action){
       const p=fp(action.projId);if(!p)break;
       const id="ph_"+Date.now();p.phases.push({id,name:action.name||"New Phase",col:action.col||PCOL[0],open:true,tasks:[]});break;
     }
-    case"addComment":{const t=ft(action.projId,action.phId,action.tId);if(t){if(!Array.isArray(t.comments))t.comments=[];t.comments.push(action.comment);}break;}
+    case"addComment":{const t=ft(action.projId,action.phId,action.tId);if(t){if(!Array.isArray(t.comments))t.comments=[];t.comments.push(ensureCommentCreatedAt(action.comment));}break;}
     case"addTaskAttachments":{
       const p=fp(action.projId);
       if(!p)break;
@@ -1343,6 +1346,9 @@ function reducer(state,action){
               else t.status="notstarted";
             }
             if(!Array.isArray(t.roles))t.roles=parseRolesInput(t.roles);
+            if(Array.isArray(t.comments)){
+              t.comments=t.comments.map((c)=>ensureCommentCreatedAt(c));
+            }
           });
         });
       });

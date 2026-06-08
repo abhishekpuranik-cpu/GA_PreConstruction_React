@@ -4,6 +4,7 @@
 import { cDates, dbDays } from './preconDates.js';
 import { taskStatus, statusLabel, todayIso } from './preconTaskStatus.js';
 import { getDepartmentForPhase } from './preconDepartments.js';
+import { commentSortKey } from './preconComments.js';
 
 export const RAG_COLORS = {
   green: { bg: '#1A6A3C', light: '#EAF5EE', border: '#A8DEB8', label: 'On track' },
@@ -73,9 +74,7 @@ export function phasesForColumn(proj, column) {
 }
 
 function parseCommentTs(c) {
-  const raw = c?.ts || '';
-  const d = new Date(raw);
-  return Number.isNaN(d.getTime()) ? 0 : d.getTime();
+  return commentSortKey(c);
 }
 
 export function getLatestIssue(tasks) {

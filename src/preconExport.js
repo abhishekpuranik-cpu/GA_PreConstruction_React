@@ -2,12 +2,12 @@ import * as XLSX from 'xlsx';
 import { cDates } from './preconDates.js';
 import { taskStatus, statusLabel, ensureTaskStatus } from './preconTaskStatus.js';
 import { formatRoles } from './preconDepartments.js';
-import { formatCommentLine } from './preconComments.js';
+import { formatCommentLine, sortCommentsChronologically } from './preconComments.js';
 import { parseAssignees } from './preconAssignees.js';
 
 function commentsText(t) {
   if (!t.comments?.length) return '';
-  return t.comments.map((c) => formatCommentLine(c)).join(' | ');
+  return sortCommentsChronologically(t.comments).map(({ comment: c }) => formatCommentLine(c)).join(' | ');
 }
 
 function flaggedComments(t) {

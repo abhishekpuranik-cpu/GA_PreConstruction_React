@@ -361,13 +361,17 @@ export function CommentForm({
 
     try {
 
+      const now = new Date();
+
       const comment = {
 
         text: savedText,
 
         author: authorName,
 
-        ts: new Date().toLocaleString('en-IN', {
+        createdAt: now.toISOString(),
+
+        ts: now.toLocaleString('en-IN', {
 
           day: 'numeric',
 

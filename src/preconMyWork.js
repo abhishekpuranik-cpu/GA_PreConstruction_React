@@ -2,6 +2,7 @@ import { cDates, dbDays } from './preconDates.js';
 import { taskStatus, todayIso } from './preconTaskStatus.js';
 import { getDepartmentForPhase } from './preconDepartments.js';
 import { assigneeMatches, nameMatches } from './preconAssignees.js';
+import { commentSortKey } from './preconComments.js';
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -13,9 +14,7 @@ export function formatShortDate(isoStr) {
 }
 
 function parseCommentTs(c) {
-  const raw = c?.ts || '';
-  const d = new Date(raw);
-  return Number.isNaN(d.getTime()) ? 0 : d.getTime();
+  return commentSortKey(c);
 }
 
 /** Earliest of next-action date and planned task end (for open tasks). */

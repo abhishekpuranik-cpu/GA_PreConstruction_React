@@ -9,6 +9,7 @@ import {
   groupMyWorkItems,
   myWorkSummary,
 } from './preconMyWork.js';
+import { sortCommentsChronologically } from './preconComments.js';
 
 const SCOL = {
   completed: '#1A6A3C',
@@ -113,6 +114,29 @@ function WorkListRow({ item, person, loginUser, departments, dispatch, toast, on
       </div>
       {expanded ? (
         <div className="mw-editor-wrap">
+          {(task.comments || []).length > 0 ? (
+            <div className="mw-comment-history">
+              <div className="mw-comment-history-title">Comment history (oldest first)</div>
+              {sortCommentsChronologically(task.comments).map(({ comment: cm }) => (
+                <div key={`${cm.createdAt || ''}-${cm.ts || ''}-${cm.author}`} className="citem mw-ch-item">
+                  <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: 4, marginBottom: 3 }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: '#1A304A' }}>{cm.author || 'Anon'}</span>
+                    <span style={{ fontSize: 10, color: '#96918A' }}>{cm.ts || '—'}</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: '#1A1815', lineHeight: 1.5 }}>{cm.text}</div>
+                  {cm.nextAction || cm.nextActionDate ? (
+                    <div style={{ fontSize: 11, color: '#1A304A', marginTop: 6, lineHeight: 1.45 }}>
+                      <span style={{ fontWeight: 600 }}>Next action:</span> {cm.nextAction || '—'}
+                      {cm.nextActionDate ? (
+                        <span style={{ color: '#55504A' }}> · Due {formatShortDate(cm.nextActionDate)}</span>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  <AttachmentLinks attachments={cm.attachments} />
+                </div>
+              ))}
+            </div>
+          ) : null}
           <CommentForm
             key={`${task.id}-${editable?.commentIndex ?? 'new'}`}
             projectId={proj.id}
