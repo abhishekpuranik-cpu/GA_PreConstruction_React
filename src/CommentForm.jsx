@@ -471,6 +471,16 @@ export function CommentForm({
           and RESEND_API_KEY. Comments still save.
         </div>
       ) : null}
+      {whatsappEnabled && autoRecipients.length > 0 && !autoRecipients.some((r) => String(r.phone || '').replace(/\D/g, '').length >= 10) ? (
+        <p className="nrp-warn" style={{ marginTop: 6, fontSize: 11 }}>
+          WhatsApp is on but <strong>no auto-recipients have a phone</strong> in Admin Security — add mobile numbers for assignees.
+        </p>
+      ) : null}
+      {whatsappEnabled ? (
+        <p className="nrp-warn" style={{ marginTop: 4, fontSize: 10, color: 'var(--muted)' }}>
+          Twilio sandbox: each recipient must WhatsApp <strong>join &lt;your-code&gt;</strong> to the sandbox number once (re-join every ~3 days).
+        </p>
+      ) : null}
       {emailEnabled || whatsappEnabled ? (
         <div className="nrp-auto-banner">
           <strong>✉ Sends automatically</strong> to department heads, leadership, and assignees

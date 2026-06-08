@@ -83,22 +83,34 @@ export async function pollNotifyJob(jobId, { maxMs = 50_000, intervalMs = 2_000 
   return { status: 'timeout', error: 'Notification still processing — check inbox shortly' };
 }
 
+function formatWhatsAppPollError(wa) {
+  if (!wa) return '';
+  if (wa.error) return wa.error;
+  if (Array.isArray(wa.errors) && wa.errors.length) {
+    return wa.errors.map((e) => e.error || e.to).filter(Boolean).join('; ');
+  }
+  return '';
+}
+
 export function notifyResultFromPoll(poll, emailRes) {
   const recipients = emailRes?.recipients || poll?.result?.recipients || [];
-  const emailSent = Boolean(poll?.result?.sentTo?.length || poll?.result?.via);
-  const waOk = poll?.result?.whatsapp?.ok;
-  const waCount = poll?.result?.whatsappCount || 0;
-  const anyOk = poll?.status === 'sent' && (emailSent || waOk);
+  const res = poll?.result || {};
+  const emailDelivered = Boolean(res.ok && res.via && (res.sentTo?.length || res.via));
+  const waOk = Boolean(res.whatsapp?.ok && (res.whatsappCount || res.whatsapp?.sent?.length));
+  const waCount = res.whatsappCount || res.whatsapp?.sent?.length || 0;
+  const anyOk = poll?.status === 'sent' && (res.ok || emailDelivered || waOk);
 
-  if (anyOk) {
+  if (anyOk && (emailDelivered || waOk)) {
     const parts = [];
-    if (emailSent) parts.push(`email ${poll.result.sentTo?.length || recipients.length}`);
+    if (emailDelivered) parts.push(`email ${res.sentTo?.length || recipients.length}`);
     if (waOk && waCount) parts.push(`WhatsApp ${waCount}`);
     return {
       patch: {
         emailQueued: false,
-        emailSent: !!emailSent,
-        emailError: emailSent ? '' : poll?.result?.error || '',
+        emailSent: !!emailDelivered,
+        emailError: emailDelivered ? '' : res.error ? `(email skipped) ${res.error}` : '',
+        whatsappSent: waOk,
+        whatsappError: '',
         notifyRecipients: recipients,
         notifyPending: false,
       },
@@ -106,15 +118,19 @@ export function notifyResultFromPoll(poll, emailRes) {
     };
   }
 
+  const waErr = formatWhatsAppPollError(res.whatsapp);
   const err =
     poll?.error ||
-    poll?.result?.error ||
-    'Email failed — configure Resend on Render (EMAIL_PROVIDER=resend, RESEND_API_KEY)';
+    res.error ||
+    waErr ||
+    'Notifications failed — check Twilio on Render and WhatsApp sandbox join on each phone';
   return {
     patch: {
       emailQueued: false,
       emailSent: false,
       emailError: err,
+      whatsappSent: false,
+      whatsappError: waErr || err,
       notifyRecipients: recipients,
       notifyPending: false,
     },
