@@ -28,6 +28,7 @@ import { StatusFilterChips } from "./StatusFilterChips.jsx";
 import { AssigneeMultiSelect } from "./AssigneeMultiSelect.jsx";
 import { filterProjectsForUser, buildAssigneeRoster, assigneeMatches, projectsForAssigneeRoster } from "./preconAssignees.js";
 import { migratePreWorkFollowUpState, applyGhqPreWorkToPhases } from "./preconGhqPreWorkMigrate.js";
+import { mergeAkashActivitiesIntoState } from "./preconAkashGhqMerge.js";
 import {
   taskStatus,
   taskStatusSelectValue,
@@ -175,6 +176,7 @@ function buildInit(){
   migratePreWorkFollowUpState(merged);
   const ghq = merged.projects?.find((p) => p.id === "ghq");
   if (ghq) applyGhqPreWorkToPhases(ghq.phases);
+  mergeAkashActivitiesIntoState(merged);
   return merged;
 }
 
@@ -1304,6 +1306,7 @@ function reducer(state,action){
     case"loadState":{
       const{state:merged,totalAdded}=mergeLifecycleIntoState(action.state);
       migratePreWorkFollowUpState(merged);
+      mergeAkashActivitiesIntoState(merged);
       ensureStateDepartments(merged);
       (merged.projects||[]).forEach(proj=>{
         (proj.phases||[]).forEach(ph=>{
