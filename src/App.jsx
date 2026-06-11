@@ -402,8 +402,11 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .stab{padding:7px 15px;border:none;background:none;color:#55504A;font-size:12px;font-weight:500;cursor:pointer;border-bottom:2.5px solid transparent;margin-bottom:-1.5px;transition:all .15s;font-family:'DM Sans',sans-serif}
 .stab.act{color:#1A304A;border-bottom-color:#1A304A;font-weight:600}
 .pjhdr{background:#fff;border:1px solid #E2DDD4;border-radius:8px;padding:18px 22px;margin-bottom:14px;display:flex;align-items:flex-start;justify-content:space-between;gap:20px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
-.ps{background:#fff;border:1px solid #E2DDD4;border-radius:8px;margin-bottom:10px;overflow:hidden}
+.ps{background:#fff;border:1px solid #E2DDD4;border-radius:8px;margin-bottom:10px;overflow:hidden;transition:box-shadow .12s,border-color .12s}
+.ps.ps-drag-over{box-shadow:0 -3px 0 0 #C89A3A inset;border-color:#C89A3A}
 .psh{padding:10px 14px;background:#F3F0EA;border-bottom:1px solid #E2DDD4;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+.pdrag{cursor:grab;color:#96918A;font-size:14px;line-height:1;user-select:none;padding:0 4px 0 0;flex-shrink:0;touch-action:none}
+.pdrag:active{cursor:grabbing}
 .ttable{width:100%;border-collapse:collapse}
 .ttable th{padding:6px 9px;font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#96918A;text-align:left;border-bottom:1px solid #E2DDD4;background:#fff;white-space:nowrap;font-family:'DM Sans',sans-serif}
 .ttable td{padding:6px 9px;border-bottom:1px solid rgba(0,0,0,.04);vertical-align:middle}
@@ -860,6 +863,8 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
   const[expandedPh,setExpandedPh]=useState({});
   const[dragTask,setDragTask]=useState(null);
   const[dragOverId,setDragOverId]=useState(null);
+  const[dragPhase,setDragPhase]=useState(null);
+  const[dragOverPhId,setDragOverPhId]=useState(null);
   const[horizonDays,setHorizonDays]=useState(null);
   const[statusFilters,setStatusFilters]=useState([]);
   const[assigneeFilter,setAssigneeFilter]=useState("");
@@ -885,6 +890,11 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
     dispatch({type:"reorderTask",projId:proj.id,phId:ph.id,fromId,toId});
     toast("Task order updated","ok");
   };
+  const dropReorderPhase=(fromId,toId)=>{
+    if(!fromId||!toId||fromId===toId)return;
+    dispatch({type:"reorderPhase",projId:proj.id,fromId,toId});
+    toast("Section order updated","ok");
+  };
   const moveTaskByStep=(ph,tId,dir)=>{
     const idx=ph.tasks.findIndex(x=>x.id===tId);
     const to=idx+dir;
@@ -896,7 +906,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
     <div>
       <ActionFilters horizonDays={horizonDays} setHorizonDays={setHorizonDays} statusFilters={statusFilters} setStatusFilters={setStatusFilters} assigneeFilter={assigneeFilter} setAssigneeFilter={setAssigneeFilter} assignees={assignees} departmentFilter={departmentFilter} setDepartmentFilter={setDepartmentFilter} departments={departments} roleFilter={roleFilter} setRoleFilter={setRoleFilter} roleOptions={roleOptions} allowAllHorizon/>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}}>
-        <span className="task-tip" style={{fontSize:12,color:C.tx3}}>💡 Drag ⋮⋮ to set chronology · {filtersActive?"Clear filters to reorder":"Expand phases below"}</span>
+        <span className="task-tip" style={{fontSize:12,color:C.tx3}}>💡 Drag ⋮⋮ on a section header or task row to set chronology · {filtersActive?"Clear filters to reorder tasks":"Expand sections below"}</span>
         <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
           <button type="button" className="btg" onClick={expandAll} title="Open every phase section">Expand all</button>
           <button type="button" className="btg" onClick={collapseAll} title="Close every phase section">Collapse all</button>
@@ -921,10 +931,26 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
         const ek=phaseExpandKey(proj.id,ph.id);
         const isOpen=expandedPh[ek]!==false;
         const dept=getDepartmentForPhase(ph.name,departments);
+        const isPhDragOver=dragOverPhId===ph.id&&dragPhase?.phId&&dragPhase.phId!==ph.id;
         return(
-          <div key={ph.id} className="ps">
+          <div key={ph.id} className={`ps${isPhDragOver?" ps-drag-over":""}`}
+            onDragOver={e=>{if(!dragPhase||dragPhase.phId===ph.id)return;e.preventDefault();e.dataTransfer.dropEffect="move";setDragOverPhId(ph.id);}}
+            onDragLeave={()=>{if(dragOverPhId===ph.id)setDragOverPhId(null);}}
+            onDrop={e=>{
+              e.preventDefault();
+              setDragOverPhId(null);
+              if(!dragPhase||dragPhase.phId===ph.id)return;
+              dropReorderPhase(dragPhase.phId,ph.id);
+              setDragPhase(null);
+            }}
+          >
             <div className="psh" onClick={()=>setExpandedPh(p=>({...p,[ek]:!isOpen}))}>
               <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                <span className="pdrag" draggable title="Drag section to reorder"
+                  onClick={e=>e.stopPropagation()}
+                  onDragStart={e=>{e.stopPropagation();setDragPhase({phId:ph.id});e.dataTransfer.effectAllowed="move";}}
+                  onDragEnd={()=>{setDragPhase(null);setDragOverPhId(null);}}
+                >⋮⋮</span>
                 <span style={{fontSize:11,color:C.tx3,width:14,textAlign:"center",flexShrink:0}} aria-hidden>{isOpen?"▾":"▸"}</span>
                 <div style={{width:9,height:9,borderRadius:"50%",background:ph.col,flexShrink:0}}/>
                 <span style={{fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:".5px",color:ph.col}}>{ph.name}</span>
@@ -1263,6 +1289,15 @@ function reducer(state,action){
       if(fromIdx<0||toIdx<0||fromIdx===toIdx)break;
       const[item]=ph.tasks.splice(fromIdx,1);
       ph.tasks.splice(toIdx,0,item);
+      break;
+    }
+    case"reorderPhase":{
+      const p=fp(action.projId);if(!p||!p.phases?.length)break;
+      const fromIdx=p.phases.findIndex(ph=>ph.id===action.fromId);
+      const toIdx=p.phases.findIndex(ph=>ph.id===action.toId);
+      if(fromIdx<0||toIdx<0||fromIdx===toIdx)break;
+      const[item]=p.phases.splice(fromIdx,1);
+      p.phases.splice(toIdx,0,item);
       break;
     }
     case"delPhase":{const p=fp(action.projId);if(p)p.phases=p.phases.filter(ph=>ph.id!==action.phId);break;}
