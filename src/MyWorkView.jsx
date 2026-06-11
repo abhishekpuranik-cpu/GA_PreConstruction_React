@@ -162,7 +162,7 @@ export function MyWorkView({ projects, loginUser, departments, dispatch, toast, 
       scopeComments,
       scopeDepartment,
       projectFilter,
-      statusFilter,
+      statusFilters,
     ]
   );
 
