@@ -1,8 +1,7 @@
 import React from 'react';
-import { AttachmentLinks } from './AttachmentPicker.jsx';
 import { CommentForm } from './CommentForm.jsx';
-import { sortCommentsChronologically } from './preconComments.js';
-import { formatShortDate, getEditableComment } from './preconMyWork.js';
+import { getEditableComment } from './preconMyWork.js';
+import { TaskCommentsSummary } from './TaskCommentsSummary.jsx';
 
 /**
  * Shared comment history + post/edit form (project tasks and My Work).
@@ -17,6 +16,7 @@ export function TaskCommentPanel({
   authorEmail,
   departments,
   allowEditLatest = true,
+  hideHistory = false,
 }) {
   const editable = allowEditLatest ? getEditableComment(task) : null;
   const initial = editable?.comment
@@ -29,57 +29,7 @@ export function TaskCommentPanel({
 
   return (
     <>
-      {(task.comments || []).length > 0 ? (
-        <div className="mw-comment-history">
-          <div className="mw-comment-history-title">Comment history (oldest first)</div>
-          {sortCommentsChronologically(task.comments).map(({ comment: cm }) => (
-            <div key={`${cm.createdAt || ''}-${cm.ts || ''}-${cm.author}`} className="citem mw-ch-item">
-              <div
-                style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  justifyContent: 'space-between',
-                  gap: 4,
-                  marginBottom: 3,
-                }}
-              >
-                <span style={{ fontSize: 11, fontWeight: 600, color: '#1A304A' }}>{cm.author || 'Anon'}</span>
-                <span style={{ fontSize: 10, color: '#96918A' }}>{cm.ts || '—'}</span>
-              </div>
-              <div style={{ fontSize: 12, color: '#1A1815', lineHeight: 1.5 }}>{cm.text}</div>
-              {cm.nextAction || cm.nextActionDate ? (
-                <div style={{ fontSize: 11, color: '#1A304A', marginTop: 6, lineHeight: 1.45 }}>
-                  <span style={{ fontWeight: 600 }}>Next action:</span> {cm.nextAction || '—'}
-                  {cm.nextActionDate ? (
-                    <span style={{ color: '#55504A' }}> · Due {formatShortDate(cm.nextActionDate)}</span>
-                  ) : null}
-                </div>
-              ) : null}
-              <AttachmentLinks attachments={cm.attachments} />
-              {cm.attachmentsPending ? (
-                <div className="c-email-meta">📎 Uploading attachments…</div>
-              ) : cm.attachmentError ? (
-                <div className="c-email-meta">📎 Attachment failed: {cm.attachmentError}</div>
-              ) : null}
-              {cm.notifyRecipients?.length ? (
-                <div className="c-email-meta">
-                  {cm.emailSent
-                    ? `✉ Sent to ${cm.notifyRecipients.map((r) => r.name || r.email).join(', ')}`
-                    : cm.emailQueued
-                      ? `✉ Email queued for ${cm.notifyRecipients.map((r) => r.name || r.email).join(', ')}`
-                      : cm.emailError
-                        ? `✉ Email failed: ${cm.emailError}`
-                        : cm.notifyPending !== false
-                          ? '✉ Sending notifications…'
-                          : '✉ Notify pending'}
-                </div>
-              ) : null}
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div style={{ fontSize: 12, color: '#96918A', fontStyle: 'italic', marginBottom: 10 }}>No comments yet</div>
-      )}
+      {!hideHistory ? <TaskCommentsSummary comments={task.comments} /> : null}
       <CommentForm
         key={`${task.id}-${editable?.commentIndex ?? 'new'}`}
         projectId={proj.id}

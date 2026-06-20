@@ -19,12 +19,13 @@ import {
   collectAllRoles,
 } from "./preconDepartments.js";
 import { PortfolioRagMatrix } from "./PortfolioRagMatrix.jsx";
-import { ensureCommentCreatedAt, formatCommentLine, sortCommentsChronologically } from "./preconComments.js";
+import { ensureCommentCreatedAt, formatCommentLine, getLatestComment, sortCommentsChronologically } from "./preconComments.js";
 import { useLoginUser } from "./useLoginUser.js";
 import { canDeletePreconProjects } from "./preconPermissions.js";
 import { MyWorkView } from "./MyWorkView.jsx";
 import { TaskActivityFiles } from "./TaskActivityFiles.jsx";
 import { TaskCommentPanel } from "./TaskCommentPanel.jsx";
+import { TaskCommentsSummary } from "./TaskCommentsSummary.jsx";
 import { StatusFilterChips } from "./StatusFilterChips.jsx";
 import { AssigneeMultiSelect } from "./AssigneeMultiSelect.jsx";
 import { filterProjectsForUser, buildAssigneeRoster, assigneeMatches, projectsForAssigneeRoster } from "./preconAssignees.js";
@@ -443,6 +444,41 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .cexp-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap}
 .cexp-head-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#C89A3A;flex:1;min-width:0;line-height:1.35}
 .cexp-close{flex-shrink:0;min-height:36px}
+.tcol-comments{min-width:140px;max-width:220px}
+.tcol-cmt-preview{display:flex;flex-direction:column;gap:2px;margin-bottom:6px;min-width:0}
+.tcol-cmt-author{font-size:10px;font-weight:600;color:#1A304A}
+.tcol-cmt-text{font-size:10px;color:#55504A;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tcol-cmt-empty{font-size:10px;color:#C4BEB6;font-style:italic;margin-bottom:6px;display:block}
+.tcc-consolidated{border-top:1px solid #E2DDD4;background:#F8F6F1;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.tcc-consolidated-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:2px}
+.tcc-consolidated-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#1A304A}
+.tcc-consolidated-meta{font-size:10px;color:#96918A}
+.tcc-card{background:#fff;border:1px solid #E2DDD4;border-radius:8px;overflow:hidden;box-sizing:border-box;max-width:100%}
+.tcc-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:10px 12px;background:#FBF7EE;border-bottom:1px solid #E2DDD4;flex-wrap:wrap}
+.tcc-card-main{flex:1;min-width:0}
+.tcc-card-seq{font-size:10px;font-weight:700;color:#96918A;margin-right:6px}
+.tcc-card-name{font-size:13px;font-weight:600;color:#1A304A;line-height:1.35}
+.tcc-card-meta{font-size:10px;color:#96918A;margin-top:3px;display:flex;flex-wrap:wrap;gap:6px}
+.tcc-card-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.tcc-card-count{font-size:10px;font-weight:600;color:#9A6E20;background:#FBF7EE;border:1px solid #E8D4A0;border-radius:999px;padding:2px 8px}
+.tcc-card-body{padding:10px 12px 12px}
+.tcc-editor{margin-top:12px;padding-top:12px;border-top:1px dashed #E2DDD4}
+.tcc-empty{font-size:12px;color:#96918A;font-style:italic;margin:0}
+.tcc-timeline{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.tcc-timeline-compact{gap:6px}
+.tcc-entry{background:#FAFAF8;border:1px solid #E2DDD4;border-radius:6px;padding:9px 10px;border-left:3px solid #C89A3A}
+.tcc-entry-flag{border-left-color:#B32E1E;background:#FDF8F8}
+.tcc-entry-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:4px}
+.tcc-entry-author{font-size:11px;font-weight:600;color:#1A304A}
+.tcc-entry-time{font-size:10px;color:#96918A;margin-left:auto}
+.tcc-entry-badge{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.35px;color:#B32E1E;background:#FCECEA;border-radius:3px;padding:1px 5px}
+.tcc-entry-text{font-size:12px;color:#1A1815;line-height:1.5;margin:0 0 6px;white-space:pre-wrap;word-break:break-word}
+.tcc-entry-next{font-size:11px;color:#1A304A;line-height:1.45;padding:6px 8px;background:#EEF4FC;border-radius:5px;margin-bottom:4px}
+.tcc-entry-next-lbl{font-weight:700;margin-right:6px;text-transform:uppercase;font-size:9px;letter-spacing:.35px;color:#1B5E9E}
+.tcc-entry-next-due{color:#55504A;margin-left:6px}
+.tcc-entry-meta{font-size:10px;color:#1B5E9E;margin-top:4px;line-height:1.4}
+.tcc-entry-meta-err{color:#B32E1E}
+.btg-on{background:#1A304A!important;color:#fff!important;border-color:#1A304A!important}
 .cexp-inner{width:100%;max-width:min(480px,100%);box-sizing:border-box;min-width:0}
 .cform{display:flex;flex-direction:column;gap:12px;width:100%;max-width:min(480px,100%);min-width:0}
 .cform-meta{font-size:11px;color:#55504A;line-height:1.45;word-break:break-word}
@@ -594,6 +630,10 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
   .main{margin-top:0;padding:12px 10px calc(24px + env(safe-area-inset-bottom,0px));overflow-x:hidden;max-width:100vw}
   .cexp-panel{padding:12px 10px}
   .cexp-inner,.cform,.cform-rich{max-width:100%}
+  .tcc-consolidated{padding:10px 8px}
+  .tcc-card-head{flex-direction:column;align-items:stretch}
+  .tcc-card-actions{justify-content:flex-end}
+  .tcol-comments{max-width:none}
   .att-pick-head{flex-direction:column;align-items:stretch}
   .att-pick-add{width:100%;text-align:center;min-height:44px}
   .nrp-auto-banner{font-size:10px;padding:6px 8px}
@@ -878,10 +918,17 @@ function RegView({proj,regStatus,setRegStatus}){
 // ── TASKS VIEW ───────────────────────────────────────────
 function phaseExpandKey(projId,phId){return`${projId}:${phId}`;}
 
+function truncateText(text, max = 72) {
+  const t = String(text || '').trim();
+  if (t.length <= max) return t;
+  return `${t.slice(0, max - 1)}…`;
+}
+
 function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
   const dm=cDates(proj);
   const[expandedC,setExpandedC]=useState({});
   const[expandedPh,setExpandedPh]=useState({});
+  const[showCommentsConsolidated,setShowCommentsConsolidated]=useState(true);
   const[dragTask,setDragTask]=useState(null);
   const[dragOverId,setDragOverId]=useState(null);
   const[dragPhase,setDragPhase]=useState(null);
@@ -896,6 +943,22 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
   const todayStr=todayIso();
   const filters={statusFilters,assigneeFilter,departmentFilter,departments,roleFilter,horizonDays,todayStr};
   const filtersActive=!!(statusFilters.length||assigneeFilter||departmentFilter||roleFilter||horizonDays!=null);
+  useEffect(()=>{
+    const visibleIds=new Set();
+    proj.phases.forEach(ph=>{
+      ph.tasks.forEach(t=>{
+        if(taskPassesFilters(t,dm,ph.name,filters))visibleIds.add(t.id);
+      });
+    });
+    setExpandedC(p=>{
+      const next={...p};
+      let changed=false;
+      Object.keys(next).forEach(id=>{
+        if(!visibleIds.has(id)){delete next[id];changed=true;}
+      });
+      return changed?next:p;
+    });
+  },[proj,dm,horizonDays,statusFilters,assigneeFilter,departmentFilter,roleFilter,todayStr,departments]);
   const expandAll=()=>{
     const next={};
     proj.phases.forEach(ph=>{next[phaseExpandKey(proj.id,ph.id)]=true;});
@@ -969,6 +1032,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}}>
         <span className="task-tip" style={{fontSize:12,color:C.tx3}}>💡 Drag ⋮⋮ on a section header or task row to set chronology · {filtersActive?"Clear filters to reorder tasks":"Expand sections below"}</span>
         <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
+          <button type="button" className={`btg${showCommentsConsolidated?" btg-on":""}`} onClick={()=>setShowCommentsConsolidated(v=>!v)} title="Show all comments for filtered tasks">{showCommentsConsolidated?"▾ Comments on":"▸ Show comments"}</button>
           <button type="button" className="btg" onClick={expandAll} title="Open every phase section">Expand all</button>
           <button type="button" className="btg" onClick={collapseAll} title="Close every phase section">Collapse all</button>
           <button className="btg" onClick={()=>dispatch({type:"addPhase",projId:proj.id})}>+ Phase</button>
@@ -993,6 +1057,8 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
         const isOpen=expandedPh[ek]!==false;
         const dept=getDepartmentForPhase(ph.name,departments);
         const isPhDragOver=dragOverPhId===ph.id&&dragPhase?.phId&&dragPhase.phId!==ph.id;
+        const phaseCommentCount=visible.reduce((n,t)=>n+(t.comments||[]).length,0);
+        const tasksWithComments=visible.filter(t=>(t.comments||[]).length>0).length;
         return(
           <div key={ph.id} className={`ps${isPhDragOver?" ps-drag-over":""}`}
             onDragOver={e=>{if(!dragPhase||dragPhase.phId===ph.id)return;e.preventDefault();e.dataTransfer.dropEffect="move";setDragOverPhId(ph.id);}}
@@ -1040,6 +1106,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                   const d=dm[t.id]||{s:"",e:""};const st=taskStatus(t,dm);const od=st==="overdue"?dbDays(d.e,todayStr):0;
                   const cc=t.comments.length;
                   const showC=!!expandedC[t.id];
+                  const latestComment=getLatestComment(t.comments);
                   const canDrag=!filtersActive;
                   const isDragOver=dragOverId===t.id&&dragTask?.phId===ph.id;
                   return(
@@ -1091,13 +1158,24 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                           </select>
                           {st==="overdue"&&<span className="badge bov" style={{marginLeft:4}}>+{od}d</span>}
                         </td>
-                        <td style={{whiteSpace:"nowrap"}}>
+                        <td className="tcol-comments">
+                          {showCommentsConsolidated&&latestComment?(
+                            <div className="tcol-cmt-preview" title={latestComment.text}>
+                              <span className="tcol-cmt-author">{latestComment.author||"Anon"} · {latestComment.ts||"—"}</span>
+                              <span className="tcol-cmt-text">{truncateText(latestComment.text, 80)}</span>
+                            </div>
+                          ):showCommentsConsolidated?(
+                            <span className="tcol-cmt-empty">No comments</span>
+                          ):null}
                           <button type="button" className="bts" title={showC?"Scroll to comments":"Post comment"} onClick={(e)=>{
                             e.stopPropagation();
-                            if(showC)document.getElementById(`cexp-${t.id}`)?.scrollIntoView({behavior:"smooth",block:"nearest"});
+                            if(showCommentsConsolidated){
+                              if(showC)document.getElementById(`cexp-${t.id}`)?.scrollIntoView({behavior:"smooth",block:"nearest"});
+                              else openCommentPanel(t.id);
+                            }else if(showC)document.getElementById(`cexp-${t.id}`)?.scrollIntoView({behavior:"smooth",block:"nearest"});
                             else openCommentPanel(t.id);
-                          }}>Post{cc?` (${cc})`:""}</button>
-                          {showC?<button type="button" className="bts" style={{marginLeft:4}} title="Hide comments" onClick={(e)=>{e.stopPropagation();closeCommentPanel(t.id);}}>▴</button>:null}
+                          }}>{showCommentsConsolidated?(showC?"Reply":"Add"):"Post"}{cc?` (${cc})`:""}</button>
+                          {showC&&!showCommentsConsolidated?<button type="button" className="bts" style={{marginLeft:4}} title="Hide comments" onClick={(e)=>{e.stopPropagation();closeCommentPanel(t.id);}}>▴</button>:null}
                         </td>
                         <td><div className="tact">
                           <button type="button" className="abt" title="Move up" disabled={filtersActive||seqIdx<=1} onClick={()=>moveTaskByStep(ph,t.id,-1)}>↑</button>
@@ -1117,7 +1195,66 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                 })}
               </tbody>
             </table></div>}
-            {isOpen&&visible.filter(t=>!!expandedC[t.id]).map(t=>(
+            {isOpen&&showCommentsConsolidated&&visible.length>0&&(
+              <div className="tcc-consolidated">
+                <div className="tcc-consolidated-head">
+                  <span className="tcc-consolidated-title">Comments — filtered tasks</span>
+                  <span className="tcc-consolidated-meta">
+                    {visible.length} task{visible.length!==1?"s":""} · {tasksWithComments} with comments · {phaseCommentCount} total
+                    {filtersActive?" · filters applied":""}
+                  </span>
+                </div>
+                {visible.map(t=>{
+                  const seqIdx=ph.tasks.findIndex(x=>x.id===t.id)+1;
+                  const d=dm[t.id]||{s:"",e:""};
+                  const cc=(t.comments||[]).length;
+                  const showC=!!expandedC[t.id];
+                  return(
+                    <article key={`tcc-${t.id}`} className="tcc-card" id={`cexp-${t.id}`}>
+                      <header className="tcc-card-head">
+                        <div className="tcc-card-main">
+                          <div>
+                            <span className="tcc-card-seq">#{seqIdx}</span>
+                            <span className="tcc-card-name">{t.name}</span>
+                          </div>
+                          <div className="tcc-card-meta">
+                            <span>{statusLabel(taskStatus(t,dm))}</span>
+                            {t.who?<span>{t.who}</span>:null}
+                            {d.e?<span>Due {fmt(d.e)}</span>:null}
+                          </div>
+                        </div>
+                        <div className="tcc-card-actions">
+                          {cc>0?<span className="tcc-card-count">{cc} comment{cc!==1?"s":""}</span>:null}
+                          <button type="button" className="bts" onClick={(e)=>{e.stopPropagation();showC?closeCommentPanel(t.id):openCommentPanel(t.id);}}>
+                            {showC?"▴ Hide":"+ Add comment"}
+                          </button>
+                        </div>
+                      </header>
+                      <div className="tcc-card-body">
+                        <TaskCommentsSummary comments={t.comments} emptyLabel="No comments on this task yet." />
+                        {showC?(
+                          <div className="tcc-editor">
+                            <TaskActivityFiles proj={proj} ph={ph} task={t} dispatch={dispatch} toast={toast} authorName={authorName}/>
+                            <TaskCommentPanel
+                              proj={proj}
+                              ph={ph}
+                              task={t}
+                              dispatch={dispatch}
+                              toast={toast}
+                              authorName={authorName}
+                              authorEmail={loginUser?.email}
+                              departments={departments}
+                              hideHistory
+                            />
+                          </div>
+                        ):null}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+            {isOpen&&!showCommentsConsolidated&&visible.filter(t=>!!expandedC[t.id]).map(t=>(
               <div key={`cexp-${t.id}`} className="cexp-panel" id={`cexp-${t.id}`}>
                 <div className="cexp-inner">
                   <div className="cexp-head">

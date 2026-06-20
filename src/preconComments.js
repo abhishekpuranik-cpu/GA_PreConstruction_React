@@ -58,3 +58,13 @@ export function formatCommentLine(c) {
   if (na || nad) return `${base} | Next: ${na || '—'} (${nad || '—'})${att}`;
   return base + att;
 }
+
+/** Latest comment by chronological sort. */
+export function getLatestComment(comments) {
+  const sorted = sortCommentsChronologically(comments);
+  return sorted.length ? sorted[sorted.length - 1].comment : null;
+}
+
+export function countComments(comments) {
+  return (comments || []).length;
+}
