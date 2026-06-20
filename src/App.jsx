@@ -21,12 +21,16 @@ import {
 import { PortfolioRagMatrix } from "./PortfolioRagMatrix.jsx";
 import { ensureCommentCreatedAt, formatCommentLine, sortCommentsChronologically } from "./preconComments.js";
 import { useLoginUser } from "./useLoginUser.js";
+import { canDeletePreconProjects } from "./preconPermissions.js";
 import { MyWorkView } from "./MyWorkView.jsx";
 import { TaskActivityFiles } from "./TaskActivityFiles.jsx";
 import { TaskCommentPanel } from "./TaskCommentPanel.jsx";
 import { StatusFilterChips } from "./StatusFilterChips.jsx";
 import { AssigneeMultiSelect } from "./AssigneeMultiSelect.jsx";
 import { filterProjectsForUser, buildAssigneeRoster, assigneeMatches, projectsForAssigneeRoster } from "./preconAssignees.js";
+import { filterAndSortProjects } from "./projectSearch.js";
+import { ProjectNavPicker } from "./ProjectNavPicker.jsx";
+import { notifyTaskStatusChange } from "./preconNotify.js";
 import { migratePreWorkFollowUpState, applyGhqPreWorkToPhases } from "./preconGhqPreWorkMigrate.js";
 import { mergeAkashActivitiesIntoState } from "./preconAkashGhqMerge.js";
 import {
@@ -170,7 +174,8 @@ function buildInit(){
           mkT("pa1","Scouting",30),mkT("pa2","TCP Act Verification",14,["pa1"]),
         ]}, parSO, parCP,
       ]},
-    ]
+    ],
+    _removedProjectIds:[],
   };
   const merged = mergeLifecycleIntoState(init).state;
   migratePreWorkFollowUpState(merged);
@@ -214,7 +219,13 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .main{margin-top:64px;padding:22px;max-width:1440px;margin-left:auto;margin-right:auto}
 .nlogo{width:30px;height:30px;background:#1A304A;color:#C89A3A;border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:15px;font-weight:700;flex-shrink:0}
 .proj-sel-wrap{display:flex;align-items:center;gap:8px;flex:1;min-width:140px;padding:0 12px}
+.proj-picker{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;flex:1;min-width:140px}
 .proj-sel-lbl{font-size:10px;font-weight:600;color:#96918A;text-transform:uppercase;letter-spacing:.4px;flex-shrink:0}
+.proj-search{flex:1;min-width:120px;max-width:220px;padding:7px 10px;border:1.5px solid #E2DDD4;border-radius:6px;font-size:12px;font-weight:500;color:#1A304A;background:#fff;font-family:'DM Sans',sans-serif}
+.proj-search:focus{outline:none;border-color:#C89A3A;box-shadow:0 0 0 2px rgba(200,154,58,.25)}
+.proj-search-hint{font-size:10px;color:#96918A;white-space:nowrap;flex-shrink:0}
+.dash-proj-search{max-width:320px;width:100%;margin-top:10px;padding:9px 12px;border:1.5px solid #E2DDD4;border-radius:6px;font-size:13px;font-family:'DM Sans',sans-serif;color:#1A304A;background:#fff}
+.dash-proj-search:focus{outline:none;border-color:#C89A3A;box-shadow:0 0 0 2px rgba(200,154,58,.25)}
 .proj-sel{flex:1;min-width:0;max-width:min(360px,100%);padding:8px 36px 8px 12px;border:1.5px solid #E2DDD4;border-radius:6px;font-size:13px;font-weight:600;color:#1A304A;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2355504A' d='M2 4l4 4 4-4'/%3E%3C/svg%3E") no-repeat right 12px center;font-family:'DM Sans',sans-serif;cursor:pointer;appearance:none;-webkit-appearance:none}
 .proj-sel:focus{outline:none;border-color:#C89A3A;box-shadow:0 0 0 2px rgba(200,154,58,.25)}
 .proj-sel option{font-weight:500}
@@ -428,8 +439,9 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .abt:hover{background:#EAE6DC}
 .abt.del:hover{background:#FCECEA}
 .cexp td{padding:14px 16px !important;background:#FBF7EE !important;vertical-align:top}
-.cexp-inner{width:100%;max-width:100%;box-sizing:border-box}
-.cform{display:flex;flex-direction:column;gap:12px;width:100%;max-width:520px}
+.cexp-panel{padding:14px 16px;background:#FBF7EE;border-top:1px solid #E2DDD4;box-sizing:border-box;width:100%;max-width:100%;overflow-x:hidden}
+.cexp-inner{width:100%;max-width:min(480px,100%);box-sizing:border-box;min-width:0}
+.cform{display:flex;flex-direction:column;gap:12px;width:100%;max-width:min(480px,100%);min-width:0}
 .cform-meta{font-size:11px;color:#55504A;line-height:1.45;word-break:break-word}
 .cform-field{display:flex;flex-direction:column;gap:4px;margin:0}
 .cform-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.45px;color:#96918A}
@@ -439,9 +451,9 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .cform-textarea{resize:vertical;min-height:88px;line-height:1.45}
 .cform-foot{display:flex;justify-content:flex-end;padding-top:2px}
 .cform-foot .btp{min-height:44px;padding:10px 20px;font-size:13px}
-.cform-rich{max-width:100%}
+.cform-rich{max-width:min(480px,100%);min-width:0}
 .c-email-meta{font-size:10px;color:#1B5E9E;margin-top:6px}
-.att-pick{margin-top:4px;padding:10px 12px;background:#F8F6F1;border:1px dashed #E2DDD4;border-radius:8px}
+.att-pick{margin-top:4px;padding:10px 12px;background:#F8F6F1;border:1px dashed #E2DDD4;border-radius:8px;max-width:100%;min-width:0;box-sizing:border-box}
 .att-pick-compact{padding:8px 10px}
 .att-pick-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:6px}
 .att-pick-title{font-size:11px;font-weight:600;color:#1A304A}
@@ -458,7 +470,7 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .att-links{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
 .att-link{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;background:#EEF4FC;border:1px solid #C5D9ED;color:#1B5E9E;font-size:11px;font-weight:600;text-decoration:none}
 .att-link:hover{background:#dbeafe}
-.nrp{margin-top:4px;padding:10px 12px;background:#fff;border:1px solid #E2DDD4;border-radius:8px}
+.nrp{margin-top:4px;padding:10px 12px;background:#fff;border:1px solid #E2DDD4;border-radius:8px;max-width:100%;min-width:0;box-sizing:border-box}
 .nrp-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-bottom:8px}
 .nrp-title{font-size:11px;font-weight:700;color:#1A304A}
 .nrp-ok{font-size:10px;color:#1A6A3C}
@@ -476,16 +488,16 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .nrp-no-email{font-size:9px;color:#AE6418}
 .nrp-loading,.nrp-err,.nrp-empty{font-size:11px;color:#96918A;margin:0}
 .nrp-err{color:#B32E1E}
-.nrp-auto-banner{font-size:11px;line-height:1.45;padding:8px 10px;background:#EEF4FC;border:1px solid #C5D9ED;border-radius:6px;color:#1A304A;margin-bottom:4px}
+.nrp-auto-banner{font-size:11px;line-height:1.45;padding:8px 10px;background:#EEF4FC;border:1px solid #C5D9ED;border-radius:6px;color:#1A304A;margin-bottom:4px;word-break:break-word;overflow-wrap:anywhere}
 .nrp-auto-banner strong{color:#1B5E9E}
 .nrp-auto-names{color:#55504A;font-weight:400}
 .nrp-auto-warn{background:#FDF3E8;border-color:#E8C490;color:#AE6418}
 .nrp-extras{margin-top:0}
-.task-files{margin:10px 0;padding:10px 12px;background:#fff;border:1px solid #E2DDD4;border-radius:8px}
+.task-files{margin:10px 0;padding:10px 12px;background:#fff;border:1px solid #E2DDD4;border-radius:8px;max-width:100%;min-width:0;box-sizing:border-box}
 .task-files-head{margin-bottom:8px}
 .task-files-title{font-size:11px;font-weight:700;color:#1A304A;display:block}
 .task-files-sub{font-size:10px;color:#96918A}
-.mw-editor-wrap{margin-top:8px;padding-top:8px;border-top:1px solid #E2DDD4}
+.mw-editor-wrap{margin-top:8px;padding-top:8px;border-top:1px solid #E2DDD4;max-width:100%;overflow-x:hidden;box-sizing:border-box}
 .mw-comment-history{margin-bottom:12px}
 .mw-comment-history-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#9A6E20;margin-bottom:8px}
 .mw-ch-item{margin-bottom:7px}
@@ -559,6 +571,9 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
   .tnav-brand{border-right:none;padding-right:0;margin-right:0;flex:1;min-width:0}
   .tnav-menu-btn{display:inline-flex;flex-shrink:0}
   .proj-sel-wrap{width:100%;padding:0;display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 10px}
+  .proj-picker{width:100%}
+  .proj-picker .proj-search{max-width:none;width:100%;min-height:40px;font-size:13px}
+  .proj-picker .proj-sel{max-width:none;width:100%;min-height:44px;font-size:14px}
 .mw-nav-tab{flex-shrink:0;min-height:40px;font-weight:600}
 .mw-nav-tab.act{background:#1A304A;color:#fff;border-color:#1A304A}
 .proj-sel-wrap .proj-sel-lbl{width:100%}
@@ -574,7 +589,11 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
   .nact-sep{display:none}
   .file-lbl,.btg,.btp,.btp-add{min-height:44px;padding:10px 12px;font-size:13px}
   .main{margin-top:0;padding:12px 10px calc(24px + env(safe-area-inset-bottom,0px));overflow-x:hidden;max-width:100vw}
-  .cexp-inner{max-width:none}
+  .cexp-panel{padding:12px 10px}
+  .cexp-inner,.cform,.cform-rich{max-width:100%}
+  .att-pick-head{flex-direction:column;align-items:stretch}
+  .att-pick-add{width:100%;text-align:center;min-height:44px}
+  .nrp-auto-banner{font-size:10px;padding:6px 8px}
   .kgrid{grid-template-columns:repeat(2,1fr);gap:8px}
   .pgrid{grid-template-columns:1fr}
   .dg2{grid-template-columns:1fr}
@@ -610,10 +629,9 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
   .pcard{flex-direction:column;align-items:flex-start}
   .pch,.psh{font-size:11px}
   .ttable-wrap .ttable{min-width:640px}
-  .cexp td{padding:12px 10px!important}
-  .cform{max-width:none}
+  .cexp-panel{padding:10px 8px}
   .cform-foot .btp{width:100%}
-  tr.cexp-tr td{display:block;width:100%;box-sizing:border-box;border-bottom:1px solid #E2DDD4}
+  .att-pick-item{flex-wrap:wrap}
 }
 `;
 
@@ -902,6 +920,21 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
     dispatch({type:"reorderTask",projId:proj.id,phId:ph.id,fromId:tId,toId:ph.tasks[to].id});
   };
   const authorName=loginUser?.ready?(loginUser.name||"User"):"";
+  const statusLabelFor=(v)=>TASK_STATUS_OPTIONS.find(o=>o.value===v)?.label||v;
+  const notifyStatus=(ph,t,oldVal,newVal)=>{
+    if(!oldVal||oldVal===newVal||!authorName)return;
+    void notifyTaskStatusChange({
+      projectId:proj.id,
+      taskId:t.id,
+      projectName:proj.name,
+      phaseName:ph.name,
+      taskWho:t.who,
+      taskName:t.name,
+      author:authorName,
+      oldLabel:statusLabelFor(oldVal),
+      newLabel:statusLabelFor(newVal),
+    },toast);
+  };
   return(
     <div>
       <ActionFilters horizonDays={horizonDays} setHorizonDays={setHorizonDays} statusFilters={statusFilters} setStatusFilters={setStatusFilters} assigneeFilter={assigneeFilter} setAssigneeFilter={setAssigneeFilter} assignees={assignees} departmentFilter={departmentFilter} setDepartmentFilter={setDepartmentFilter} departments={departments} roleFilter={roleFilter} setRoleFilter={setRoleFilter} roleOptions={roleOptions} allowAllHorizon/>
@@ -1017,44 +1050,59 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                         <td>
                           <select className="bts" style={{minWidth:118,fontWeight:600,color:SCOL[st]||C.gray}}
                             value={taskStatusSelectValue(t)}
-                            onChange={e=>dispatch({type:"setTaskStatus",projId:proj.id,phId:ph.id,tId:t.id,v:e.target.value})}>
+                            onChange={e=>{
+                              const v=e.target.value;
+                              const prev=taskStatusSelectValue(t);
+                              dispatch({type:"setTaskStatus",projId:proj.id,phId:ph.id,tId:t.id,v});
+                              notifyStatus(ph,t,prev,v);
+                            }}>
                             {TASK_STATUS_OPTIONS.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}
                           </select>
                           {st==="overdue"&&<span className="badge bov" style={{marginLeft:4}}>+{od}d</span>}
                         </td>
                         <td style={{whiteSpace:"nowrap"}}>
-                          <button type="button" className="bts" title="Post comment" onClick={()=>setExpandedC(p=>({...p,[t.id]:true}))}>Post{cc?` (${cc})`:""}</button>
+                          <button type="button" className="bts" title="Post comment" onClick={()=>{
+                            setExpandedC(p=>({...p,[t.id]:true}));
+                            requestAnimationFrame(()=>document.getElementById(`cexp-${t.id}`)?.scrollIntoView({behavior:"smooth",block:"nearest"}));
+                          }}>Post{cc?` (${cc})`:""}</button>
                           {showC?<button type="button" className="bts" style={{marginLeft:4}} title="Hide comments" onClick={()=>setExpandedC(p=>({...p,[t.id]:false}))}>▴</button>:null}
                         </td>
                         <td><div className="tact">
                           <button type="button" className="abt" title="Move up" disabled={filtersActive||seqIdx<=1} onClick={()=>moveTaskByStep(ph,t.id,-1)}>↑</button>
                           <button type="button" className="abt" title="Move down" disabled={filtersActive||seqIdx>=ph.tasks.length} onClick={()=>moveTaskByStep(ph,t.id,1)}>↓</button>
-                          <button className="abt" title="Done" onClick={()=>{dispatch({type:"markDone",projId:proj.id,phId:ph.id,tId:t.id});toast("Marked complete","ok");}}>✓</button>
+                          <button className="abt" title="Done" onClick={()=>{
+                            const prev=taskStatusSelectValue(t);
+                            dispatch({type:"markDone",projId:proj.id,phId:ph.id,tId:t.id});
+                            toast("Marked complete","ok");
+                            notifyStatus(ph,t,prev,"completed");
+                          }}>✓</button>
                           <button className="abt" title="Add after" onClick={()=>dispatch({type:"addTask",projId:proj.id,phId:ph.id,afterId:t.id})}>+</button>
                           <button className="abt del" title="Delete" onClick={()=>{if(confirm(`Delete "${t.name}"?`))dispatch({type:"delTask",projId:proj.id,phId:ph.id,tId:t.id});}}>🗑</button>
                         </div></td>
                       </tr>
-                      {showC&&<tr className="cexp-tr"><td colSpan={11} className="cexp">
-                        <div className="cexp-inner">
-                        <div style={{fontSize:11,fontWeight:600,textTransform:"uppercase",letterSpacing:".5px",color:C.gold,marginBottom:10}}>Comments — {t.name}</div>
-                        <TaskActivityFiles proj={proj} ph={ph} task={t} dispatch={dispatch} toast={toast} authorName={authorName}/>
-                        <TaskCommentPanel
-                          proj={proj}
-                          ph={ph}
-                          task={t}
-                          dispatch={dispatch}
-                          toast={toast}
-                          authorName={authorName}
-                          authorEmail={loginUser?.email}
-                          departments={departments}
-                        />
-                        </div>
-                      </td></tr>}
                     </React.Fragment>
                   );
                 })}
               </tbody>
             </table></div>}
+            {isOpen&&visible.filter(t=>expandedC[t.id]).map(t=>(
+              <div key={`cexp-${t.id}`} className="cexp-panel" id={`cexp-${t.id}`}>
+                <div className="cexp-inner">
+                  <div style={{fontSize:11,fontWeight:600,textTransform:"uppercase",letterSpacing:".5px",color:C.gold,marginBottom:10}}>Comments — {t.name}</div>
+                  <TaskActivityFiles proj={proj} ph={ph} task={t} dispatch={dispatch} toast={toast} authorName={authorName}/>
+                  <TaskCommentPanel
+                    proj={proj}
+                    ph={ph}
+                    task={t}
+                    dispatch={dispatch}
+                    toast={toast}
+                    authorName={authorName}
+                    authorEmail={loginUser?.email}
+                    departments={departments}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
         );
       }).filter(Boolean)}
@@ -1082,25 +1130,27 @@ function ProjectFormFields({form,setForm}){
   );
 }
 
-function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWork,onEditProject,onDeleteProject,onAddProject,onImportJson,onImportExcel,departments}){
+function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWork,onEditProject,onDeleteProject,onAddProject,onImportJson,onImportExcel,departments,canDeleteProjects}){
   const[horizonDays,setHorizonDays]=useState(30);
   const[statusFilters,setStatusFilters]=useState([]);
   const[assigneeFilter,setAssigneeFilter]=useState("");
   const[departmentFilter,setDepartmentFilter]=useState("");
   const[roleFilter,setRoleFilter]=useState("");
-  const assignees=useMemo(()=>collectAssignees(projects),[projects]);
-  const roleOptions=useMemo(()=>collectAllRoles(projects),[projects]);
+  const[projSearch,setProjSearch]=useState("");
+  const displayProjects=useMemo(()=>filterAndSortProjects(projects,projSearch),[projects,projSearch]);
+  const assignees=useMemo(()=>collectAssignees(displayProjects),[displayProjects]);
+  const roleOptions=useMemo(()=>collectAllRoles(displayProjects),[displayProjects]);
   const todayStr=todayIso();
   const filters={statusFilters,assigneeFilter,departmentFilter,departments,roleFilter,horizonDays,todayStr};
-  const allStats=projects.map(p=>({p,s:pStats(p)}));
+  const allStats=displayProjects.map(p=>({p,s:pStats(p)}));
   const tT=allStats.reduce((a,x)=>a+x.s.tot,0),tC=allStats.reduce((a,x)=>a+x.s.comp,0),
         tO=allStats.reduce((a,x)=>a+x.s.ov,0),tI=allStats.reduce((a,x)=>a+x.s.ip,0);
   const op=tT?Math.round(tC/tT*100):0;
   const statusData=[{name:"Completed",v:tC,c:"#1A6A3C"},{name:"In Progress",v:tI,c:"#1B5E9E"},{name:"Overdue",v:tO,c:"#B32E1E"},{name:"Not Started",v:allStats.reduce((a,x)=>a+x.s.up,0),c:"#9A9590"}];
-  const ghq=projects.find(p=>p.id==="ghq");
+  const ghq=displayProjects.find(p=>p.id==="ghq");
   const phaseData=ghq?ghq.phases.map(ph=>{const dm=cDates(ghq);const c=ph.tasks.filter(t=>taskStatus(t,dm)==="completed").length;return{name:ph.name.substring(0,12),pct:ph.tasks.length?Math.round(c/ph.tasks.length*100):0,col:ph.col};}):[];
   const upcoming=[],iss=[];
-  projects.forEach(proj=>{
+  displayProjects.forEach(proj=>{
     const dm=cDates(proj);
     proj.phases.forEach(ph=>ph.tasks.forEach(t=>{
       const d=dm[t.id];if(!d)return;const st=taskStatus(t,dm);
@@ -1120,7 +1170,17 @@ function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWo
     <div>
       <div style={{marginBottom:20}}>
         <h1 className="disp" style={{fontSize:30,fontWeight:600,color:C.navy,lineHeight:1.1}}>Pre-Construction Command Centre</h1>
-        <p style={{color:C.tx2,fontSize:13,marginTop:4}}>Golden Abodes · {projects.length} Projects · {fmt(todayStr)}</p>
+        <p style={{color:C.tx2,fontSize:13,marginTop:4}}>
+          Golden Abodes · {displayProjects.length}{projSearch.trim()?` of ${projects.length}`:""} Projects · {fmt(todayStr)}
+        </p>
+        <input
+          type="search"
+          className="dash-proj-search"
+          placeholder="Search projects by name, location…"
+          value={projSearch}
+          onChange={e=>setProjSearch(e.target.value)}
+          aria-label="Search projects on dashboard"
+        />
         <div className="dash-actions">
           {onOpenMyWork?<button type="button" className="mw-cta" onClick={onOpenMyWork}>◎ My Work — your assignments</button>:null}
           {onAddProject?<button type="button" className="btp-add" onClick={onAddProject}>+ Add project</button>:null}
@@ -1128,9 +1188,9 @@ function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWo
           {onImportExcel?<label className="file-lbl">Import Excel<input type="file" accept=".xlsx,.xls" onChange={e=>{const f=e.target.files?.[0];if(f)onImportExcel(f);e.target.value="";}}/></label>:null}
         </div>
       </div>
-      <PortfolioRagMatrix projects={projects} departments={departments} onOpenProject={onOpenProject}/>
+      <PortfolioRagMatrix projects={displayProjects} departments={departments} onOpenProject={onOpenProject}/>
       <div className="kgrid">
-        {[{l:"Total Tasks",v:tT,c:C.navy},{l:"Completed",v:tC,c:C.green,sub:`${op}% overall`},{l:"In Progress",v:tI,c:C.blue},{l:"Overdue",v:tO,c:C.red,sub:tO>0?"Needs attention":"All on track"},{l:"Projects",v:projects.length,c:C.gold}].map((k,i)=>(
+        {[{l:"Total Tasks",v:tT,c:C.navy},{l:"Completed",v:tC,c:C.green,sub:`${op}% overall`},{l:"In Progress",v:tI,c:C.blue},{l:"Overdue",v:tO,c:C.red,sub:tO>0?"Needs attention":"All on track"},{l:"Projects",v:displayProjects.length,c:C.gold}].map((k,i)=>(
           <div key={i} className="kcard" style={{"--acc":k.c}}>
             <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:".8px",color:C.tx3,marginBottom:7}}>{k.l}</div>
             <div className="disp" style={{fontSize:30,fontWeight:600,color:k.c,lineHeight:1}}>{k.v}</div>
@@ -1139,7 +1199,7 @@ function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWo
         ))}
       </div>
       <div className="pgrid">
-        {allStats.map(({p,s})=>{
+        {allStats.length?allStats.map(({p,s})=>{
           const r=34,circ=2*Math.PI*r,off=circ*(1-s.pct/100);
           const dm=cDates(p);let nxt=null;
           for(const ph of p.phases)for(const t of ph.tasks){const st=taskStatus(t,dm);if(st==="inprogress"||st==="notstarted"){nxt=t;break;}if(nxt)break;}
@@ -1153,7 +1213,7 @@ function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWo
               </svg>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{fontWeight:600,fontSize:13,color:C.navy,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.name}</div>
-                <div style={{fontSize:11,color:C.tx3,marginTop:1}}>{p.loc} · {p.floors}F</div>
+                <div style={{fontSize:11,color:C.tx3,marginTop:1}}>{p.loc} · {p.floors}F{p.ko?` · Kickoff ${fmt(p.ko)}`:""}</div>
                 <div style={{display:"flex",gap:7,marginTop:4,fontSize:11}}>
                   <span style={{color:C.green}}>✓{s.comp}</span>
                   <span style={{color:C.blue}}>{s.ip} active</span>
@@ -1162,12 +1222,16 @@ function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWo
                 {nxt&&<div style={{fontSize:11,color:C.tx3,marginTop:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>↳ {nxt.name}</div>}
                 <div style={{display:"flex",gap:5,marginTop:8}} onClick={e=>e.stopPropagation()}>
                   {onEditProject&&<button type="button" className="bts" onClick={()=>onEditProject(p)}>Edit</button>}
-                  {onDeleteProject&&<button type="button" className="btd bts" onClick={()=>onDeleteProject(p)}>Delete</button>}
+                  {canDeleteProjects&&onDeleteProject&&<button type="button" className="btd bts" onClick={()=>onDeleteProject(p)}>Delete</button>}
                 </div>
               </div>
             </div>
           );
-        })}
+        }):(
+          <p style={{gridColumn:"1/-1",padding:"24px 8px",color:C.tx3,fontSize:13}}>
+            {projSearch.trim()?`No projects match “${projSearch.trim()}”.`:"No projects yet — add one to get started."}
+          </p>
+        )}
       </div>
       <ActionFilters horizonDays={horizonDays} setHorizonDays={setHorizonDays} statusFilters={statusFilters} setStatusFilters={setStatusFilters} assigneeFilter={assigneeFilter} setAssigneeFilter={setAssigneeFilter} assignees={assignees} departmentFilter={departmentFilter} setDepartmentFilter={setDepartmentFilter} departments={departments} roleFilter={roleFilter} setRoleFilter={setRoleFilter} roleOptions={roleOptions}/>
       <div className="dg2">
@@ -1326,6 +1390,9 @@ function reducer(state,action){
     case"addProject":S.projects.push(action.proj);break;
     case"delProject":{
       S.projects=S.projects.filter(p=>p.id!==action.pid);
+      if(!Array.isArray(S._removedProjectIds))S._removedProjectIds=[];
+      const rid=String(action.pid||"").trim();
+      if(rid&&!S._removedProjectIds.includes(rid))S._removedProjectIds.push(rid);
       break;
     }
     case"updProject":{
@@ -1420,7 +1487,9 @@ export default function App(){
   const[editProjId,setEditProjId]=useState(null);
   const[cloudStatus,setCloudStatus]=useState("loading");
   const mongoFlushRef=useRef(null);
+  const deleteFlushPendingRef=useRef(false);
   const loginUser=useLoginUser();
+  const canDeleteProjects=useMemo(()=>canDeletePreconProjects(loginUser),[loginUser]);
   const{toasts,toast}=useToasts();
   const visibleProjects=useMemo(()=>filterProjectsForUser(state.projects,loginUser),[state.projects,loginUser]);
   const curProj=state.projects.find(p=>p.id===curView);
@@ -1477,11 +1546,19 @@ export default function App(){
   const[editProj,setEditProj]=useState(emptyProjForm);
 
   const confirmDeleteProject=(p)=>{
+    if(!canDeleteProjects){toast("Only the platform admin can delete projects","err");return;}
     if(!p||!confirm(`Delete project "${p.name}" and all its tasks?`))return;
+    deleteFlushPendingRef.current=true;
     dispatch({type:"delProject",pid:p.id});
     if(curView===p.id)setCurView("dashboard");
-    toast("Project deleted","ok");
+    toast("Project deleted — saving…","ok");
   };
+
+  useEffect(()=>{
+    if(!deleteFlushPendingRef.current)return;
+    deleteFlushPendingRef.current=false;
+    void mongoFlushRef.current?.();
+  },[state.projects.length,state._removedProjectIds?.length]);
   const openEditProject=(p)=>{
     if(!p)return;
     setEditProjId(p.id);
@@ -1491,7 +1568,7 @@ export default function App(){
 
   return(
     <div style={{minHeight:"100dvh",background:C.bg,maxWidth:"100vw",overflowX:"hidden"}}>
-      <MongoSyncAdapter state={state} dispatch={dispatch} toast={toast} flushRef={mongoFlushRef} onSyncStatus={setCloudStatus}/>
+      <MongoSyncAdapter state={state} dispatch={dispatch} toast={toast} flushRef={mongoFlushRef} onSyncStatus={setCloudStatus} canDeleteProjects={canDeleteProjects}/>
       <nav className="tnav">
         <div className="tnav-row">
           <div className="tnav-brand" style={{borderRight:`1.5px solid ${C.bd}`,paddingRight:12,marginRight:2}}>
@@ -1514,18 +1591,12 @@ export default function App(){
           >
             ◎ My Work
           </button>
-          <label className="proj-sel-lbl" htmlFor="ga-precon-view">Project</label>
-          <select
-            id="ga-precon-view"
-            className="proj-sel"
+          <ProjectNavPicker
+            projects={state.projects}
             value={viewSelectValue}
-            onChange={e=>{sv(e.target.value);setNavOpen(false);}}
-            aria-label="Select dashboard or project"
-          >
-            <option value="dashboard">Dashboard — all projects</option>
-            <option value="mywork">My Work — your assignments</option>
-            {visibleProjects.map(p=><option key={p.id} value={p.id}>{p.name}{p.loc?` · ${p.loc}`:""}</option>)}
-          </select>
+            onChange={sv}
+            onCloseNav={()=>setNavOpen(false)}
+          />
         </div>
         <div className={`nact${navOpen?" open":""}`}>
           <div className="nact-grp">
@@ -1548,7 +1619,7 @@ export default function App(){
 
       <main className="main">
         {curView==="dashboard"
-          ?<Dashboard projects={visibleProjects} cloudUrl={cloudUrl} setCloudUrl={setCloudUrl} toast={toast} onOpenProject={id=>setCurView(id)} onOpenMyWork={()=>setCurView("mywork")} onEditProject={openEditProject} onDeleteProject={confirmDeleteProject} onAddProject={()=>setModal("addProj")} onImportJson={importJSON} onImportExcel={importExcel} departments={state.departments}/>
+          ?<Dashboard projects={state.projects} cloudUrl={cloudUrl} setCloudUrl={setCloudUrl} toast={toast} onOpenProject={id=>setCurView(id)} onOpenMyWork={()=>setCurView("mywork")} onEditProject={openEditProject} onDeleteProject={confirmDeleteProject} onAddProject={()=>setModal("addProj")} onImportJson={importJSON} onImportExcel={importExcel} departments={state.departments} canDeleteProjects={canDeleteProjects}/>
           :curView==="mywork"
           ?<MyWorkView projects={visibleProjects} loginUser={loginUser} departments={state.departments} dispatch={dispatch} toast={toast} onOpenProject={id=>{setCurView(id);setSubTab(p=>({...p,[id]:"tasks"}));}}/>
           :curProj?(()=>{
@@ -1579,7 +1650,7 @@ export default function App(){
                     <div className="pjhdr-actions" style={{display:"flex",gap:5,marginTop:9,justifyContent:"flex-end",flexWrap:"wrap"}}>
                       <button className="bts" onClick={()=>setModal("addPhase_"+curProj.id)}>+ Phase</button>
                       <button className="bts" onClick={()=>openEditProject(curProj)}>Edit</button>
-                      <button className="btd bts" onClick={()=>confirmDeleteProject(curProj)}>Delete</button>
+                      {canDeleteProjects&&<button className="btd bts" onClick={()=>confirmDeleteProject(curProj)}>Delete</button>}
                     </div>
                   </div>
                 </div>
