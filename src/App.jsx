@@ -25,7 +25,7 @@ import { canDeletePreconProjects } from "./preconPermissions.js";
 import { MyWorkView } from "./MyWorkView.jsx";
 import { TaskActivityFiles } from "./TaskActivityFiles.jsx";
 import { TaskCommentPanel } from "./TaskCommentPanel.jsx";
-import { TaskCommentsSummary } from "./TaskCommentsSummary.jsx";
+import { TaskCommentsListSection } from "./TaskCommentsListSection.jsx";
 import { StatusFilterChips } from "./StatusFilterChips.jsx";
 import { AssigneeMultiSelect } from "./AssigneeMultiSelect.jsx";
 import { filterProjectsForUser, buildAssigneeRoster, assigneeMatches, projectsForAssigneeRoster } from "./preconAssignees.js";
@@ -479,6 +479,39 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .tcc-entry-meta{font-size:10px;color:#1B5E9E;margin-top:4px;line-height:1.4}
 .tcc-entry-meta-err{color:#B32E1E}
 .btg-on{background:#1A304A!important;color:#fff!important;border-color:#1A304A!important}
+.clv-panel{margin-top:16px;background:#fff;border:1px solid #E2DDD4;border-radius:8px;overflow:hidden}
+.clv-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:12px 14px;background:#F3F0EA;border-bottom:1px solid #E2DDD4;flex-wrap:wrap}
+.clv-title{margin:0;font-size:13px;font-weight:700;color:#1A304A;text-transform:uppercase;letter-spacing:.45px}
+.clv-meta{margin:4px 0 0;font-size:11px;color:#96918A}
+.clv-toggle{display:flex;align-items:center;gap:6px;font-size:11px;color:#55504A;cursor:pointer;user-select:none}
+.clv-toggle input{accent-color:#1A304A}
+.clv-empty{margin:0;padding:16px 14px;font-size:12px;color:#96918A;font-style:italic}
+.clv-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.clv-table{width:100%;border-collapse:collapse;min-width:720px}
+.clv-table th{padding:7px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#96918A;text-align:left;border-bottom:1px solid #E2DDD4;background:#FAFAF8;white-space:nowrap}
+.clv-table td{padding:8px 10px;border-bottom:1px solid rgba(0,0,0,.05);vertical-align:top;font-size:12px;color:#1A1815}
+.clv-row:hover td{background:#FBF7EE}
+.clv-phase{font-size:11px;color:#55504A;max-width:140px}
+.clv-num{text-align:center;color:#96918A;font-size:11px}
+.clv-task{min-width:160px;max-width:220px}
+.clv-task-name{display:block;font-weight:600;color:#1A304A;line-height:1.35}
+.clv-task-due{display:block;font-size:10px;color:#96918A;margin-top:2px}
+.clv-st{font-size:11px;white-space:nowrap}
+.clv-who{font-size:11px;color:#55504A;max-width:120px;word-break:break-word}
+.clv-comments{min-width:280px;max-width:480px}
+.clv-cmt-lines{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.clv-cmt-line{display:flex;flex-direction:column;gap:2px;padding:6px 8px;background:#FAFAF8;border-left:2px solid #C89A3A;border-radius:0 4px 4px 0}
+.clv-cmt-line-flag{border-left-color:#B32E1E;background:#FDF8F8}
+.clv-cmt-meta{font-size:10px;color:#96918A}
+.clv-cmt-meta strong{color:#1A304A;font-weight:600}
+.clv-cmt-flag{margin-left:6px;font-size:9px;font-weight:700;color:#B32E1E;text-transform:uppercase}
+.clv-cmt-text{font-size:11px;color:#1A1815;line-height:1.45;white-space:pre-wrap;word-break:break-word}
+.clv-cmt-next{font-size:10px;color:#1B5E9E;line-height:1.4}
+.clv-no-cmt{font-size:11px;color:#C4BEB6;font-style:italic}
+.clv-act{white-space:nowrap;text-align:right}
+.clv-expand td{padding:0!important;background:#FBF7EE!important;border-bottom:1px solid #E2DDD4!important}
+.clv-expand-inner{padding:12px 14px;max-width:min(520px,100%);box-sizing:border-box}
+.clv-expand-lbl{font-size:11px;font-weight:600;color:#9A6E20;margin-bottom:10px;text-transform:uppercase;letter-spacing:.4px}
 .cexp-inner{width:100%;max-width:min(480px,100%);box-sizing:border-box;min-width:0}
 .cform{display:flex;flex-direction:column;gap:12px;width:100%;max-width:min(480px,100%);min-width:0}
 .cform-meta{font-size:11px;color:#55504A;line-height:1.45;word-break:break-word}
@@ -634,6 +667,8 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
   .tcc-card-head{flex-direction:column;align-items:stretch}
   .tcc-card-actions{justify-content:flex-end}
   .tcol-comments{max-width:none}
+  .clv-head{flex-direction:column}
+  .clv-comments{max-width:none;min-width:200px}
   .att-pick-head{flex-direction:column;align-items:stretch}
   .att-pick-add{width:100%;text-align:center;min-height:44px}
   .nrp-auto-banner{font-size:10px;padding:6px 8px}
@@ -929,6 +964,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
   const[expandedC,setExpandedC]=useState({});
   const[expandedPh,setExpandedPh]=useState({});
   const[showCommentsConsolidated,setShowCommentsConsolidated]=useState(true);
+  const[showOnlyWithComments,setShowOnlyWithComments]=useState(true);
   const[dragTask,setDragTask]=useState(null);
   const[dragOverId,setDragOverId]=useState(null);
   const[dragPhase,setDragPhase]=useState(null);
@@ -1057,8 +1093,6 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
         const isOpen=expandedPh[ek]!==false;
         const dept=getDepartmentForPhase(ph.name,departments);
         const isPhDragOver=dragOverPhId===ph.id&&dragPhase?.phId&&dragPhase.phId!==ph.id;
-        const phaseCommentCount=visible.reduce((n,t)=>n+(t.comments||[]).length,0);
-        const tasksWithComments=visible.filter(t=>(t.comments||[]).length>0).length;
         return(
           <div key={ph.id} className={`ps${isPhDragOver?" ps-drag-over":""}`}
             onDragOver={e=>{if(!dragPhase||dragPhase.phId===ph.id)return;e.preventDefault();e.dataTransfer.dropEffect="move";setDragOverPhId(ph.id);}}
@@ -1195,65 +1229,6 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                 })}
               </tbody>
             </table></div>}
-            {isOpen&&showCommentsConsolidated&&visible.length>0&&(
-              <div className="tcc-consolidated">
-                <div className="tcc-consolidated-head">
-                  <span className="tcc-consolidated-title">Comments — filtered tasks</span>
-                  <span className="tcc-consolidated-meta">
-                    {visible.length} task{visible.length!==1?"s":""} · {tasksWithComments} with comments · {phaseCommentCount} total
-                    {filtersActive?" · filters applied":""}
-                  </span>
-                </div>
-                {visible.map(t=>{
-                  const seqIdx=ph.tasks.findIndex(x=>x.id===t.id)+1;
-                  const d=dm[t.id]||{s:"",e:""};
-                  const cc=(t.comments||[]).length;
-                  const showC=!!expandedC[t.id];
-                  return(
-                    <article key={`tcc-${t.id}`} className="tcc-card" id={`cexp-${t.id}`}>
-                      <header className="tcc-card-head">
-                        <div className="tcc-card-main">
-                          <div>
-                            <span className="tcc-card-seq">#{seqIdx}</span>
-                            <span className="tcc-card-name">{t.name}</span>
-                          </div>
-                          <div className="tcc-card-meta">
-                            <span>{statusLabel(taskStatus(t,dm))}</span>
-                            {t.who?<span>{t.who}</span>:null}
-                            {d.e?<span>Due {fmt(d.e)}</span>:null}
-                          </div>
-                        </div>
-                        <div className="tcc-card-actions">
-                          {cc>0?<span className="tcc-card-count">{cc} comment{cc!==1?"s":""}</span>:null}
-                          <button type="button" className="bts" onClick={(e)=>{e.stopPropagation();showC?closeCommentPanel(t.id):openCommentPanel(t.id);}}>
-                            {showC?"▴ Hide":"+ Add comment"}
-                          </button>
-                        </div>
-                      </header>
-                      <div className="tcc-card-body">
-                        <TaskCommentsSummary comments={t.comments} emptyLabel="No comments on this task yet." />
-                        {showC?(
-                          <div className="tcc-editor">
-                            <TaskActivityFiles proj={proj} ph={ph} task={t} dispatch={dispatch} toast={toast} authorName={authorName}/>
-                            <TaskCommentPanel
-                              proj={proj}
-                              ph={ph}
-                              task={t}
-                              dispatch={dispatch}
-                              toast={toast}
-                              authorName={authorName}
-                              authorEmail={loginUser?.email}
-                              departments={departments}
-                              hideHistory
-                            />
-                          </div>
-                        ):null}
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            )}
             {isOpen&&!showCommentsConsolidated&&visible.filter(t=>!!expandedC[t.id]).map(t=>(
               <div key={`cexp-${t.id}`} className="cexp-panel" id={`cexp-${t.id}`}>
                 <div className="cexp-inner">
@@ -1278,6 +1253,28 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
           </div>
         );
       }).filter(Boolean)}
+      {showCommentsConsolidated?(
+        <TaskCommentsListSection
+          proj={proj}
+          dm={dm}
+          filters={filters}
+          filtersActive={filtersActive}
+          taskPassesFilters={taskPassesFilters}
+          statusLabel={statusLabel}
+          taskStatus={taskStatus}
+          fmt={fmt}
+          expandedC={expandedC}
+          openCommentPanel={openCommentPanel}
+          closeCommentPanel={closeCommentPanel}
+          dispatch={dispatch}
+          toast={toast}
+          authorName={authorName}
+          loginUser={loginUser}
+          departments={departments}
+          showOnlyWithComments={showOnlyWithComments}
+          setShowOnlyWithComments={setShowOnlyWithComments}
+        />
+      ):null}
     </div>
   );
 }
