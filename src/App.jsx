@@ -413,32 +413,71 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .stabs{display:flex;border-bottom:1.5px solid #E2DDD4;margin-bottom:18px}
 .stab{padding:7px 15px;border:none;background:none;color:#55504A;font-size:12px;font-weight:500;cursor:pointer;border-bottom:2.5px solid transparent;margin-bottom:-1.5px;transition:all .15s;font-family:'DM Sans',sans-serif}
 .stab.act{color:#1A304A;border-bottom-color:#1A304A;font-weight:600}
+.proj-page{display:flex;flex-direction:column;gap:16px}
+.pjhdr-v2{background:#fff;border:1px solid #E2DDD4;border-radius:12px;padding:20px 22px;display:flex;align-items:flex-start;justify-content:space-between;gap:24px;box-shadow:0 2px 8px rgba(26,48,74,.06);position:relative;overflow:hidden}
+.pjhdr-v2::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--pj-accent,#1A304A)}
+.pjhdr-main{flex:1;min-width:0;padding-left:4px}
+.pjhdr-eyebrow{margin:0 0 4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.55px;color:#96918A}
+.pjhdr-title{margin:0;font-family:'Cormorant Garamond',serif;font-size:clamp(1.5rem,3vw,1.85rem);font-weight:600;color:#1A304A;line-height:1.15}
+.pjhdr-meta{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:10px;font-size:12px;color:#55504A}
+.pjhdr-ko{display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap}
+.pjhdr-ko label{font-size:11px;font-weight:600;color:#96918A;text-transform:uppercase;letter-spacing:.4px}
+.pjhdr-ko input{padding:6px 10px;border:1px solid #E2DDD4;border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;color:#1A1815;background:#FAFAF8}
+.pjhdr-ko input:focus{outline:none;border-color:#C89A3A;box-shadow:0 0 0 2px rgba(200,154,58,.2)}
+.pjhdr-ko-hint{font-size:11px;color:#96918A}
+.pjhdr-side{text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+.pjhdr-progress{display:flex;flex-direction:column;align-items:flex-end;line-height:1}
+.pjhdr-pct{font-family:'Cormorant Garamond',serif;font-size:2.5rem;font-weight:600;color:#1A304A}
+.pjhdr-pct-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.55px;color:#96918A;margin-top:2px}
+.pjhdr-chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+.pj-chip{font-size:10px;font-weight:600;padding:3px 9px;border-radius:999px;border:1px solid transparent;white-space:nowrap}
+.pj-chip-ok{background:#EAF5EE;color:#1A6A3C;border-color:#A8DEB8}
+.pj-chip-ip{background:#EEF4FC;color:#1B5E9E;border-color:#B5D0EF}
+.pj-chip-ov{background:#FCECEA;color:#B32E1E;border-color:#EFBAB0}
+.pj-chip-up{background:#F5F3EE;color:#6A6560;border-color:#E2DDD4}
+.pjhdr-actions{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+.stabs-v2{display:inline-flex;gap:4px;padding:4px;background:#F3F0EA;border:1px solid #E2DDD4;border-radius:10px;margin-bottom:0;border-bottom:none;width:fit-content;max-width:100%}
+.stabs-v2 .stab{margin-bottom:0;border-bottom:none;border-radius:7px;padding:8px 16px;font-size:12px;font-weight:500;color:#55504A;white-space:nowrap}
+.stabs-v2 .stab.act{background:#fff;color:#1A304A;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.tasks-view{display:flex;flex-direction:column;gap:14px}
+.tasks-toolbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;background:#fff;border:1px solid #E2DDD4;border-radius:10px}
+.tasks-toolbar-tip{font-size:11px;color:#96918A;line-height:1.45;flex:1;min-width:200px}
+.tasks-toolbar-actions{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+.tasks-filters-card{background:#fff;border:1px solid #E2DDD4;border-radius:10px;padding:12px 14px;margin-bottom:0}
+.tasks-filters-card .fbar{margin-bottom:0;background:#F8F6F1;border:none;padding:10px 12px;border-radius:8px}
 .pjhdr{background:#fff;border:1px solid #E2DDD4;border-radius:8px;padding:18px 22px;margin-bottom:14px;display:flex;align-items:flex-start;justify-content:space-between;gap:20px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
-.ps{background:#fff;border:1px solid #E2DDD4;border-radius:8px;margin-bottom:10px;overflow:hidden;transition:box-shadow .12s,border-color .12s}
+.ps{background:#fff;border:1px solid #E2DDD4;border-radius:10px;margin-bottom:0;overflow:hidden;transition:box-shadow .12s,border-color .12s;box-shadow:0 1px 3px rgba(0,0,0,.04)}
 .ps.ps-drag-over{box-shadow:0 -3px 0 0 #C89A3A inset;border-color:#C89A3A}
-.psh{padding:10px 14px;background:#F3F0EA;border-bottom:1px solid #E2DDD4;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+.psh{padding:12px 16px;background:linear-gradient(180deg,#FAFAF8 0%,#F3F0EA 100%);border-bottom:1px solid #E2DDD4;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;gap:10px}
 .pdrag{cursor:grab;color:#96918A;font-size:14px;line-height:1;user-select:none;padding:0 4px 0 0;flex-shrink:0;touch-action:none}
 .pdrag:active{cursor:grabbing}
 .ttable{width:100%;border-collapse:collapse}
-.ttable th{padding:6px 9px;font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#96918A;text-align:left;border-bottom:1px solid #E2DDD4;background:#fff;white-space:nowrap;font-family:'DM Sans',sans-serif}
-.ttable td{padding:6px 9px;border-bottom:1px solid rgba(0,0,0,.04);vertical-align:middle}
-.trow:hover td{background:#F8F6F1}
+.ttable thead th{position:sticky;top:0;z-index:2;background:#FAFAF8;box-shadow:0 1px 0 #E2DDD4}
+.ttable th{padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.55px;color:#96918A;text-align:left;border-bottom:1px solid #E2DDD4;white-space:nowrap;font-family:'DM Sans',sans-serif;font-weight:600}
+.ttable td{padding:8px 10px;border-bottom:1px solid rgba(0,0,0,.05);vertical-align:middle}
+.trow:nth-child(even) td{background:#FDFCFA}
+.trow:hover td{background:#FBF7EE!important}
 .trow.trow-drag-over td{background:#FBF7EE;border-top:2px solid #C89A3A}
 .tdrag{cursor:grab;color:#96918A;font-size:14px;line-height:1;user-select:none;padding:0 2px}
 .tdrag:active{cursor:grabbing}
 .tdrag.tdrag-off{opacity:.35;cursor:not-allowed}
-.ec{border-radius:4px;padding:2px 4px;outline:none;font-size:12.5px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:text;min-width:60px}
+.ec{border-radius:6px;padding:4px 6px;outline:none;font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:text;min-width:80px;line-height:1.35}
 .ec:hover{background:#EAE6DC}
-.ec:focus{outline:2px solid #C89A3A;background:#fff;border-radius:4px}
-.di{padding:3px 6px;border:1.5px solid #C89A3A;border-radius:4px;background:#fff;font-size:12px;outline:none;width:122px;font-family:'DM Sans',sans-serif}
-.ni{padding:3px 5px;border:1.5px solid #C89A3A;border-radius:4px;background:#fff;font-size:12px;outline:none;width:56px;font-family:'DM Sans',sans-serif}
-.ti{width:100%;padding:3px 6px;border:1px solid #E2DDD4;border-radius:4px;background:transparent;font-size:12px;font-family:'DM Sans',sans-serif}
-.ti:focus{outline:none;border-color:#C89A3A}
-.tact{display:flex;gap:3px;opacity:0;transition:opacity .15s}
+.ec:focus{outline:none;border:1.5px solid #C89A3A;background:#fff;box-shadow:0 0 0 2px rgba(200,154,58,.15)}
+.di{padding:5px 8px;border:1px solid #E2DDD4;border-radius:6px;background:#FAFAF8;font-size:12px;outline:none;width:118px;font-family:'DM Sans',sans-serif}
+.di:focus{border-color:#C89A3A;box-shadow:0 0 0 2px rgba(200,154,58,.15)}
+.ni{padding:5px 6px;border:1px solid #E2DDD4;border-radius:6px;background:#FAFAF8;font-size:12px;outline:none;width:52px;font-family:'DM Sans',sans-serif}
+.ni:focus{border-color:#C89A3A;box-shadow:0 0 0 2px rgba(200,154,58,.15)}
+.tact{display:flex;gap:4px;opacity:1}
+.proj-page .trow .tact{opacity:1}
 .trow:hover .tact{opacity:1}
-.abt{width:21px;height:21px;border-radius:4px;border:none;background:transparent;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center}
-.abt:hover{background:#EAE6DC}
-.abt.del:hover{background:#FCECEA}
+.abt{width:26px;height:26px;border-radius:6px;border:1px solid transparent;background:#F3F0EA;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;color:#55504A}
+.abt:hover{background:#EAE6DC;border-color:#E2DDD4}
+.abt.del:hover{background:#FCECEA;border-color:#EFBAB0;color:#B32E1E}
+.bts{padding:4px 10px;font-size:11px;border-radius:6px;border:1px solid #E2DDD4;background:#fff;color:#55504A;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500}
+.bts:hover{border-color:#1A304A;color:#1A304A;background:#F8F6F1}
+.status-sel{padding:5px 8px;border-radius:6px;border:1px solid #E2DDD4;background:#FAFAF8;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif;min-width:110px;cursor:pointer}
+.status-sel:focus{outline:none;border-color:#C89A3A}
 .cexp td{padding:14px 16px !important;background:#FBF7EE !important;vertical-align:top}
 .cexp-panel{padding:14px 16px;background:#FBF7EE;border-top:1px solid #E2DDD4;box-sizing:border-box;width:100%;max-width:100%;overflow-x:hidden}
 .cexp-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap}
@@ -479,15 +518,23 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .tcc-entry-meta{font-size:10px;color:#1B5E9E;margin-top:4px;line-height:1.4}
 .tcc-entry-meta-err{color:#B32E1E}
 .btg-on{background:#1A304A!important;color:#fff!important;border-color:#1A304A!important}
-.clv-panel{margin-top:16px;background:#fff;border:1px solid #E2DDD4;border-radius:8px;overflow:hidden}
-.clv-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:12px 14px;background:#F3F0EA;border-bottom:1px solid #E2DDD4;flex-wrap:wrap}
+.psh-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex:1;min-width:0}
+.ps-phase-name{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.45px}
+.ps-dept{font-size:10px;color:#55504A;background:#fff;border:1px solid #E2DDD4;padding:2px 8px;border-radius:999px}
+.ps-meta{font-size:11px;color:#96918A}
+.ps-actions{display:flex;gap:5px;flex-shrink:0}
+.proj-tab-panel{min-height:120px}
+.clv-panel{margin-top:0;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.tcol-count{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#FBF7EE;border:1px solid #E8D4A0;font-size:10px;font-weight:700;color:#9A6E20;margin-right:4px}
+.clv-panel{margin-top:0;background:#fff;border:1px solid #E2DDD4;border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.clv-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:14px 16px;background:linear-gradient(180deg,#FAFAF8 0%,#F3F0EA 100%);border-bottom:1px solid #E2DDD4;flex-wrap:wrap}
 .clv-title{margin:0;font-size:13px;font-weight:700;color:#1A304A;text-transform:uppercase;letter-spacing:.45px}
 .clv-meta{margin:4px 0 0;font-size:11px;color:#96918A}
 .clv-toggle{display:flex;align-items:center;gap:6px;font-size:11px;color:#55504A;cursor:pointer;user-select:none}
 .clv-toggle input{accent-color:#1A304A}
 .clv-empty{margin:0;padding:16px 14px;font-size:12px;color:#96918A;font-style:italic}
 .clv-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
-.clv-table{width:100%;border-collapse:collapse;min-width:720px}
+.clv-table{width:100%;border-collapse:collapse;min-width:680px}
 .clv-table th{padding:7px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#96918A;text-align:left;border-bottom:1px solid #E2DDD4;background:#FAFAF8;white-space:nowrap}
 .clv-table td{padding:8px 10px;border-bottom:1px solid rgba(0,0,0,.05);vertical-align:top;font-size:12px;color:#1A1815}
 .clv-row:hover td{background:#FBF7EE}
@@ -626,8 +673,9 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .tnav-brand{display:flex;align-items:center;gap:9px;flex-shrink:0}
 .tnav-row{display:contents}
 .tnav-menu-btn{display:none;align-items:center;justify-content:center;padding:8px 12px;border:1px solid #E2DDD4;border-radius:6px;background:#fff;color:#1A304A;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;margin-left:auto}
-.ttable-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -2px}
-.ttable-wrap .ttable{min-width:720px}
+.ttable-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.ttable-wrap .ttable{min-width:520px}
+.phases-stack{display:flex;flex-direction:column;gap:12px}
 .task-tip{flex:1;min-width:0}
 .stabs{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .stabs::-webkit-scrollbar{display:none}
@@ -677,6 +725,13 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
   .dg2{grid-template-columns:1fr}
   .fgrid{grid-template-columns:1fr}
   .rgrid{grid-template-columns:1fr}
+  .pjhdr-v2{flex-direction:column;padding:16px 18px}
+  .pjhdr-side{align-items:flex-start;text-align:left;width:100%}
+  .pjhdr-chips,.pjhdr-actions{justify-content:flex-start}
+  .pjhdr-pct{font-size:2rem}
+  .stabs-v2{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .tasks-toolbar{flex-direction:column;align-items:stretch}
+  .tasks-toolbar-actions{justify-content:flex-start}
   .pjhdr{flex-direction:column;align-items:stretch;padding:14px 16px;gap:14px}
   .pjhdr-stats{text-align:left}
   .pjhdr-stats .disp{font-size:32px}
@@ -706,7 +761,14 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
   .fbar select,.fbar .fbtn{width:100%}
   .pcard{flex-direction:column;align-items:flex-start}
   .pch,.psh{font-size:11px}
-  .ttable-wrap .ttable{min-width:640px}
+  .pjhdr-v2{flex-direction:column;padding:16px 18px}
+  .pjhdr-side{align-items:flex-start;text-align:left;width:100%}
+  .pjhdr-chips{justify-content:flex-start}
+  .pjhdr-actions{justify-content:flex-start}
+  .stabs-v2{width:100%;overflow-x:auto}
+  .tasks-toolbar{flex-direction:column;align-items:stretch}
+  .tasks-toolbar-actions{justify-content:flex-start}
+  .ttable-wrap .ttable{min-width:520px}
   .cexp-panel{padding:10px 8px}
   .cform-foot .btp{width:100%}
   .att-pick-item{flex-wrap:wrap}
@@ -1063,27 +1125,30 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
     },toast);
   };
   return(
-    <div>
-      <ActionFilters horizonDays={horizonDays} setHorizonDays={setHorizonDays} statusFilters={statusFilters} setStatusFilters={setStatusFilters} assigneeFilter={assigneeFilter} setAssigneeFilter={setAssigneeFilter} assignees={assignees} departmentFilter={departmentFilter} setDepartmentFilter={setDepartmentFilter} departments={departments} roleFilter={roleFilter} setRoleFilter={setRoleFilter} roleOptions={roleOptions} allowAllHorizon/>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}}>
-        <span className="task-tip" style={{fontSize:12,color:C.tx3}}>💡 Drag ⋮⋮ on a section header or task row to set chronology · {filtersActive?"Clear filters to reorder tasks":"Expand sections below"}</span>
-        <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
-          <button type="button" className={`btg${showCommentsConsolidated?" btg-on":""}`} onClick={()=>setShowCommentsConsolidated(v=>!v)} title="Show all comments for filtered tasks">{showCommentsConsolidated?"▾ Comments on":"▸ Show comments"}</button>
-          <button type="button" className="btg" onClick={expandAll} title="Open every phase section">Expand all</button>
-          <button type="button" className="btg" onClick={collapseAll} title="Close every phase section">Collapse all</button>
+    <div className="tasks-view">
+      <div className="tasks-filters-card">
+        <ActionFilters horizonDays={horizonDays} setHorizonDays={setHorizonDays} statusFilters={statusFilters} setStatusFilters={setStatusFilters} assigneeFilter={assigneeFilter} setAssigneeFilter={setAssigneeFilter} assignees={assignees} departmentFilter={departmentFilter} setDepartmentFilter={setDepartmentFilter} departments={departments} roleFilter={roleFilter} setRoleFilter={setRoleFilter} roleOptions={roleOptions} allowAllHorizon/>
+      </div>
+      <div className="tasks-toolbar">
+        <p className="tasks-toolbar-tip">Drag ⋮⋮ on a section or task to reorder · {filtersActive?"Clear filters to enable drag reorder":"Expand phases to edit tasks"}</p>
+        <div className="tasks-toolbar-actions">
+          <button type="button" className={`btg${showCommentsConsolidated?" btg-on":""}`} onClick={()=>setShowCommentsConsolidated(v=>!v)} title="Show comment list for filtered tasks">{showCommentsConsolidated?"Comments on":"Show comments"}</button>
+          <button type="button" className="btg" onClick={expandAll}>Expand all</button>
+          <button type="button" className="btg" onClick={collapseAll}>Collapse all</button>
           <button className="btg" onClick={()=>dispatch({type:"addPhase",projId:proj.id})}>+ Phase</button>
           <button className="btg" onClick={()=>{
-            const dm2=cDates(proj);let csv="Phase,Task,Start,End,Dur,Roles (Process),Assignee,Status,Comments\n";
+            const dm2=cDates(proj);let csv="Phase,Task,Start,End,Dur,Assignee,Status,Comments\n";
             proj.phases.forEach(ph=>ph.tasks.forEach(t=>{
               if(!taskPassesFilters(t,dm2,ph.name,filters))return;
               const d=dm2[t.id]||{s:"",e:""};
               const cm=sortCommentsChronologically(t.comments).map(({comment:c})=>formatCommentLine(c)).join(" | ");
-              csv+=`"${ph.name}","${t.name}","${d.s}","${d.e}","${t.dur}","${formatRoles(t)}","${t.who||""}","${statusLabel(taskStatus(t,dm2))}","${cm.replace(/"/g,'""')}"\n`;
+              csv+=`"${ph.name}","${t.name}","${d.s}","${d.e}","${t.dur}","${t.who||""}","${statusLabel(taskStatus(t,dm2))}","${cm.replace(/"/g,'""')}"\n`;
             }));
             const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download=proj.name.replace(/\s+/g,"_")+"_Schedule.csv";a.click();toast("CSV exported","ok");
           }}>Export CSV</button>
         </div>
       </div>
+      <div className="phases-stack">
       {proj.phases.map((ph,pi)=>{
         const visible=ph.tasks.filter(t=>taskPassesFilters(t,dm,ph.name,filters));
         if(departmentFilter&&visible.length===0)return null;
@@ -1109,21 +1174,21 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
               if(isOpen)closeCommentsForPhase(ph);
               setExpandedPh(p=>({...p,[ek]:!isOpen}));
             }}>
-              <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+              <div className="psh-left">
                 <span className="pdrag" draggable title="Drag section to reorder"
                   onClick={e=>e.stopPropagation()}
                   onDragStart={e=>{e.stopPropagation();setDragPhase({phId:ph.id});e.dataTransfer.effectAllowed="move";}}
                   onDragEnd={()=>{setDragPhase(null);setDragOverPhId(null);}}
                 >⋮⋮</span>
-                <span style={{fontSize:11,color:C.tx3,width:14,textAlign:"center",flexShrink:0}} aria-hidden>{isOpen?"▾":"▸"}</span>
-                <div style={{width:9,height:9,borderRadius:"50%",background:ph.col,flexShrink:0}}/>
-                <span style={{fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:".5px",color:ph.col}}>{ph.name}</span>
-                {dept?<span style={{fontSize:10,color:C.tx2,background:C.sf2,padding:"2px 8px",borderRadius:4}} title="Department head">{dept.name} · {dept.head}</span>:null}
-                <span style={{fontSize:11,color:C.tx3}}>{visible.length}{visible.length!==ph.tasks.length?` / ${ph.tasks.length}`:""} tasks</span>
+                <span className="ps-meta" aria-hidden>{isOpen?"▾":"▸"}</span>
+                <span className="ps-phase-dot" style={{width:9,height:9,borderRadius:"50%",background:ph.col,flexShrink:0,display:"inline-block"}}/>
+                <span className="ps-phase-name" style={{color:ph.col}}>{ph.name}</span>
+                {dept?<span className="ps-dept" title="Department head">{dept.name} · {dept.head}</span>:null}
+                <span className="ps-meta">{visible.length}{visible.length!==ph.tasks.length?` / ${ph.tasks.length}`:""} tasks</span>
                 <div className="ppbar"><div className="ppfill" style={{width:`${pct}%`,background:ph.col}}/></div>
-                <span style={{fontSize:11,color:C.tx3}}>{pct}%</span>
+                <span className="ps-meta">{pct}%</span>
               </div>
-              <div style={{display:"flex",gap:5}} onClick={e=>e.stopPropagation()}>
+              <div className="ps-actions" onClick={e=>e.stopPropagation()}>
                 <button className="bts" onClick={()=>dispatch({type:"addTask",projId:proj.id,phId:ph.id,afterId:null})}>+ Task</button>
                 <button className="bts" onClick={()=>{if(confirm(`Delete phase "${ph.name}"?`))dispatch({type:"delPhase",projId:proj.id,phId:ph.id});}}>✕</button>
               </div>
@@ -1131,7 +1196,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
             {isOpen&&<div className="ttable-wrap"><table className="ttable">
               <thead><tr>
                 <th style={{width:22}} aria-label="Reorder"/>
-                <th style={{width:26}}>#</th><th>Task</th><th>Roles (Process)</th><th>Start ✏️</th><th>Dur</th><th>End</th>
+                <th style={{width:26}}>#</th><th>Task</th><th>Start</th><th>Dur</th><th>End</th>
                 <th>Assignee</th><th>Status</th><th>Comments</th><th>Actions</th>
               </tr></thead>
               <tbody>
@@ -1163,15 +1228,11 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                           >⋮⋮</span>
                         </td>
                         <td style={{textAlign:"center",color:C.tx3,fontSize:11}}>{seqIdx}</td>
-                        <td style={{minWidth:180}}>
+                        <td style={{minWidth:160}}>
                           <div className="ec" contentEditable suppressContentEditableWarning
                             onBlur={e=>dispatch({type:"updTask",projId:proj.id,phId:ph.id,tId:t.id,f:"name",v:e.target.textContent.trim()})}
                             onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();e.target.blur();}}}
                           >{t.name}</div>
-                        </td>
-                        <td>
-                          <input type="text" className="ti" defaultValue={formatRoles(t)} placeholder="e.g. Acq Lead, Architect" title="Roles from Process sheet — comma-separated"
-                            style={{width:200,minWidth:140}} onBlur={e=>dispatch({type:"updTask",projId:proj.id,phId:ph.id,tId:t.id,f:"roles",v:e.target.value})}/>
                         </td>
                         <td><input type="date" className="di" defaultValue={t.ms||d.s||""} onChange={e=>dispatch({type:"setMS",projId:proj.id,phId:ph.id,tId:t.id,v:e.target.value||null})}/></td>
                         <td><input type="number" className="ni" defaultValue={t.dur} min={1} max={999} onChange={e=>dispatch({type:"updTask",projId:proj.id,phId:ph.id,tId:t.id,f:"dur",v:parseInt(e.target.value)||1})}/></td>
@@ -1180,7 +1241,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                           <AssigneeMultiSelect compact value={t.who||""} options={assigneeRoster} onChange={v=>dispatch({type:"updTask",projId:proj.id,phId:ph.id,tId:t.id,f:"who",v})}/>
                         </td>
                         <td>
-                          <select className="bts" style={{minWidth:118,fontWeight:600,color:SCOL[st]||C.gray}}
+                          <select className="status-sel" style={{color:SCOL[st]||C.gray}}
                             value={taskStatusSelectValue(t)}
                             onChange={e=>{
                               const v=e.target.value;
@@ -1193,14 +1254,13 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                           {st==="overdue"&&<span className="badge bov" style={{marginLeft:4}}>+{od}d</span>}
                         </td>
                         <td className="tcol-comments">
-                          {showCommentsConsolidated&&latestComment?(
+                          {!showCommentsConsolidated&&latestComment?(
                             <div className="tcol-cmt-preview" title={latestComment.text}>
                               <span className="tcol-cmt-author">{latestComment.author||"Anon"} · {latestComment.ts||"—"}</span>
                               <span className="tcol-cmt-text">{truncateText(latestComment.text, 80)}</span>
                             </div>
-                          ):showCommentsConsolidated?(
-                            <span className="tcol-cmt-empty">No comments</span>
                           ):null}
+                          {cc>0?<span className="tcol-count" title={`${cc} comment${cc!==1?"s":""}`}>{cc}</span>:null}
                           <button type="button" className="bts" title={showC?"Scroll to comments":"Post comment"} onClick={(e)=>{
                             e.stopPropagation();
                             if(showCommentsConsolidated){
@@ -1253,6 +1313,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
           </div>
         );
       }).filter(Boolean)}
+      </div>
       {showCommentsConsolidated?(
         <TaskCommentsListSection
           proj={proj}
@@ -1794,43 +1855,49 @@ export default function App(){
           :curProj?(()=>{
             const s=pStats(curProj);const sub=subTab[curProj.id]||"tasks";
             return(
-              <div>
-                <div className="pjhdr">
-                  <div>
-                    <h2 className="disp" style={{fontSize:24,fontWeight:600,color:C.navy}}>{curProj.name}</h2>
-                    <div style={{display:"flex",gap:14,marginTop:7,flexWrap:"wrap",fontSize:12,color:C.tx2}}>
-                      <span>📍 <strong>{curProj.loc}</strong></span>
-                      <span>{curProj.type} · {curProj.floors}F</span>
-                      <span className={`badge ${curProj.status==="Pre-Construction"?"bip":"bup"}`}>{curProj.status}</span>
+              <div className="proj-page" style={{"--pj-accent":curProj.col||C.navy}}>
+                <header className="pjhdr-v2">
+                  <div className="pjhdr-main">
+                    <p className="pjhdr-eyebrow">{curProj.status} · {curProj.type}</p>
+                    <h1 className="pjhdr-title">{curProj.name}</h1>
+                    <div className="pjhdr-meta">
+                      <span>{curProj.loc||"Location TBD"}</span>
+                      <span>{curProj.floors} floors</span>
                     </div>
-                    <div style={{display:"flex",alignItems:"center",gap:6,marginTop:8}}>
-                      <label style={{fontSize:11,color:C.tx3}}>Kickoff:</label>
-                      <input type="date" defaultValue={curProj.ko} onChange={e=>dispatch({type:"setKO",pid:curProj.id,v:e.target.value})} style={{padding:"3px 7px",border:`1px solid ${C.bd}`,borderRadius:4,fontSize:12,fontFamily:"'DM Sans',sans-serif"}}/>
-                      <span style={{fontSize:11,color:C.tx3}}>↳ cascades to all auto-dates</span>
+                    <div className="pjhdr-ko">
+                      <label htmlFor={`ko-${curProj.id}`}>Kickoff</label>
+                      <input id={`ko-${curProj.id}`} type="date" defaultValue={curProj.ko} onChange={e=>dispatch({type:"setKO",pid:curProj.id,v:e.target.value})}/>
+                      <span className="pjhdr-ko-hint">Cascades planned dates across tasks</span>
                     </div>
                   </div>
-                  <div className="pjhdr-stats">
-                    <div className="disp" style={{fontSize:40,fontWeight:600,color:C.navy,lineHeight:1}}>{s.pct}%</div>
-                    <div style={{fontSize:11,color:C.tx3,textTransform:"uppercase",letterSpacing:".6px"}}>Complete</div>
-                    <div className="pjhdr-actions" style={{display:"flex",gap:8,marginTop:6,fontSize:11,justifyContent:"flex-end"}}>
-                      <span style={{color:C.green}}>✓{s.comp}</span><span style={{color:C.blue}}>{s.ip} active</span>
-                      <span style={{color:C.red}}>{s.ov} late</span><span style={{color:C.gray}}>{s.up} upcoming</span>
+                  <div className="pjhdr-side">
+                    <div className="pjhdr-progress">
+                      <span className="pjhdr-pct">{s.pct}%</span>
+                      <span className="pjhdr-pct-lbl">Complete</span>
                     </div>
-                    <div className="pjhdr-actions" style={{display:"flex",gap:5,marginTop:9,justifyContent:"flex-end",flexWrap:"wrap"}}>
+                    <div className="pjhdr-chips">
+                      <span className="pj-chip pj-chip-ok">✓ {s.comp} done</span>
+                      <span className="pj-chip pj-chip-ip">{s.ip} active</span>
+                      {s.ov>0?<span className="pj-chip pj-chip-ov">{s.ov} overdue</span>:null}
+                      <span className="pj-chip pj-chip-up">{s.up} upcoming</span>
+                    </div>
+                    <div className="pjhdr-actions">
                       <button className="bts" onClick={()=>setModal("addPhase_"+curProj.id)}>+ Phase</button>
-                      <button className="bts" onClick={()=>openEditProject(curProj)}>Edit</button>
+                      <button className="bts" onClick={()=>openEditProject(curProj)}>Edit project</button>
                       {canDeleteProjects&&<button className="btd bts" onClick={()=>confirmDeleteProject(curProj)}>Delete</button>}
                     </div>
                   </div>
-                </div>
-                <div className="stabs">
-                  {[["tasks","📋 Tasks & Schedule"],["gantt","📅 Gantt"],["regs","⚖️ Regulatory"]].map(([t,l])=>(
-                    <button key={t} className={`stab${sub===t?" act":""}`} onClick={()=>sst(curProj.id,t)}>{l}</button>
+                </header>
+                <div className="stabs-v2" role="tablist" aria-label="Project views">
+                  {[["tasks","Tasks & schedule"],["gantt","Gantt"],["regs","Regulatory"]].map(([t,l])=>(
+                    <button key={t} type="button" role="tab" aria-selected={sub===t} className={`stab${sub===t?" act":""}`} onClick={()=>sst(curProj.id,t)}>{l}</button>
                   ))}
                 </div>
+                <div className="proj-tab-panel">
                 {sub==="tasks"&&<TasksView proj={curProj} dispatch={dispatch} toast={toast} departments={state.departments} loginUser={loginUser} assigneeRoster={assigneeRoster}/>}
                 {sub==="gantt"&&<GanttView proj={curProj}/>}
                 {sub==="regs"&&<RegView proj={curProj} regStatus={regStatus} setRegStatus={setRegStatus}/>}
+                </div>
               </div>
             );
           })()
