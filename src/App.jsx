@@ -440,6 +440,9 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .abt.del:hover{background:#FCECEA}
 .cexp td{padding:14px 16px !important;background:#FBF7EE !important;vertical-align:top}
 .cexp-panel{padding:14px 16px;background:#FBF7EE;border-top:1px solid #E2DDD4;box-sizing:border-box;width:100%;max-width:100%;overflow-x:hidden}
+.cexp-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.cexp-head-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#C89A3A;flex:1;min-width:0;line-height:1.35}
+.cexp-close{flex-shrink:0;min-height:36px}
 .cexp-inner{width:100%;max-width:min(480px,100%);box-sizing:border-box;min-width:0}
 .cform{display:flex;flex-direction:column;gap:12px;width:100%;max-width:min(480px,100%);min-width:0}
 .cform-meta{font-size:11px;color:#55504A;line-height:1.45;word-break:break-word}
@@ -920,6 +923,31 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
     dispatch({type:"reorderTask",projId:proj.id,phId:ph.id,fromId:tId,toId:ph.tasks[to].id});
   };
   const authorName=loginUser?.ready?(loginUser.name||"User"):"";
+  const openCommentPanel=(taskId)=>{
+    setExpandedC(p=>{
+      if(p[taskId])return p;
+      return{...p,[taskId]:true};
+    });
+    requestAnimationFrame(()=>document.getElementById(`cexp-${taskId}`)?.scrollIntoView({behavior:"smooth",block:"nearest"}));
+  };
+  const closeCommentPanel=(taskId)=>{
+    setExpandedC(p=>{
+      if(!p[taskId])return p;
+      const next={...p};
+      delete next[taskId];
+      return next;
+    });
+  };
+  const closeCommentsForPhase=(ph)=>{
+    setExpandedC(p=>{
+      let changed=false;
+      const next={...p};
+      (ph.tasks||[]).forEach(t=>{
+        if(next[t.id]){delete next[t.id];changed=true;}
+      });
+      return changed?next:p;
+    });
+  };
   const statusLabelFor=(v)=>TASK_STATUS_OPTIONS.find(o=>o.value===v)?.label||v;
   const notifyStatus=(ph,t,oldVal,newVal)=>{
     if(!oldVal||oldVal===newVal||!authorName)return;
@@ -977,7 +1005,10 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
               setDragPhase(null);
             }}
           >
-            <div className="psh" onClick={()=>setExpandedPh(p=>({...p,[ek]:!isOpen}))}>
+            <div className="psh" onClick={()=>{
+              if(isOpen)closeCommentsForPhase(ph);
+              setExpandedPh(p=>({...p,[ek]:!isOpen}));
+            }}>
               <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                 <span className="pdrag" draggable title="Drag section to reorder"
                   onClick={e=>e.stopPropagation()}
@@ -1008,7 +1039,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                   const seqIdx=ph.tasks.findIndex(x=>x.id===t.id)+1;
                   const d=dm[t.id]||{s:"",e:""};const st=taskStatus(t,dm);const od=st==="overdue"?dbDays(d.e,todayStr):0;
                   const cc=t.comments.length;
-                  const showC=expandedC[t.id];
+                  const showC=!!expandedC[t.id];
                   const canDrag=!filtersActive;
                   const isDragOver=dragOverId===t.id&&dragTask?.phId===ph.id;
                   return(
@@ -1061,11 +1092,12 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                           {st==="overdue"&&<span className="badge bov" style={{marginLeft:4}}>+{od}d</span>}
                         </td>
                         <td style={{whiteSpace:"nowrap"}}>
-                          <button type="button" className="bts" title="Post comment" onClick={()=>{
-                            setExpandedC(p=>({...p,[t.id]:true}));
-                            requestAnimationFrame(()=>document.getElementById(`cexp-${t.id}`)?.scrollIntoView({behavior:"smooth",block:"nearest"}));
+                          <button type="button" className="bts" title={showC?"Scroll to comments":"Post comment"} onClick={(e)=>{
+                            e.stopPropagation();
+                            if(showC)document.getElementById(`cexp-${t.id}`)?.scrollIntoView({behavior:"smooth",block:"nearest"});
+                            else openCommentPanel(t.id);
                           }}>Post{cc?` (${cc})`:""}</button>
-                          {showC?<button type="button" className="bts" style={{marginLeft:4}} title="Hide comments" onClick={()=>setExpandedC(p=>({...p,[t.id]:false}))}>▴</button>:null}
+                          {showC?<button type="button" className="bts" style={{marginLeft:4}} title="Hide comments" onClick={(e)=>{e.stopPropagation();closeCommentPanel(t.id);}}>▴</button>:null}
                         </td>
                         <td><div className="tact">
                           <button type="button" className="abt" title="Move up" disabled={filtersActive||seqIdx<=1} onClick={()=>moveTaskByStep(ph,t.id,-1)}>↑</button>
@@ -1085,10 +1117,13 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                 })}
               </tbody>
             </table></div>}
-            {isOpen&&visible.filter(t=>expandedC[t.id]).map(t=>(
+            {isOpen&&visible.filter(t=>!!expandedC[t.id]).map(t=>(
               <div key={`cexp-${t.id}`} className="cexp-panel" id={`cexp-${t.id}`}>
                 <div className="cexp-inner">
-                  <div style={{fontSize:11,fontWeight:600,textTransform:"uppercase",letterSpacing:".5px",color:C.gold,marginBottom:10}}>Comments — {t.name}</div>
+                  <div className="cexp-head">
+                    <div className="cexp-head-title">Comments — {t.name}</div>
+                    <button type="button" className="bts cexp-close" title="Hide comments" onClick={(e)=>{e.stopPropagation();closeCommentPanel(t.id);}}>▴ Hide</button>
+                  </div>
                   <TaskActivityFiles proj={proj} ph={ph} task={t} dispatch={dispatch} toast={toast} authorName={authorName}/>
                   <TaskCommentPanel
                     proj={proj}
