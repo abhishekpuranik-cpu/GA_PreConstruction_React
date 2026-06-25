@@ -13,6 +13,18 @@ import './activityCalendar.css';
 
 const VIEWS = ['day', 'week', 'month', 'year'];
 
+function renderDayEvents(evs, renderEvent, limit = 3) {
+  const shown = limit ? evs.slice(0, limit) : evs;
+  return (
+    <div className="hr-cal-day-evs">
+      {shown.map(renderEvent)}
+      {limit && evs.length > limit ? (
+        <div className="hr-cal-more">+{evs.length - limit} more</div>
+      ) : null}
+    </div>
+  );
+}
+
 export function ActivityCalendarShell({
   eyebrow = 'Activities',
   view = 'month',
@@ -70,8 +82,7 @@ export function ActivityCalendarShell({
               tabIndex={0}
             >
               <div className="hr-cal-day-num">{cell.date.getDate()}</div>
-              {evs.slice(0, 3).map(renderEvent)}
-              {evs.length > 3 ? <div className="hr-cal-more">+{evs.length - 3} more</div> : null}
+              {evs.length ? renderDayEvents(evs, renderEvent) : null}
             </div>
           );
         })}
@@ -81,26 +92,25 @@ export function ActivityCalendarShell({
     const days = weekCellDates(cursorDate);
     body = (
       <div className="hr-cal-week">
-        <div className="hr-cal-dow hr-cal-week-corner" />
         {days.map((day) => (
-          <div key={day.ymd} className={`hr-cal-dow${day.ymd === today ? ' today' : ''}`}>
-            {day.dow}
-            <br />
-            <strong>{day.date.getDate()}</strong>
+          <div key={`head-${day.ymd}`} className={`hr-cal-week-head${day.ymd === today ? ' today' : ''}`}>
+            <span className="hr-cal-week-dow">{day.dow}</span>
+            <strong className="hr-cal-week-date">{day.date.getDate()}</strong>
           </div>
         ))}
-        <div className="hr-cal-week-corner" />
         {days.map((day) => {
           const evs = byDay.get(day.ymd) || [];
           return (
             <div
               key={`col-${day.ymd}`}
-              className={`hr-cal-day${day.ymd === today ? ' today' : ''}${selectedYmd === day.ymd ? ' selected' : ''}`}
+              className={`hr-cal-day hr-cal-week-day${day.ymd === today ? ' today' : ''}${selectedYmd === day.ymd ? ' selected' : ''}`}
               onClick={() => onSelectDay?.(day.ymd)}
               role="button"
               tabIndex={0}
             >
-              {evs.length ? evs.map(renderEvent) : <div className="hr-cal-empty-hint">Click to focus day</div>}
+              {evs.length ? renderDayEvents(evs, renderEvent, 0) : (
+                <div className="hr-cal-empty-hint">No tasks</div>
+              )}
             </div>
           );
         })}
@@ -180,26 +190,28 @@ export function ActivityCalendarShell({
   return (
     <div className="hr-cal-wrap">
       <div className="hr-cal-top">
-        <div>
+        <div className="hr-cal-top-left">
           <div className="hr-cal-eyebrow">{eyebrow}</div>
           <div className="hr-cal-title">{title}</div>
         </div>
-        <div className="hr-cal-nav">
-          <button type="button" onClick={() => onCursorChange?.(shift(view, cursorDate, -1))} title="Previous">◀</button>
-          <button type="button" className="hr-cal-today-btn" onClick={onToday}>Today</button>
-          <button type="button" onClick={() => onCursorChange?.(shift(view, cursorDate, 1))} title="Next">▶</button>
-        </div>
-        <div className="hr-cal-views">
-          {VIEWS.map((v) => (
-            <button
-              key={v}
-              type="button"
-              className={view === v ? 'on' : ''}
-              onClick={() => onViewChange?.(v)}
-            >
-              {v.charAt(0).toUpperCase() + v.slice(1)}
-            </button>
-          ))}
+        <div className="hr-cal-top-actions">
+          <div className="hr-cal-nav">
+            <button type="button" onClick={() => onCursorChange?.(shift(view, cursorDate, -1))} title="Previous">◀</button>
+            <button type="button" className="hr-cal-today-btn" onClick={onToday}>Today</button>
+            <button type="button" onClick={() => onCursorChange?.(shift(view, cursorDate, 1))} title="Next">▶</button>
+          </div>
+          <div className="hr-cal-views">
+            {VIEWS.map((v) => (
+              <button
+                key={v}
+                type="button"
+                className={view === v ? 'on' : ''}
+                onClick={() => onViewChange?.(v)}
+              >
+                {v.charAt(0).toUpperCase() + v.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
       <div className="hr-cal-body">{body}</div>

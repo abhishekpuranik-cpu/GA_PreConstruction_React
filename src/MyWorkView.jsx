@@ -158,6 +158,7 @@ export function MyWorkView({ projects, loginUser, departments, dispatch, toast, 
         <div className="mw-empty card"><p>Select at least one filter under &quot;Show work&quot;.</p></div>
       ) : (
         <>
+          <div className="mw-cal-shell">
           <ActivityCalendarShell
             eyebrow="My Work"
             view={view}
@@ -183,6 +184,7 @@ export function MyWorkView({ projects, loginUser, departments, dispatch, toast, 
             onTaskClick={setActiveItem}
             legend={LEGEND}
           />
+          </div>
 
           {selectedYmd && view !== 'day' ? (
             <section className="card mw-cal-day-panel">
