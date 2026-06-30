@@ -23,7 +23,7 @@ export const DEFAULT_DEPARTMENTS = [
   {
     id: 'dept_design',
     name: 'Design & Approvals',
-    head: 'Minal Firke',
+    head: 'Minal Firake',
     phaseSlugs: ['design_approvals'],
     phaseNames: ['design & approvals', 'design & team appointments', 'regulatory approvals'],
   },
