@@ -2,15 +2,13 @@ import React, { useEffect, useMemo, useState } from 'react';
 
 import { AttachmentPicker } from './AttachmentPicker.jsx';
 
-import { NotifyRecipientPicker } from './NotifyRecipientPicker.jsx';
-
 import { validateCommentPayload } from './preconComments.js';
 
-import { notifyResultFromPoll, pollNotifyJob, uploadAttachments } from './preconMedia.js';
+import { uploadAttachments } from './preconMedia.js';
 
 import { loadExtraRecipients, mergeRecipients, saveExtraRecipients } from './preconAutoNotify.js';
 
-import { loadNotifyContext, notifyPreconUpdate } from './preconNotify.js';
+import { loadNotifyContext, notifyPreconUpdate, hasNotifyTargets, runPreconNotification } from './preconNotify.js';
 
 
 
@@ -192,7 +190,7 @@ export function CommentForm({
 
 
 
-      const shouldNotify = (emailEnabled || whatsappEnabled) && notifyRecipients.length > 0;
+      const shouldNotify = hasNotifyTargets(notifyRecipients, { emailEnabled, whatsappEnabled });
 
       if (!shouldNotify) {
 
@@ -257,21 +255,22 @@ export function CommentForm({
                 emailQueued: true,
                 emailSent: false,
                 emailError: '',
+                whatsappSent: false,
+                whatsappError: '',
                 notifyRecipients: emailRes.recipients || notifyRecipients,
                 notifyPending: true,
               },
               commentIndex
             );
           }
-          toast('Sending notifications…', 'ok');
-          const poll = await pollNotifyJob(emailRes.jobId);
-          const { patch, toastOk, toastErr } = notifyResultFromPoll(poll, emailRes);
-          if (commentIndex != null && onNotifyComplete) onNotifyComplete(patch, commentIndex);
-          toast(toastOk || toastErr, toastOk ? 'ok' : 'err');
+          const { patch } = await runPreconNotification(emailRes, toast);
+          if (commentIndex != null && onNotifyComplete && patch) onNotifyComplete(patch, commentIndex);
         } else {
           const patch = {
             emailSent: !!emailRes.ok,
             emailError: emailRes.ok ? '' : emailRes.error || 'Email failed',
+            whatsappSent: !!(emailRes?.whatsapp?.ok && (emailRes.whatsappCount || emailRes?.whatsapp?.sent?.length)),
+            whatsappError: emailRes?.whatsapp?.error || '',
             notifyRecipients: emailRes.recipients || notifyRecipients,
             notifyPending: false,
           };
@@ -282,7 +281,7 @@ export function CommentForm({
           if (patch.emailSent) parts.push(`email ${patch.notifyRecipients.length}`);
           if (waOk && waCount) parts.push(`WhatsApp ${waCount}`);
           if (parts.length) toast(`Notifications sent (${parts.join(', ')})`, 'ok');
-          else toast(`Notifications failed: ${patch.emailError || emailRes?.whatsapp?.error || 'check SMTP/Twilio'}`, 'err');
+          else toast(`Notifications failed: ${patch.emailError || emailRes?.whatsapp?.error || 'check email config on Render'}`, 'err');
         }
 
       } catch (e) {
@@ -353,7 +352,7 @@ export function CommentForm({
 
     const notifyRecipients = allRecipientsPreview;
 
-    const shouldNotifyLater = (emailEnabled || whatsappEnabled) && notifyRecipients.length > 0;
+    const shouldNotifyLater = hasNotifyTargets(notifyRecipients, { emailEnabled, whatsappEnabled });
 
 
 
@@ -471,38 +470,34 @@ export function CommentForm({
 
       {emailConfig?.setupRequired && !emailEnabled ? (
         <div className="nrp-auto-banner nrp-auto-warn">
-          <strong>Email needs setup on Render</strong> — use Resend: verify goldenabodes.com, set EMAIL_PROVIDER=resend
-          and RESEND_API_KEY. Comments still save.
+          <strong>Email notifications need setup on Render</strong> — set{' '}
+          <code>EMAIL_PROVIDER=resend</code> + <code>RESEND_API_KEY</code>, or use the Google Apps Script relay (
+          <code>EMAIL_PROVIDER=gas</code>). Comments still save locally.
         </div>
       ) : null}
-      {whatsappEnabled && autoRecipients.length > 0 && !autoRecipients.some((r) => String(r.phone || '').replace(/\D/g, '').length >= 10) ? (
+      {emailEnabled && autoRecipients.length > 0 && !autoRecipients.some((r) => String(r.email || '').includes('@')) ? (
         <p className="nrp-warn" style={{ marginTop: 6, fontSize: 11 }}>
-          WhatsApp is on but <strong>no auto-recipients have a phone</strong> in Admin Security — add mobile numbers for assignees.
-        </p>
-      ) : null}
-      {whatsappEnabled ? (
-        <p className="nrp-warn" style={{ marginTop: 4, fontSize: 10, color: 'var(--muted)' }}>
-          Twilio sandbox: each recipient must WhatsApp <strong>join &lt;your-code&gt;</strong> to the sandbox number once (re-join every ~3 days).
+          Email is on but <strong>no auto-recipients have an address</strong> in Admin Security — add work emails for assignees.
         </p>
       ) : null}
       {emailEnabled || whatsappEnabled ? (
         <div className="nrp-auto-banner">
-          <strong>✉ Sends automatically</strong> to department heads, leadership, and assignees
+          <strong>✉ Sends automatically</strong> to dept heads, leadership &amp; assignees on this project
           {emailEnabled ? (
             <span className="nrp-auto-names">
               {' '}
-              · email{emailConfig?.provider ? ` (${emailConfig.provider})` : ''}
+              · email{emailConfig?.provider ? ` (${emailConfig.provider})` : ''} — PreConstruction app + project access only
             </span>
           ) : null}
-          {whatsappEnabled ? <span className="nrp-auto-names"> · WhatsApp (phones in Admin)</span> : null}
+          {whatsappEnabled ? <span className="nrp-auto-names"> · WhatsApp (optional)</span> : null}
           {allRecipientsPreview.length ? (
             <span className="nrp-auto-names"> ({allRecipientsPreview.map((r) => r.name).join(', ')})</span>
           ) : (
-            <span className="nrp-auto-names"> — add email &amp; WhatsApp phone per user in Admin</span>
+            <span className="nrp-auto-names"> — add work email per user in Admin Security</span>
           )}
         </div>
       ) : !emailConfig?.setupRequired ? (
-        <div className="nrp-auto-banner nrp-auto-warn">Email/WhatsApp not configured on server — comment saves locally only</div>
+        <div className="nrp-auto-banner nrp-auto-warn">Notifications not configured on server — comment saves locally only</div>
       ) : null}
 
       <label className="cform-field">
@@ -574,24 +569,6 @@ export function CommentForm({
       </label>
 
       <AttachmentPicker items={staged} onChange={setStaged} disabled={isBusy} />
-
-      <NotifyRecipientPicker
-
-        projectId={projectId}
-
-        phaseName={phaseName}
-
-        taskWho={taskWho}
-
-        autoRecipients={autoRecipients}
-
-        extraSelected={extraRecipients}
-
-        onExtraChange={handleExtraChange}
-
-        disabled={isBusy}
-
-      />
 
       <div className="cform-foot">
 

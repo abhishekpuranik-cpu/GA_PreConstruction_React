@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { sortCommentsChronologically } from './preconComments.js';
+import { sortCommentsNewestFirst } from './preconComments.js';
 import { formatShortDate } from './preconMyWork.js';
 import { TaskActivityFiles } from './TaskActivityFiles.jsx';
 import { TaskCommentPanel } from './TaskCommentPanel.jsx';
@@ -11,7 +11,7 @@ function truncate(text, max = 120) {
 }
 
 function CommentInlineList({ comments }) {
-  const sorted = sortCommentsChronologically(comments);
+  const sorted = sortCommentsNewestFirst(comments);
   if (!sorted.length) {
     return <span className="clv-no-cmt">No comments</span>;
   }

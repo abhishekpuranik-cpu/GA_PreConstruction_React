@@ -40,6 +40,11 @@ export function sortCommentsChronologically(comments) {
     });
 }
 
+/** Newest first for display timelines. */
+export function sortCommentsNewestFirst(comments) {
+  return sortCommentsChronologically(comments).slice().reverse();
+}
+
 /** Backfill ISO createdAt from ts for legacy/imported rows. */
 export function ensureCommentCreatedAt(c) {
   if (!c || c.createdAt) return c;

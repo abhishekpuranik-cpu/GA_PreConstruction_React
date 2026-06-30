@@ -72,13 +72,18 @@ export function weekCellDates(cursorDate) {
   });
 }
 
+/** @param {string|string[]|null} ymd — one date or multiple per task (next action + due). */
 export function indexTasksByYmd(tasks, getYmd) {
   const map = new Map();
   for (const task of tasks) {
-    const ymd = getYmd(task);
-    if (!ymd) continue;
-    if (!map.has(ymd)) map.set(ymd, []);
-    map.get(ymd).push(task);
+    const raw = getYmd(task);
+    const ymds = Array.isArray(raw) ? raw : raw ? [raw] : [];
+    const unique = [...new Set(ymds.map((y) => String(y || '').trim()).filter(Boolean))];
+    for (const ymd of unique) {
+      if (!map.has(ymd)) map.set(ymd, []);
+      const list = map.get(ymd);
+      if (!list.includes(task)) list.push(task);
+    }
   }
   return map;
 }

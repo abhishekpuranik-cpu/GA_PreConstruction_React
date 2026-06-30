@@ -175,6 +175,26 @@ export function buildMyWorkItems(projects, opts = {}) {
   return { items, todayStr };
 }
 
+/** All calendar dates for an item — next action and activity due (planned end). */
+export function getItemCalendarDates(item) {
+  const dates = [];
+  if (item.nextDate) dates.push(String(item.nextDate).trim());
+  if (item.dueDate) dates.push(String(item.dueDate).trim());
+  if (!dates.length && item.sortDate) dates.push(String(item.sortDate).trim());
+  return [...new Set(dates.filter(Boolean))];
+}
+
+export function itemMatchesCalendarDay(item, ymd) {
+  return getItemCalendarDates(item).includes(ymd);
+}
+
+export function calendarDateLabel(item, ymd) {
+  const parts = [];
+  if (item.nextDate === ymd) parts.push('Next action');
+  if (item.dueDate === ymd) parts.push('Due');
+  return parts.join(' · ') || 'Scheduled';
+}
+
 export function groupMyWorkItems(items, todayStr) {
   const groups = [
     { id: 'overdue', title: 'Overdue', hint: 'Earliest due date in the past', items: [] },
@@ -207,12 +227,13 @@ export function groupMyWorkItems(items, todayStr) {
 
 export function myWorkSummary(items, todayStr) {
   const open = items.filter((i) => i.st !== 'completed');
-  const overdue = open.filter((i) => i.sortDate && i.sortDate < todayStr);
-  const dueToday = open.filter((i) => i.sortDate === todayStr);
+  const overdue = open.filter((i) => getItemCalendarDates(i).some((d) => d < todayStr));
+  const dueToday = open.filter((i) => getItemCalendarDates(i).includes(todayStr));
   const dueWeek = open.filter((i) => {
-    if (!i.sortDate) return false;
-    const diff = dbDays(i.sortDate, todayStr);
-    return diff >= 0 && diff <= 7;
+    return getItemCalendarDates(i).some((d) => {
+      const diff = dbDays(d, todayStr);
+      return diff >= 0 && diff <= 7;
+    });
   });
   const projects = new Set(open.map((i) => i.proj.id));
   return {

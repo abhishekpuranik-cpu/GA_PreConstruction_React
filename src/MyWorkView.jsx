@@ -7,7 +7,10 @@ import { ActivityCalendarShell } from './ActivityCalendarShell.jsx';
 import { fmtYmd, parseYmd, todayYmd } from './activityCalendarUtils.js';
 import {
   buildMyWorkItems,
+  calendarDateLabel,
   formatShortDate,
+  getItemCalendarDates,
+  itemMatchesCalendarDay,
   myWorkSummary,
 } from './preconMyWork.js';
 import './activityCalendar.css';
@@ -92,7 +95,7 @@ export function MyWorkView({ projects, loginUser, departments, dispatch, toast, 
   const myDepts = useMemo(() => (departments || []).filter((d) => assigneeMatches(d.head, effectivePerson)), [departments, effectivePerson]);
 
   const selectedDayItems = useMemo(
-    () => filtered.filter((i) => i.sortDate === selectedYmd),
+    () => filtered.filter((i) => itemMatchesCalendarDay(i, selectedYmd)),
     [filtered, selectedYmd],
   );
 
@@ -103,7 +106,7 @@ export function MyWorkView({ projects, loginUser, departments, dispatch, toast, 
           <p className="mw-eyebrow">Personal workboard</p>
           <h1 className="mw-title disp">My Work</h1>
           <p className="mw-sub">
-            Calendar view by next-action / due date. Click a task to edit comments — same form as project tasks.
+            Calendar view by next-action date and activity due date. Click a task to edit comments.
           </p>
         </div>
         <div className="mw-stats">
@@ -137,17 +140,27 @@ export function MyWorkView({ projects, loginUser, departments, dispatch, toast, 
           <label className="mw-check"><input type="checkbox" checked={scopeDepartment} onChange={(e) => setScopeDepartment(e.target.checked)} />My department</label>
         </fieldset>
         {projects.length > 1 ? (
-          <fieldset className="mw-scope mw-projects">
-            <legend>Projects {projectFilter.length ? `(${projectFilter.length} selected)` : '(all)'}</legend>
+          <details className="mw-projects-compact">
+            <summary>
+              Projects {projectFilter.length ? `(${projectFilter.length} selected)` : '(all)'}
+            </summary>
+            <div className="mw-proj-toolbar">
+              <button type="button" className="mw-proj-mini-btn" onClick={() => setProjectFilter([])}>All</button>
+              <button type="button" className="mw-proj-mini-btn" onClick={() => setProjectFilter(allProjectIds)}>None</button>
+            </div>
             <div className="mw-proj-chips">
               {projects.map((p) => (
-                <label key={p.id} className={`mw-proj-chip${projectFilter.includes(p.id) ? ' on' : ''}`}>
-                  <input type="checkbox" checked={projectFilter.length === 0 || projectFilter.includes(p.id)} onChange={() => toggleProject(p.id)} />
+                <label key={p.id} className={`mw-proj-chip${projectFilter.length === 0 || projectFilter.includes(p.id) ? ' on' : ''}`}>
+                  <input
+                    type="checkbox"
+                    checked={projectFilter.length === 0 || projectFilter.includes(p.id)}
+                    onChange={() => toggleProject(p.id)}
+                  />
                   {p.name}
                 </label>
               ))}
             </div>
-          </fieldset>
+          </details>
         ) : null}
         <label className="mw-check"><input type="checkbox" checked={hideCompleted} onChange={(e) => setHideCompleted(e.target.checked)} />Hide completed</label>
       </div>
@@ -165,7 +178,7 @@ export function MyWorkView({ projects, loginUser, departments, dispatch, toast, 
             cursorDate={cursorDate}
             selectedYmd={selectedYmd}
             tasks={filtered}
-            getTaskYmd={(item) => item.sortDate || null}
+            getTaskYmd={(item) => getItemCalendarDates(item)}
             getTaskId={(item) => `${item.proj.id}-${item.task.id}`}
             getTaskTitle={(item) => `${item.task.name} · ${item.proj.name}`}
             getTaskColor={(item) => SCOL[item.st] || '#1A304A'}
@@ -200,7 +213,7 @@ export function MyWorkView({ projects, loginUser, departments, dispatch, toast, 
                       <button type="button" className="mw-cal-day-list-btn" onClick={() => setActiveItem(item)}>
                         <span className={`badge ${statusBadgeClass(item.st)}`}>{statusLabel(item.st)}</span>
                         <strong>{item.task.name}</strong>
-                        <span className="mw-sub">{item.proj.name}</span>
+                        <span className="mw-sub">{item.proj.name} · {calendarDateLabel(item, selectedYmd)}</span>
                       </button>
                     </li>
                   ))}

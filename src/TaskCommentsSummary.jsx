@@ -1,6 +1,6 @@
 import React from 'react';
 import { AttachmentLinks } from './AttachmentPicker.jsx';
-import { sortCommentsChronologically } from './preconComments.js';
+import { sortCommentsNewestFirst } from './preconComments.js';
 import { formatShortDate } from './preconMyWork.js';
 
 function commentKey(cm, index) {
@@ -11,7 +11,7 @@ function commentKey(cm, index) {
  * Read-only consolidated comment timeline for a task.
  */
 export function TaskCommentsSummary({ comments, compact = false, emptyLabel = 'No comments yet' }) {
-  const sorted = sortCommentsChronologically(comments);
+  const sorted = sortCommentsNewestFirst(comments);
 
   if (!sorted.length) {
     return <p className="tcc-empty">{emptyLabel}</p>;
