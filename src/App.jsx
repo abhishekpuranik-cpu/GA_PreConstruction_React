@@ -35,6 +35,7 @@ import { ProjectNavPicker } from "./ProjectNavPicker.jsx";
 import { notifyTaskStatusChange } from "./preconNotify.js";
 import { migratePreWorkFollowUpState, applyGhqPreWorkToPhases } from "./preconGhqPreWorkMigrate.js";
 import { mergeAkashActivitiesIntoState } from "./preconAkashGhqMerge.js";
+import { migrateAssigneeNamesState } from "./preconAssigneeNames.js";
 import {
   taskStatus,
   taskStatusSelectValue,
@@ -181,6 +182,7 @@ function buildInit(){
   };
   const merged = mergeLifecycleIntoState(init).state;
   migratePreWorkFollowUpState(merged);
+  migrateAssigneeNamesState(merged);
   const ghq = merged.projects?.find((p) => p.id === "ghq");
   if (ghq) applyGhqPreWorkToPhases(ghq.phases);
   mergeAkashActivitiesIntoState(merged);
@@ -1679,6 +1681,7 @@ function reducer(state,action){
       const{state:merged,totalAdded}=mergeLifecycleIntoState(action.state);
       migratePreWorkFollowUpState(merged);
       mergeAkashActivitiesIntoState(merged);
+      migrateAssigneeNamesState(merged);
       ensureStateDepartments(merged);
       (merged.projects||[]).forEach(proj=>{
         (proj.phases||[]).forEach(ph=>{

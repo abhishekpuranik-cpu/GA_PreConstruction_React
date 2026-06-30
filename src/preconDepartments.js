@@ -3,13 +3,15 @@
  * Role placeholders on tasks come from cemeLifecycle / Process sheet (task.roles).
  */
 
-export const DEPARTMENTS_VERSION = 2;
+import { canonicalAssigneeName } from './preconAssigneeNames.js';
+
+export const DEPARTMENTS_VERSION = 3;
 
 /** Legacy default head — cleared on load so Abhishek is not auto-assigned to any department. */
 const LEGACY_ABHISHEK_HEADS = new Set(['abhishek', 'abhishek puranik']);
 
 function sanitizeDepartmentHead(head) {
-  const h = String(head || '').trim();
+  const h = canonicalAssigneeName(head);
   if (LEGACY_ABHISHEK_HEADS.has(h.toLowerCase())) return '';
   return h;
 }
@@ -21,14 +23,14 @@ export const DEFAULT_DEPARTMENTS = [
   {
     id: 'dept_design',
     name: 'Design & Approvals',
-    head: 'Minal Madam',
+    head: 'Minal Firke',
     phaseSlugs: ['design_approvals'],
     phaseNames: ['design & approvals', 'design & team appointments', 'regulatory approvals'],
   },
   {
     id: 'dept_acquisition',
     name: 'Acquisition, Finance & Sales Office',
-    head: 'Amit Dhumal (Amit)',
+    head: 'Amit Dhumal',
     phaseSlugs: [
       'land_acquisition_feasibility',
       'registration',
