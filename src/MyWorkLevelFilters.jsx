@@ -11,6 +11,8 @@ export function MyWorkLevelFilters({
   onDepartmentFilterChange,
   departments,
   deptSummaries,
+  overallHint = 'All departments on one calendar',
+  departmentHint = 'Focus one department at a time',
 }) {
   const showDeptPills = viewLevel === 'department' || (deptSummaries?.length > 0);
   const activeDept = departmentFilter || '';
@@ -43,9 +45,9 @@ export function MyWorkLevelFilters({
           </button>
         </div>
         {viewLevel === 'overall' ? (
-          <span className="mw-level-hint">All departments on one calendar</span>
+          <span className="mw-level-hint">{overallHint}</span>
         ) : (
-          <span className="mw-level-hint">Focus one department at a time</span>
+          <span className="mw-level-hint">{departmentHint}</span>
         )}
       </div>
 

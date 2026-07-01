@@ -275,13 +275,9 @@ export function CommentForm({
             notifyPending: false,
           };
           if (commentIndex != null && onNotifyComplete) onNotifyComplete(patch, commentIndex);
-          const waOk = emailRes?.whatsapp?.ok;
-          const waCount = emailRes?.whatsappCount || 0;
-          const parts = [];
-          if (patch.emailSent) parts.push(`email ${patch.notifyRecipients.length}`);
-          if (waOk && waCount) parts.push(`WhatsApp ${waCount}`);
-          if (parts.length) toast(`Notifications sent (${parts.join(', ')})`, 'ok');
-          else toast(`Notifications failed: ${patch.emailError || emailRes?.whatsapp?.error || 'check email config on Render'}`, 'err');
+          if (!patch.emailSent && !patch.whatsappSent) {
+            await runPreconNotification(emailRes, toast);
+          }
         }
 
       } catch (e) {

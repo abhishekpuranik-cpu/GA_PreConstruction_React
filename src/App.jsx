@@ -23,6 +23,7 @@ import { ensureCommentCreatedAt, formatCommentLine, getLatestComment, sortCommen
 import { useLoginUser } from "./useLoginUser.js";
 import { canDeletePreconProjects } from "./preconPermissions.js";
 import { MyWorkView } from "./MyWorkView.jsx";
+import { DashboardCalendarView } from "./DashboardCalendarView.jsx";
 import { TaskActivityFiles } from "./TaskActivityFiles.jsx";
 import { TaskCommentPanel } from "./TaskCommentPanel.jsx";
 import { ProjectPageShell } from "./ProjectPageShell.jsx";
@@ -35,7 +36,7 @@ import { ProjectNavPicker } from "./ProjectNavPicker.jsx";
 import { notifyTaskStatusChange } from "./preconNotify.js";
 import { migratePreWorkFollowUpState, applyGhqPreWorkToPhases } from "./preconGhqPreWorkMigrate.js";
 import { mergeAkashActivitiesIntoState } from "./preconAkashGhqMerge.js";
-import { migrateAssigneeNamesState } from "./preconAssigneeNames.js";
+import { formatNavStatusMessage } from './preconNavStatus.js';
 import {
   taskStatus,
   taskStatusSelectValue,
@@ -242,6 +243,10 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .file-lbl:hover{border-color:#1A304A;color:#1A304A}
 .file-lbl input{display:none}
 .dash-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;margin-bottom:4px}
+.dash-stabs{margin-top:4px;margin-bottom:20px}
+.dash-cal .mw-hero{margin-top:0}
+.dash-cal .mw-sub{color:rgba(255,255,255,.78)}
+.dash-cal .mw-cal-day-panel .mw-sub{color:#55504A}
 .bti{width:28px;height:28px;border-radius:5px;border:1px solid #E2DDD4;background:#fff;color:#55504A;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer}
 .bti:hover{background:#F3F0EA;border-color:#CEC8BB}
 .btp{padding:5px 13px;background:#1A304A;color:#fff;border:none;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif}
@@ -728,9 +733,11 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .fg input,.fg select,.fg textarea{width:100%;padding:7px 9px;border:1px solid #E2DDD4;border-radius:5px;font-size:13px;background:#fff;color:#1A1815;font-family:'DM Sans',sans-serif}
 .fg input:focus,.fg select:focus,.fg textarea:focus{outline:none;border-color:#C89A3A}
 .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
-.tarea{position:fixed;bottom:18px;right:18px;z-index:700;display:flex;flex-direction:column;gap:7px;pointer-events:none}
-.toast{background:#1A304A;color:#fff;padding:9px 14px;border-radius:5px;font-size:12px;font-weight:500;box-shadow:0 4px 16px rgba(0,0,0,.15);opacity:0;transform:translateY(6px);transition:all .2s;pointer-events:auto}
-.toast.show{opacity:1;transform:none}.toast.ok{background:#1A6A3C}.toast.err{background:#B32E1E}
+.tnav-status-hint{font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap;max-width:min(140px,32vw);overflow:hidden;text-overflow:ellipsis;line-height:1.3;flex-shrink:1;min-width:0}
+.tnav-status-hint.err{color:#B32E1E;background:#FDECEA}
+.tnav-status-hint.info{color:#1B5E9E;background:#EEF4FC}
+.tnav-status-hint.ok{color:#1A6A3C;background:#EAF5EE}
+.tnav-mongo{font-size:10px;color:#96918A;padding:0 4px;white-space:nowrap;flex-shrink:0}
 .gtt{position:fixed;background:#1A304A;color:#fff;padding:9px 13px;border-radius:5px;font-size:12px;z-index:400;pointer-events:none;opacity:0;transition:opacity .12s;max-width:230px;box-shadow:0 4px 16px rgba(0,0,0,.2)}
 .gtt.show{opacity:1}
 .codebox{background:#12131A;color:#E8D49A;padding:13px;border-radius:5px;font-family:monospace;font-size:10.5px;line-height:1.6;max-height:210px;overflow-y:auto;white-space:pre-wrap;word-break:break-all}
@@ -822,8 +829,8 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
   .gchart{min-height:240px}
   .mbox{width:calc(100vw - 20px);max-height:min(88vh,100dvh - 24px)}
   .mbox.wide{width:calc(100vw - 20px)}
-  .tarea{bottom:max(12px,env(safe-area-inset-bottom,12px));right:12px;left:12px;align-items:stretch}
-  .toast{text-align:center}
+  .nact-grp .btg,.nact-grp .btp,.nact-grp .file-lbl{min-height:40px}
+  .tnav-status-hint{max-width:min(100px,24vw)}
   .disp[style*="fontSize:30"]{font-size:24px!important}
   .disp[style*="fontSize:24"]{font-size:20px!important}
   .disp[style*="fontSize:40"]{font-size:32px!important}
@@ -942,16 +949,23 @@ function taskPassesFilters(t, dm, phaseName, { statusFilters, assigneeFilter, de
   return true;
 }
 
-// ── TOAST HOOK ───────────────────────────────────────────
-function useToasts(){
-  const[toasts,setToasts]=useState([]);
-  const add=useCallback((msg,type="")=>{
-    const id=Date.now();
-    setToasts(p=>[...p,{id,msg,type}]);
-    setTimeout(()=>setToasts(p=>p.map(t=>t.id===id?{...t,show:true}:t)),10);
-    setTimeout(()=>setToasts(p=>p.filter(t=>t.id!==id)),2800);
+// ── NAV STATUS (replaces blocking toasts) ─────────────────
+function useNavStatus(){
+  const[navHint,setNavHint]=useState(null);
+  const timerRef=useRef(null);
+  const toast=useCallback((msg,type="")=>{
+    const formatted=formatNavStatusMessage(msg,type);
+    if(!formatted.show){
+      if(timerRef.current)clearTimeout(timerRef.current);
+      setNavHint(null);
+      return;
+    }
+    if(timerRef.current)clearTimeout(timerRef.current);
+    setNavHint(formatted);
+    timerRef.current=setTimeout(()=>setNavHint(null),formatted.type==="err"?8000:4000);
   },[]);
-  return{toasts,toast:add};
+  useEffect(()=>()=>{if(timerRef.current)clearTimeout(timerRef.current);},[]);
+  return{navHint,toast};
 }
 
 // ── GANTT COMPONENT ──────────────────────────────────────
@@ -1435,7 +1449,8 @@ function ProjectFormFields({form,setForm}){
   );
 }
 
-function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWork,onEditProject,onDeleteProject,onAddProject,onImportJson,onImportExcel,departments,canDeleteProjects}){
+function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWork,onEditProject,onDeleteProject,onAddProject,onImportJson,onImportExcel,departments,canDeleteProjects,dispatch,loginUser}){
+  const[dashTab,setDashTab]=useState("overview");
   const[horizonDays,setHorizonDays]=useState(30);
   const[statusFilters,setStatusFilters]=useState([]);
   const[assigneeFilter,setAssigneeFilter]=useState("");
@@ -1493,6 +1508,14 @@ function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWo
           {onImportExcel?<label className="file-lbl">Import Excel<input type="file" accept=".xlsx,.xls" onChange={e=>{const f=e.target.files?.[0];if(f)onImportExcel(f);e.target.value="";}}/></label>:null}
         </div>
       </div>
+      <div className="stabs dash-stabs" role="tablist" aria-label="Dashboard views">
+        <button type="button" role="tab" aria-selected={dashTab==="overview"} className={`stab${dashTab==="overview"?" act":""}`} onClick={()=>setDashTab("overview")}>Overview</button>
+        <button type="button" role="tab" aria-selected={dashTab==="calendar"} className={`stab${dashTab==="calendar"?" act":""}`} onClick={()=>setDashTab("calendar")}>Work Calendar</button>
+      </div>
+      {dashTab==="calendar"?(
+        <DashboardCalendarView projects={displayProjects} departments={departments} dispatch={dispatch} toast={toast} loginUser={loginUser} onOpenProject={onOpenProject}/>
+      ):(
+      <>
       <PortfolioRagMatrix projects={displayProjects} departments={departments} onOpenProject={onOpenProject}/>
       <div className="kgrid">
         {[{l:"Total Tasks",v:tT,c:C.navy},{l:"Completed",v:tC,c:C.green,sub:`${op}% overall`},{l:"In Progress",v:tI,c:C.blue},{l:"Overdue",v:tO,c:C.red,sub:tO>0?"Needs attention":"All on track"},{l:"Projects",v:displayProjects.length,c:C.gold}].map((k,i)=>(
@@ -1604,6 +1627,8 @@ function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWo
           The <code style={{background:"rgba(0,0,0,.06)",padding:"1px 4px",borderRadius:3}}>doGet</code> returns JSON, <code style={{background:"rgba(0,0,0,.06)",padding:"1px 4px",borderRadius:3}}>doPost</code> saves it. Both apps POST/GET from the same endpoint.
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }
@@ -1796,7 +1821,7 @@ export default function App(){
   const deleteFlushPendingRef=useRef(false);
   const loginUser=useLoginUser();
   const canDeleteProjects=useMemo(()=>canDeletePreconProjects(loginUser),[loginUser]);
-  const{toasts,toast}=useToasts();
+  const{navHint,toast}=useNavStatus();
   const visibleProjects=useMemo(()=>filterProjectsForUser(state.projects,loginUser),[state.projects,loginUser]);
   const curProj=state.projects.find(p=>p.id===curView);
   const rosterProjects=useMemo(()=>projectsForAssigneeRoster(state.projects,loginUser,curProj),[state.projects,loginUser,curProj]);
@@ -1918,14 +1943,19 @@ export default function App(){
             <button type="button" className="btg" title="Download full workspace JSON" onClick={exportJSON}>Export JSON</button>
           </div>
           <span className="nact-sep" aria-hidden="true"/>
-          <span style={{fontSize:10,color:C.tx3,padding:"0 4px",whiteSpace:"nowrap"}} title="MongoDB sync">{CLOUD_LABELS[cloudStatus]||cloudStatus}</span>
+          {navHint?(
+            <span className={`tnav-status-hint ${navHint.type||"info"}`} title={navHint.full} role="status">
+              {navHint.short}
+            </span>
+          ):null}
+          <span className="tnav-mongo" title="MongoDB sync">{CLOUD_LABELS[cloudStatus]||cloudStatus}</span>
           <button type="button" className="btp" onClick={()=>{if(mongoFlushRef.current)mongoFlushRef.current();else toast("Cloud save unavailable","err");}}>Save</button>
         </div>
       </nav>
 
       <main className={`main${curProj?" main-proj":""}`}>
         {curView==="dashboard"
-          ?<Dashboard projects={state.projects} cloudUrl={cloudUrl} setCloudUrl={setCloudUrl} toast={toast} onOpenProject={id=>setCurView(id)} onOpenMyWork={()=>setCurView("mywork")} onEditProject={openEditProject} onDeleteProject={confirmDeleteProject} onAddProject={()=>setModal("addProj")} onImportJson={importJSON} onImportExcel={importExcel} departments={state.departments} canDeleteProjects={canDeleteProjects}/>
+          ?<Dashboard projects={state.projects} cloudUrl={cloudUrl} setCloudUrl={setCloudUrl} toast={toast} onOpenProject={id=>setCurView(id)} onOpenMyWork={()=>setCurView("mywork")} onEditProject={openEditProject} onDeleteProject={confirmDeleteProject} onAddProject={()=>setModal("addProj")} onImportJson={importJSON} onImportExcel={importExcel} departments={state.departments} canDeleteProjects={canDeleteProjects} dispatch={dispatch} loginUser={loginUser}/>
           :curView==="mywork"
           ?<MyWorkView projects={visibleProjects} loginUser={loginUser} departments={state.departments} dispatch={dispatch} toast={toast} onOpenProject={id=>{setCurView(id);setSubTab(p=>({...p,[id]:"tasks"}));}}/>
           :curProj?(()=>{
@@ -1998,10 +2028,6 @@ export default function App(){
         );
       })()}
 
-      {/* Toasts */}
-      <div className="tarea">
-        {toasts.map(t=><div key={t.id} className={`toast${t.show?" show":""} ${t.type}`}>{t.msg}</div>)}
-      </div>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { mergePreconstructionClientState } from './preconMerge.js';
 import {
   canUseMongoState,
   createMongoDebouncedSaver,
@@ -23,7 +24,7 @@ function enableMongoOnCloud() {
  * Loads / saves PreConstruction reducer state to Golden Abodes Platform MongoDB
  * (same app_states collection as GET/PUT /api/apps/preconstruction/state).
  */
-export function MongoSyncAdapter({ state, dispatch, toast, flushRef, onSyncStatus }) {
+export function MongoSyncAdapter({ state, dispatch, toast, flushRef, onSyncStatus, canDeleteProjects = false }) {
   const [syncReady, setSyncReady] = useState(false);
   const [cloudStatus, setCloudStatus] = useState('loading');
   const stateRef = useRef(state);
@@ -32,6 +33,11 @@ export function MongoSyncAdapter({ state, dispatch, toast, flushRef, onSyncStatu
   const scheduleSaveRef = useRef(null);
   const userEditedRef = useRef(false);
   const initialStateJsonRef = useRef(null);
+  const canDeleteRef = useRef(canDeleteProjects);
+
+  useEffect(() => {
+    canDeleteRef.current = canDeleteProjects;
+  }, [canDeleteProjects]);
 
   useLayoutEffect(() => {
     stateRef.current = state;
@@ -114,21 +120,35 @@ export function MongoSyncAdapter({ state, dispatch, toast, flushRef, onSyncStatu
     if (res.ok) {
       versionRef.current.v = res.version ?? versionRef.current.v;
       setCloudStatus('synced');
-      toast('Saved to MongoDB', 'ok');
       return true;
     }
     if (res.status === 409) {
-      // Auto-recover benign conflicts caused by overlapping autosave/manual save.
       try {
         const latest = await mongoGetState(APP_ID);
-        if (latest.ok && latest.data && sameState(latest.data, snap)) {
-          versionRef.current.v = latest.version || versionRef.current.v;
-          setCloudStatus('synced');
-          toast('Saved (version synced)', 'ok');
-          return true;
+        if (latest.ok && latest.data) {
+          if (sameState(latest.data, snap)) {
+            versionRef.current.v = latest.version || versionRef.current.v;
+            setCloudStatus('synced');
+            return true;
+          }
+          const merged = mergePreconstructionClientState(latest.data, snap, {
+            allowProjectRemoval: canDeleteRef.current
+          });
+          const retry = await mongoPutState(APP_ID, {
+            data: merged,
+            expectedVersion: latest.version ?? versionRef.current.v
+          });
+          if (retry.ok) {
+            versionRef.current.v = retry.version ?? versionRef.current.v;
+            if (!sameState(merged, snap)) {
+              dispatch({ type: 'loadState', state: merged });
+            }
+            setCloudStatus('synced');
+            return true;
+          }
         }
       } catch {
-        /* ignore and keep conflict flow */
+        /* fall through to conflict status */
       }
       setCloudStatus('conflict');
       toast('Save conflict — reload to get team data', 'err');
@@ -177,7 +197,6 @@ export function MongoSyncAdapter({ state, dispatch, toast, flushRef, onSyncStatu
         const remote = Number(j?.version || 0);
         if (remote > versionRef.current.v && remote > notifiedRemoteVersion.current) {
           notifiedRemoteVersion.current = remote;
-          toast('New PreConstruction update available from team.', 'ok');
         }
       } catch {
         /* ignore */

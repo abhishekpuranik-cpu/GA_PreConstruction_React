@@ -1,6 +1,6 @@
 import { cDates, dbDays } from './preconDates.js';
 import { taskMatchesStatusFilters, taskStatus, todayIso } from './preconTaskStatus.js';
-import { getDepartmentForPhase } from './preconDepartments.js';
+import { getDepartmentForPhase, taskMatchesRoleFilter } from './preconDepartments.js';
 import { assigneeMatches, nameMatches } from './preconAssignees.js';
 import { commentSortKey } from './preconComments.js';
 
@@ -95,6 +95,78 @@ export function hasCommentByPerson(task, person) {
   return (task.comments || []).some((c) => nameMatches(c.author, person));
 }
 
+function pushWorkItem(items, { proj, ph, task, st, dm, departments, todayStr }) {
+  const dept = getDepartmentForPhase(ph.name, departments);
+  const chrono = effectiveChronologyDate(task, dm, st);
+  const nextEntry = getLatestNextActionEntry(task.comments);
+  const sortTs = chrono.sortDate ? new Date(chrono.sortDate).getTime() : 9e15;
+  const overdueDays =
+    chrono.sortDate && st !== 'completed' && chrono.sortDate < todayStr
+      ? dbDays(chrono.sortDate, todayStr)
+      : st === 'overdue' && chrono.dueDate
+        ? dbDays(chrono.dueDate, todayStr)
+        : 0;
+
+  items.push({
+    proj,
+    ph,
+    task,
+    st,
+    d: dm[task.id] || { s: '', e: '' },
+    dept,
+    sortDate: chrono.sortDate,
+    sortSource: chrono.sortSource,
+    nextDate: chrono.nextDate,
+    dueDate: chrono.dueDate,
+    nextAction: nextEntry,
+    editable: getEditableComment(task),
+    sortTs: Number.isNaN(sortTs) ? 9e15 : sortTs,
+    overdueDays,
+    todayStr,
+  });
+}
+
+function sortWorkItems(items) {
+  items.sort((a, b) => {
+    const aDone = a.st === 'completed' ? 1 : 0;
+    const bDone = b.st === 'completed' ? 1 : 0;
+    if (aDone !== bDone) return aDone - bDone;
+    if (a.sortTs !== b.sortTs) return a.sortTs - b.sortTs;
+    return (a.proj.name || '').localeCompare(b.proj.name || '') || (a.task.name || '').localeCompare(b.task.name || '');
+  });
+  return items;
+}
+
+/**
+ * All tasks across projects for portfolio / department calendar (any assignee).
+ */
+export function buildPortfolioWorkItems(projects, opts = {}) {
+  const departments = opts.departments || [];
+  const statusFilters = opts.statusFilters || [];
+  const assigneeFilter = String(opts.assigneeFilter || '').trim();
+  const roleFilter = opts.roleFilter || '';
+  const projectIds = opts.projectIds || [];
+  const todayStr = todayIso();
+  const items = [];
+  const idSet = projectIds.length ? new Set(projectIds) : null;
+
+  for (const proj of projects || []) {
+    if (idSet && !idSet.has(proj.id)) continue;
+    const dm = cDates(proj);
+    for (const ph of proj.phases || []) {
+      for (const task of ph.tasks || []) {
+        const st = taskStatus(task, dm);
+        if (!taskMatchesStatusFilters(st, statusFilters)) continue;
+        if (assigneeFilter && !assigneeMatches(task.who, assigneeFilter)) continue;
+        if (!taskMatchesRoleFilter(task, roleFilter)) continue;
+        pushWorkItem(items, { proj, ph, task, st, dm, departments, todayStr });
+      }
+    }
+  }
+
+  return { items: sortWorkItems(items), todayStr };
+}
+
 /**
  * @param {object} opts
  * @param {object[]} opts.projects
@@ -132,47 +204,12 @@ export function buildMyWorkItems(projects, opts = {}) {
         if (scopes.myDepartment && taskInPersonDepartment(ph, person, departments)) include = true;
         if (!include || !person) continue;
 
-        const dept = getDepartmentForPhase(ph.name, departments);
-        const chrono = effectiveChronologyDate(task, dm, st);
-        const nextEntry = getLatestNextActionEntry(task.comments);
-        const sortTs = chrono.sortDate ? new Date(chrono.sortDate).getTime() : 9e15;
-        const overdueDays =
-          chrono.sortDate && st !== 'completed' && chrono.sortDate < todayStr
-            ? dbDays(chrono.sortDate, todayStr)
-            : st === 'overdue' && chrono.dueDate
-              ? dbDays(chrono.dueDate, todayStr)
-              : 0;
-
-        items.push({
-          proj,
-          ph,
-          task,
-          st,
-          d: dm[task.id] || { s: '', e: '' },
-          dept,
-          sortDate: chrono.sortDate,
-          sortSource: chrono.sortSource,
-          nextDate: chrono.nextDate,
-          dueDate: chrono.dueDate,
-          nextAction: nextEntry,
-          editable: getEditableComment(task),
-          sortTs: Number.isNaN(sortTs) ? 9e15 : sortTs,
-          overdueDays,
-          todayStr,
-        });
+        pushWorkItem(items, { proj, ph, task, st, dm, departments, todayStr });
       }
     }
   }
 
-  items.sort((a, b) => {
-    const aDone = a.st === 'completed' ? 1 : 0;
-    const bDone = b.st === 'completed' ? 1 : 0;
-    if (aDone !== bDone) return aDone - bDone;
-    if (a.sortTs !== b.sortTs) return a.sortTs - b.sortTs;
-    return (a.proj.name || '').localeCompare(b.proj.name || '') || (a.task.name || '').localeCompare(b.task.name || '');
-  });
-
-  return { items, todayStr };
+  return { items: sortWorkItems(items), todayStr };
 }
 
 /** All calendar dates for an item — next action and activity due (planned end). */
