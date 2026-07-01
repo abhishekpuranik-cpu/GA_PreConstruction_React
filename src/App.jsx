@@ -36,6 +36,7 @@ import { ProjectNavPicker } from "./ProjectNavPicker.jsx";
 import { notifyTaskStatusChange } from "./preconNotify.js";
 import { migratePreWorkFollowUpState, applyGhqPreWorkToPhases } from "./preconGhqPreWorkMigrate.js";
 import { mergeAkashActivitiesIntoState } from "./preconAkashGhqMerge.js";
+import { migrateAssigneeNamesState } from "./preconAssigneeNames.js";
 import { formatNavStatusMessage } from './preconNavStatus.js';
 import {
   taskStatus,
