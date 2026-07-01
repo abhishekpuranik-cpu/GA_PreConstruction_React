@@ -97,17 +97,19 @@ function pickRicherTask(a, b) {
 }
 
 function mergeTaskPair(keep, drop) {
-  const merged = { ...keep };
-  merged.who = canonicalizeWho([keep.who, drop.who].filter(Boolean).join('; '));
-  merged.comments = mergeComments(keep.comments, drop.comments);
-  if (!merged.as && drop.as) merged.as = drop.as;
-  if (!merged.ae && drop.ae) merged.ae = drop.ae;
-  if (!merged.ms && drop.ms) merged.ms = drop.ms;
-  if (!merged.plannedEnd && drop.plannedEnd) merged.plannedEnd = drop.plannedEnd;
-  if ((!merged.status || merged.status === 'notstarted') && drop.status && drop.status !== 'notstarted') {
-    merged.status = drop.status;
+  const primary = pickRicherTask(keep, drop);
+  const secondary = primary === keep ? drop : keep;
+  const merged = { ...primary };
+  merged.who = canonicalizeWho([primary.who, secondary.who].filter(Boolean).join('; '));
+  merged.comments = mergeComments(primary.comments, secondary.comments);
+  if (!merged.as && secondary.as) merged.as = secondary.as;
+  if (!merged.ae && secondary.ae) merged.ae = secondary.ae;
+  if (!merged.ms && secondary.ms) merged.ms = secondary.ms;
+  if (!merged.plannedEnd && secondary.plannedEnd) merged.plannedEnd = secondary.plannedEnd;
+  if ((!merged.status || merged.status === 'notstarted') && secondary.status && secondary.status !== 'notstarted') {
+    merged.status = secondary.status;
   }
-  if ((!merged.dur || merged.dur < 1) && drop.dur) merged.dur = drop.dur;
+  if ((!merged.dur || merged.dur < 1) && secondary.dur) merged.dur = secondary.dur;
   return merged;
 }
 
@@ -127,11 +129,11 @@ function mergeDuplicateTasksInPhase(ph) {
       merged.push(tasks[0]);
       return;
     }
-    let acc = tasks[0];
-    for (let i = 1; i < tasks.length; i += 1) {
+    let acc = pickRicherTask(tasks[0], tasks[1]);
+    for (let i = 2; i < tasks.length; i += 1) {
       acc = mergeTaskPair(acc, tasks[i]);
-      removed += 1;
     }
+    removed += tasks.length - 1;
     merged.push(acc);
   });
   ph.tasks = merged;

@@ -2,7 +2,7 @@ import { cDates, dbDays } from './preconDates.js';
 import { taskMatchesStatusFilters, taskStatus, todayIso } from './preconTaskStatus.js';
 import { getDepartmentForPhase, taskMatchesRoleFilter } from './preconDepartments.js';
 import { assigneeMatches, nameMatches } from './preconAssignees.js';
-import { commentSortKey, normalizeTaskComments } from './preconComments.js';
+import { commentSortKey, collectTaskComments, normalizeTaskComments, normTaskKey } from './preconComments.js';
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -66,11 +66,21 @@ export function getLatestNextActionEntry(comments) {
 }
 
 /** Comment to edit inline (latest with next action, else latest comment). */
-export function getEditableComment(task) {
-  const comments = task.comments || [];
+export function getEditableComment(task, ctx = null) {
+  const comments = ctx?.proj
+    ? collectTaskComments(ctx.proj, ctx.ph, task)
+    : normalizeTaskComments(task?.comments);
   if (!comments.length) return null;
   const withNa = getLatestNextActionEntry(comments);
-  if (withNa) return { commentIndex: withNa.commentIndex, comment: comments[withNa.commentIndex] };
+  if (withNa) {
+    const raw = task.comments || [];
+    const rawIndex = raw.findIndex((c) => {
+      const text = String(c?.text ?? c?.comment ?? '').trim();
+      return text && text === withNa.text && String(c?.author || '').trim() === String(withNa.author || '').trim();
+    });
+    if (rawIndex >= 0) return { commentIndex: rawIndex, comment: raw[rawIndex] };
+    return { commentIndex: comments.length - 1, comment: withNa };
+  }
   let bestIdx = 0;
   let bestScore = -1;
   comments.forEach((c, i) => {
@@ -80,7 +90,16 @@ export function getEditableComment(task) {
       bestIdx = i;
     }
   });
-  return { commentIndex: bestIdx, comment: comments[bestIdx] };
+  const latest = comments[bestIdx];
+  const raw = task.comments || [];
+  const rawIndex = raw.findIndex((c) => {
+    const text = String(c?.text ?? c?.comment ?? '').trim();
+    return text && text === String(latest?.text || '').trim();
+  });
+  return {
+    commentIndex: rawIndex >= 0 ? rawIndex : bestIdx,
+    comment: rawIndex >= 0 ? raw[rawIndex] : latest,
+  };
 }
 
 export function personLeadsDepartment(person, dept) {
@@ -170,15 +189,50 @@ export function buildPortfolioWorkItems(projects, opts = {}) {
 
 /** Resolve live project / phase / task from workspace (drawer must not use stale snapshots). */
 export function resolveWorkItemFromProjects(projects, item) {
-  if (!item?.proj?.id || !item?.ph?.id || !item?.task?.id) return item;
+  if (!item?.proj?.id || !item?.task) return item;
+  const taskId = item.task.id;
+  const taskNameKey = normTaskKey(item.task.name);
+
   for (const proj of projects || []) {
     if (proj.id !== item.proj.id) continue;
-    for (const ph of proj.phases || []) {
-      if (ph.id !== item.ph.id) continue;
-      const task = (ph.tasks || []).find((t) => t.id === item.task.id);
-      if (task) return { ...item, proj, ph, task };
+
+    let ph = null;
+    let task = null;
+
+    for (const phase of proj.phases || []) {
+      const hit = (phase.tasks || []).find((t) => t.id === taskId);
+      if (hit) {
+        ph = phase;
+        task = hit;
+        break;
+      }
     }
+
+    if (!task && taskNameKey) {
+      const preferred = (proj.phases || []).find((p) => p.id === item.ph?.id);
+      const searchOrder = preferred
+        ? [preferred, ...(proj.phases || []).filter((p) => p.id !== preferred.id)]
+        : (proj.phases || []);
+      for (const phase of searchOrder) {
+        const hit = (phase.tasks || []).find((t) => normTaskKey(t.name) === taskNameKey);
+        if (hit) {
+          ph = phase;
+          task = hit;
+          break;
+        }
+      }
+    }
+
+    if (!task) return item;
+
+    const comments = collectTaskComments(proj, ph, task);
+    const liveTask = comments.length > normalizeTaskComments(task.comments).length
+      ? { ...task, comments }
+      : task;
+
+    return { ...item, proj, ph, task: liveTask };
   }
+
   return item;
 }
 

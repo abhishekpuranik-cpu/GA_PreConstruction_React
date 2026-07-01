@@ -19,7 +19,7 @@ import {
   collectAllRoles,
 } from "./preconDepartments.js";
 import { PortfolioRagMatrix } from "./PortfolioRagMatrix.jsx";
-import { ensureCommentCreatedAt, formatCommentLine, getLatestComment, normalizeTaskComments, sortCommentsChronologically } from "./preconComments.js";
+import { ensureCommentCreatedAt, formatCommentLine, getLatestComment, normalizeTaskComments, sortCommentsChronologically, collectTaskComments } from "./preconComments.js";
 import { useLoginUser } from "./useLoginUser.js";
 import { canDeletePreconProjects } from "./preconPermissions.js";
 import { MyWorkView } from "./MyWorkView.jsx";
@@ -35,6 +35,7 @@ import { filterAndSortProjects } from "./projectSearch.js";
 import { ProjectNavPicker } from "./ProjectNavPicker.jsx";
 import { notifyTaskStatusChange } from "./preconNotify.js";
 import { migratePreWorkFollowUpState, applyGhqPreWorkToPhases } from "./preconGhqPreWorkMigrate.js";
+import { reconcileDuplicateTaskComments } from "./preconCommentReconcile.js";
 import { mergeAkashActivitiesIntoState } from "./preconAkashGhqMerge.js";
 import { migrateAssigneeNamesState } from "./preconAssigneeNames.js";
 import { formatNavStatusMessage } from './preconNavStatus.js';
@@ -1317,9 +1318,10 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                 {visible.map((t)=>{
                   const seqIdx=ph.tasks.findIndex(x=>x.id===t.id)+1;
                   const d=dm[t.id]||{s:"",e:""};const st=taskStatus(t,dm);const od=st==="overdue"?dbDays(d.e,todayStr):0;
-                  const cc=t.comments.length;
+                  const taskComments=collectTaskComments(proj,ph,t);
+                  const cc=taskComments.length;
                   const showC=!!expandedC[t.id];
-                  const latestComment=getLatestComment(t.comments);
+                  const latestComment=getLatestComment(taskComments);
                   const canDrag=!filtersActive;
                   const isDragOver=dragOverId===t.id&&dragTask?.phId===ph.id;
                   return(
@@ -1770,6 +1772,7 @@ function reducer(state,action){
       migratePreWorkFollowUpState(merged);
       mergeAkashActivitiesIntoState(merged);
       migrateAssigneeNamesState(merged);
+      reconcileDuplicateTaskComments(merged);
       ensureStateDepartments(merged);
       (merged.projects||[]).forEach(proj=>{
         (proj.phases||[]).forEach(ph=>{

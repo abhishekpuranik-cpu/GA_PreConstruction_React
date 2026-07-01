@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { CommentForm } from './CommentForm.jsx';
+import { collectTaskComments } from './preconComments.js';
 import { getEditableComment } from './preconMyWork.js';
 import { TaskCommentsSummary } from './TaskCommentsSummary.jsx';
 
@@ -22,7 +23,11 @@ export function TaskCommentPanel({
   compactForm = false,
   historyTitle = 'Previous comments',
 }) {
-  const editable = !blankForm && allowEditLatest ? getEditableComment(task) : null;
+  const displayComments = useMemo(
+    () => collectTaskComments(proj, ph, task),
+    [proj, ph, task],
+  );
+  const editable = !blankForm && allowEditLatest ? getEditableComment(task, { proj, ph }) : null;
   const initial = blankForm || !editable?.comment
     ? {}
     : {
@@ -34,7 +39,7 @@ export function TaskCommentPanel({
   return (
     <>
       {!hideHistory ? (
-        <TaskCommentsSummary comments={task.comments} title={historyTitle} hideNotifyMeta />
+        <TaskCommentsSummary comments={displayComments} title={historyTitle} hideNotifyMeta />
       ) : null}
       <div className="cform-section">
         <h4 className="cform-section-title">New comment &amp; next action</h4>
