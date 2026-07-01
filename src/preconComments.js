@@ -153,7 +153,7 @@ export function normTaskKey(name) {
     .trim();
 }
 
-function legacyTaskCommentSources(task) {
+export function legacyTaskCommentSources(task) {
   const buckets = [];
   if (task?.comments != null) buckets.push(task.comments);
   if (task?.comment != null) buckets.push(task.comment);

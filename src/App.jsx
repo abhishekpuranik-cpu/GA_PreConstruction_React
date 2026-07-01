@@ -35,7 +35,7 @@ import { filterAndSortProjects } from "./projectSearch.js";
 import { ProjectNavPicker } from "./ProjectNavPicker.jsx";
 import { notifyTaskStatusChange } from "./preconNotify.js";
 import { migratePreWorkFollowUpState, applyGhqPreWorkToPhases } from "./preconGhqPreWorkMigrate.js";
-import { reconcileDuplicateTaskComments } from "./preconCommentReconcile.js";
+import { repairAllTaskComments } from "./preconCommentReconcile.js";
 import { mergeAkashActivitiesIntoState } from "./preconAkashGhqMerge.js";
 import { migrateAssigneeNamesState } from "./preconAssigneeNames.js";
 import { formatNavStatusMessage } from './preconNavStatus.js';
@@ -1767,12 +1767,17 @@ function reducer(state,action){
       break;
     }
     case"setCloudUrl":S.cloudUrl=action.v;break;
+    case"clearCommentRepairFlag":{
+      if(S.__commentsRepairPending)delete S.__commentsRepairPending;
+      return S;
+    }
     case"loadState":{
       const{state:merged,totalAdded}=mergeLifecycleIntoState(action.state);
       migratePreWorkFollowUpState(merged);
       mergeAkashActivitiesIntoState(merged);
       migrateAssigneeNamesState(merged);
-      reconcileDuplicateTaskComments(merged);
+      const{changed:commentsRepaired}=repairAllTaskComments(merged);
+      if(commentsRepaired)merged.__commentsRepairPending=true;
       ensureStateDepartments(merged);
       (merged.projects||[]).forEach(proj=>{
         (proj.phases||[]).forEach(ph=>{
@@ -1783,12 +1788,10 @@ function reducer(state,action){
               else t.status="notstarted";
             }
             if(!Array.isArray(t.roles))t.roles=parseRolesInput(t.roles);
-            if(typeof t.comments==="string"){
+            if(!Array.isArray(t.comments)||typeof t.comments==="string"||(t.comments&&typeof t.comments==="object"&&!Array.isArray(t.comments))){
               t.comments=normalizeTaskComments(t.comments);
-            }else if(Array.isArray(t.comments)){
-              t.comments=t.comments.map((c)=>ensureCommentCreatedAt(c));
             }else{
-              t.comments=[];
+              t.comments=t.comments.map((c)=>ensureCommentCreatedAt(c));
             }
           });
         });
@@ -1855,6 +1858,7 @@ export default function App(){
   const[editProjId,setEditProjId]=useState(null);
   const[cloudStatus,setCloudStatus]=useState("loading");
   const mongoFlushRef=useRef(null);
+  const mongoReloadRef=useRef(null);
   const deleteFlushPendingRef=useRef(false);
   const loginUser=useLoginUser();
   const canDeleteProjects=useMemo(()=>canDeletePreconProjects(loginUser),[loginUser]);
@@ -1936,7 +1940,7 @@ export default function App(){
 
   return(
     <div style={{minHeight:"100dvh",background:C.bg,maxWidth:"100vw",overflowX:"hidden"}}>
-      <MongoSyncAdapter state={state} dispatch={dispatch} toast={toast} flushRef={mongoFlushRef} onSyncStatus={setCloudStatus} canDeleteProjects={canDeleteProjects}/>
+      <MongoSyncAdapter state={state} dispatch={dispatch} toast={toast} flushRef={mongoFlushRef} reloadRef={mongoReloadRef} onSyncStatus={setCloudStatus} canDeleteProjects={canDeleteProjects}/>
       <nav className="tnav">
         <div className="tnav-row">
           <div className="tnav-brand" style={{borderRight:`1.5px solid ${C.bd}`,paddingRight:12,marginRight:2}}>
@@ -1986,6 +1990,7 @@ export default function App(){
             </span>
           ):null}
           <span className="tnav-mongo" title="MongoDB sync">{CLOUD_LABELS[cloudStatus]||cloudStatus}</span>
+          <button type="button" className="btg" title="Reload workspace from MongoDB" disabled={cloudStatus==="loading"} onClick={()=>{if(mongoReloadRef.current)void mongoReloadRef.current();else toast("Cloud reload unavailable","err");}}>↻ Reload</button>
           <button type="button" className="btp" onClick={()=>{if(mongoFlushRef.current)mongoFlushRef.current();else toast("Cloud save unavailable","err");}}>Save</button>
         </div>
       </nav>

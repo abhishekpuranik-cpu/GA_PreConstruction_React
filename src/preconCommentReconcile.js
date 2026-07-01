@@ -1,66 +1,115 @@
-import { collectTaskComments, mergeCommentBuckets, normalizeTaskComments } from './preconComments.js';
+import {
+  ensureCommentCreatedAt,
+  legacyTaskCommentSources,
+  mergeCommentBuckets,
+  normalizeTaskComments,
+  normTaskKey,
+} from './preconComments.js';
 
-export const COMMENT_RECONCILE_VERSION = 1;
-
-function normTaskKey(name) {
-  return String(name || '')
-    .toLowerCase()
-    .replace(/^\d+\.\s*/, '')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
+function taskNameKeys(name) {
+  const keys = new Set();
+  const raw = String(name || '').trim();
+  const base = normTaskKey(raw);
+  if (base) keys.add(base);
+  const stripped = normTaskKey(raw.replace(/^[^:]+:\s*/, ''));
+  if (stripped) keys.add(stripped);
+  return [...keys];
 }
 
-function taskRichness(task) {
-  let score = 0;
-  if (task?.ae) score += 8;
-  if (task?.as) score += 4;
-  if (task?.ms) score += 2;
-  if (task?.status && task.status !== 'notstarted') score += 2;
-  score += normalizeTaskComments(task?.comments).length;
-  if (task?.who) score += 1;
-  return score;
-}
-
-function pickPrimaryTask(tasks) {
-  if (!tasks?.length) return null;
-  return tasks.reduce((best, task) => (taskRichness(task) > taskRichness(best) ? task : best), tasks[0]);
-}
-
-/** Copy merged comments onto the richest duplicate task in each name group. */
-export function reconcileDuplicateTaskComments(state) {
-  if (!state || typeof state !== 'object') return { state, changed: false, groups: 0 };
-  if ((state.commentReconcileVersion || 0) >= COMMENT_RECONCILE_VERSION) {
-    return { state, changed: false, groups: 0 };
+function commentsFingerprint(comments) {
+  try {
+    return JSON.stringify(normalizeTaskComments(comments));
+  } catch {
+    return '';
   }
+}
+
+function applyComments(task, merged) {
+  const withTs = merged.map((c) => ensureCommentCreatedAt(c));
+  const next = commentsFingerprint(withTs);
+  const prev = commentsFingerprint(task.comments);
+  if (next !== prev) {
+    task.comments = withTs;
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Repair every task's comments on each workspace load:
+ * - normalize legacy shapes (strings, objects, remark fields)
+ * - merge comments across same-named tasks (even in different phases)
+ * - write the merged list back onto every matching task
+ */
+export function repairAllTaskComments(state) {
+  if (!state || typeof state !== 'object') return { state, changed: false, groups: 0 };
 
   let changed = false;
   let groups = 0;
 
   for (const proj of state.projects || []) {
-    const byName = new Map();
+    const hits = [];
     for (const ph of proj.phases || []) {
       for (const task of ph.tasks || []) {
-        const key = normTaskKey(task.name);
-        if (!key) continue;
-        if (!byName.has(key)) byName.set(key, []);
-        byName.get(key).push({ ph, task });
+        hits.push({ ph, task, keys: taskNameKeys(task.name) });
       }
     }
 
-    byName.forEach((hits) => {
-      if (hits.length < 2) return;
-      groups += 1;
-      const primary = pickPrimaryTask(hits.map((h) => h.task));
-      const primaryHit = hits.find((h) => h.task.id === primary.id) || hits[0];
-      const merged = mergeCommentBuckets(hits.map((h) => collectTaskComments(proj, h.ph, h.task, { includeAliases: false })));
-      const current = normalizeTaskComments(primaryHit.task.comments);
-      if (merged.length > current.length) {
-        primaryHit.task.comments = merged;
-        changed = true;
+    const parent = new Map();
+    const find = (id) => {
+      let root = id;
+      while (parent.get(root) !== root) root = parent.get(root);
+      let cur = id;
+      while (cur !== root) {
+        const next = parent.get(cur);
+        parent.set(cur, root);
+        cur = next;
       }
+      return root;
+    };
+    const union = (a, b) => {
+      const ra = find(a);
+      const rb = find(b);
+      if (ra !== rb) parent.set(rb, ra);
+    };
+
+    hits.forEach(({ task, ph }, index) => {
+      const id = `${index}`;
+      parent.set(id, id);
+    });
+
+    const keyOwner = new Map();
+    hits.forEach(({ keys }, index) => {
+      const id = `${index}`;
+      keys.forEach((key) => {
+        if (!key) return;
+        if (keyOwner.has(key)) union(id, keyOwner.get(key));
+        else keyOwner.set(key, id);
+      });
+    });
+
+    const clusters = new Map();
+    hits.forEach((hit, index) => {
+      const root = find(`${index}`);
+      if (!clusters.has(root)) clusters.set(root, []);
+      clusters.get(root).push(hit);
+    });
+
+    clusters.forEach((cluster) => {
+      if (cluster.length > 1) groups += 1;
+      const merged = mergeCommentBuckets(cluster.flatMap(({ task }) => legacyTaskCommentSources(task)));
+      cluster.forEach(({ task }) => {
+        if (applyComments(task, merged.length ? merged : normalizeTaskComments(task.comments))) {
+          changed = true;
+        }
+      });
     });
   }
 
-  state.commentReconcileVersion = COMMENT_RECONCILE_VERSION;
   return { state, changed, groups };
+}
+
+/** @deprecated use repairAllTaskComments */
+export function reconcileDuplicateTaskComments(state) {
+  return repairAllTaskComments(state);
 }

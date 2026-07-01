@@ -24,7 +24,15 @@ function enableMongoOnCloud() {
  * Loads / saves PreConstruction reducer state to Golden Abodes Platform MongoDB
  * (same app_states collection as GET/PUT /api/apps/preconstruction/state).
  */
-export function MongoSyncAdapter({ state, dispatch, toast, flushRef, onSyncStatus, canDeleteProjects = false }) {
+export function MongoSyncAdapter({
+  state,
+  dispatch,
+  toast,
+  flushRef,
+  reloadRef,
+  onSyncStatus,
+  canDeleteProjects = false,
+}) {
   const [syncReady, setSyncReady] = useState(false);
   const [cloudStatus, setCloudStatus] = useState('loading');
   const stateRef = useRef(state);
@@ -34,6 +42,7 @@ export function MongoSyncAdapter({ state, dispatch, toast, flushRef, onSyncStatu
   const userEditedRef = useRef(false);
   const initialStateJsonRef = useRef(null);
   const canDeleteRef = useRef(canDeleteProjects);
+  const initialLoadDoneRef = useRef(false);
 
   useEffect(() => {
     canDeleteRef.current = canDeleteProjects;
@@ -58,6 +67,20 @@ export function MongoSyncAdapter({ state, dispatch, toast, flushRef, onSyncStatu
     if (typeof onSyncStatus === 'function') onSyncStatus(cloudStatus);
   }, [cloudStatus, onSyncStatus]);
 
+  const applyRemoteState = (remote, version, { force = false } = {}) => {
+    if (!remote || typeof remote !== 'object' || Array.isArray(remote)) return false;
+    if (!force && userEditedRef.current) return false;
+    dispatch({ type: 'loadState', state: remote });
+    try {
+      initialStateJsonRef.current = JSON.stringify(remote);
+    } catch {
+      /* ignore */
+    }
+    versionRef.current.v = version || 0;
+    setCloudStatus(force ? 'synced' : userEditedRef.current ? 'dirty' : 'synced');
+    return true;
+  };
+
   useEffect(() => {
     const ac = new AbortController();
     (async () => {
@@ -70,16 +93,7 @@ export function MongoSyncAdapter({ state, dispatch, toast, flushRef, onSyncStatu
         const res = await mongoGetState(APP_ID);
         if (ac.signal.aborted) return;
         if (res.ok && res.data && typeof res.data === 'object' && !Array.isArray(res.data)) {
-          if (!userEditedRef.current) {
-            dispatch({ type: 'loadState', state: res.data });
-            try {
-              initialStateJsonRef.current = JSON.stringify(res.data);
-            } catch {
-              /* ignore */
-            }
-          }
-          versionRef.current.v = res.version || 0;
-          setCloudStatus(userEditedRef.current ? 'dirty' : 'synced');
+          applyRemoteState(res.data, res.version);
         } else if (res.status === 404) {
           versionRef.current.v = 0;
           setCloudStatus('new');
@@ -89,7 +103,10 @@ export function MongoSyncAdapter({ state, dispatch, toast, flushRef, onSyncStatu
       } catch {
         if (!ac.signal.aborted) setCloudStatus('offline');
       } finally {
-        if (!ac.signal.aborted) setSyncReady(true);
+        if (!ac.signal.aborted) {
+          initialLoadDoneRef.current = true;
+          setSyncReady(true);
+        }
       }
     })();
     return () => ac.abort();
@@ -132,11 +149,11 @@ export function MongoSyncAdapter({ state, dispatch, toast, flushRef, onSyncStatu
             return true;
           }
           const merged = mergePreconstructionClientState(latest.data, snap, {
-            allowProjectRemoval: canDeleteRef.current
+            allowProjectRemoval: canDeleteRef.current,
           });
           const retry = await mongoPutState(APP_ID, {
             data: merged,
-            expectedVersion: latest.version ?? versionRef.current.v
+            expectedVersion: latest.version ?? versionRef.current.v,
           });
           if (retry.ok) {
             versionRef.current.v = retry.version ?? versionRef.current.v;
@@ -151,7 +168,7 @@ export function MongoSyncAdapter({ state, dispatch, toast, flushRef, onSyncStatu
         /* fall through to conflict status */
       }
       setCloudStatus('conflict');
-      toast('Save conflict — reload to get team data', 'err');
+      toast('Save conflict — use Reload to get team data', 'err');
       return false;
     }
     setCloudStatus('error');
@@ -159,12 +176,53 @@ export function MongoSyncAdapter({ state, dispatch, toast, flushRef, onSyncStatu
     return false;
   };
 
+  const reloadFromCloud = async () => {
+    if (!canUseMongoState()) {
+      toast('Mongo sync unavailable (open from platform URL)', 'err');
+      return false;
+    }
+    setCloudStatus('loading');
+    try {
+      const res = await mongoGetState(APP_ID);
+      if (res.ok && res.data && typeof res.data === 'object' && !Array.isArray(res.data)) {
+        userEditedRef.current = false;
+        applyRemoteState(res.data, res.version, { force: true });
+        toast('Workspace reloaded from Mongo', 'ok');
+        return true;
+      }
+      if (res.status === 404) {
+        versionRef.current.v = 0;
+        setCloudStatus('new');
+        toast('No saved workspace on Mongo yet', 'err');
+        return false;
+      }
+      setCloudStatus('error');
+      toast(res.error || 'Reload failed', 'err');
+      return false;
+    } catch {
+      setCloudStatus('offline');
+      toast('Reload failed — offline', 'err');
+      return false;
+    }
+  };
+
   useEffect(() => {
     if (flushRef) flushRef.current = flushSave;
+    if (reloadRef) reloadRef.current = reloadFromCloud;
     return () => {
       if (flushRef) flushRef.current = null;
+      if (reloadRef) reloadRef.current = null;
     };
   });
+
+  useEffect(() => {
+    if (!syncReady || !state.__commentsRepairPending) return undefined;
+    dispatch({ type: 'clearCommentRepairFlag' });
+    const timer = setTimeout(() => {
+      void flushSave();
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [syncReady, state.__commentsRepairPending, dispatch]);
 
   useEffect(() => {
     if (!syncReady || !isMongoAutsaveEnabled() || !canUseMongoState()) return;
