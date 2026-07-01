@@ -30,7 +30,7 @@ const PHASE_SLUG_ALIASES = {
   registration: ['registration'],
 };
 
-const CUSTOM_PHASE_KEEP = /sales office setup|construction pre-requisite/i;
+const CUSTOM_PHASE_KEEP = /sales office setup|construction pre-requisite|demolition/i;
 
 function norm(s) {
   return String(s || '')
@@ -220,6 +220,7 @@ export function applyKickoffOffsets(proj) {
 
   (proj.phases || []).forEach((ph) => {
     (ph.tasks || []).forEach((t) => {
+      if (t.msManual) return;
       if (t.offsetFromKo != null && t.offsetFromKo !== '' && !Number.isNaN(Number(t.offsetFromKo))) {
         t.ms = iso(addDays(ko, Number(t.offsetFromKo)));
       }

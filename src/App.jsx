@@ -39,6 +39,8 @@ import { repairAllTaskComments } from "./preconCommentReconcile.js";
 import { mergeAkashActivitiesIntoState } from "./preconAkashGhqMerge.js";
 import { migrateAssigneeNamesState } from "./preconAssigneeNames.js";
 import { formatNavStatusMessage } from './preconNavStatus.js';
+import { recordActivityFromAction, setPreconActivityActor } from './preconActivityLog.js';
+import { DashboardReportsView } from './DashboardReportsView.jsx';
 import {
   taskStatus,
   taskStatusSelectValue,
@@ -181,6 +183,7 @@ function buildInit(){
         ]}, parSO, parCP,
       ]},
     ],
+    activityLog:[],
     _removedProjectIds:[],
   };
   const merged = mergeLifecycleIntoState(init).state;
@@ -250,6 +253,25 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .dash-stab{padding:10px 18px;border:none;background:none;color:#55504A;font-size:13px;font-weight:600;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s;font-family:'DM Sans',sans-serif;white-space:nowrap;min-height:44px}
 .dash-stab:hover{color:#1A304A;background:rgba(26,48,74,.04);border-radius:8px 8px 0 0}
 .dash-stab.act{color:#1A304A;border-bottom-color:#C89A3A;font-weight:700}
+.dash-reports{margin-bottom:20px}
+.dash-reports-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:14px;margin-bottom:16px}
+.dash-reports-dl{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start}
+.dash-reports-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.dash-reports-stat{background:#fff;border:1px solid #E2DDD4;border-radius:8px;padding:12px 14px}
+.dash-reports-stat.wide{grid-column:span 2}
+.dash-reports-stat-n{font-size:24px;font-weight:600;color:#1A304A;line-height:1}
+.dash-reports-stat-l{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#96918A;margin-top:4px}
+.dash-reports-chips{display:flex;flex-wrap:wrap;gap:6px}
+.dash-reports-chip{font-size:11px;padding:3px 8px;border-radius:12px;background:#F3F0EA;border:1px solid #E2DDD4;color:#55504A}
+.dash-reports-filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center}
+.dash-reports-filters select,.dash-reports-filters input[type=date]{padding:8px 10px;border:1.5px solid #E2DDD4;border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;color:#1A304A;background:#fff}
+.dash-reports-table-wrap{overflow:auto;max-height:min(62vh,640px)}
+.dash-reports-table{width:100%;border-collapse:collapse;font-size:12px}
+.dash-reports-table th{position:sticky;top:0;background:#F3F0EA;text-align:left;padding:10px 12px;border-bottom:1px solid #E2DDD4;font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:#96918A}
+.dash-reports-table td{padding:10px 12px;border-bottom:1px solid #EAE6DC;vertical-align:top;color:#1A1815}
+.dash-reports-table tr:hover td{background:#FBF9F5}
+.dash-reports-type{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.35px;color:#1B5E9E;background:#EEF4FC;border:1px solid #B5D0EF;padding:2px 7px;border-radius:10px;white-space:nowrap}
+.mono{font-variant-numeric:tabular-nums;white-space:nowrap;font-size:11px;color:#55504A}
 .dash-cal .mw-hero{margin-top:0}
 .dash-cal .mw-sub{color:rgba(255,255,255,.78)}
 .dash-cal .mw-cal-day-panel .mw-sub{color:#55504A}
@@ -786,6 +808,8 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
   .nact{max-width:100%}
 }
 @media (max-width:768px){
+  .dash-reports-stats{grid-template-columns:repeat(2,1fr)}
+  .dash-reports-stat.wide{grid-column:span 2}
   .tnav{position:sticky;top:0;flex-direction:column;align-items:stretch;padding:10px 12px;gap:8px}
   .tnav-row{display:flex;align-items:center;width:100%;gap:8px;min-width:0}
   .tnav-brand{border-right:none;padding-right:0;margin-right:0;flex:1;min-width:0}
@@ -1350,7 +1374,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                             onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();e.target.blur();}}}
                           >{t.name}</div>
                         </td>
-                        <td><input type="date" className="di" defaultValue={t.ms||d.s||""} onChange={e=>dispatch({type:"setMS",projId:proj.id,phId:ph.id,tId:t.id,v:e.target.value||null})}/></td>
+                        <td><input type="date" className="di" value={t.ms||d.s||""} onChange={e=>dispatch({type:"setMS",projId:proj.id,phId:ph.id,tId:t.id,v:e.target.value||null})}/></td>
                         <td><input type="number" className="ni" defaultValue={t.dur} min={1} max={999} onChange={e=>dispatch({type:"updTask",projId:proj.id,phId:ph.id,tId:t.id,f:"dur",v:parseInt(e.target.value)||1})}/></td>
                         <td style={{color:C.tx2,fontSize:12,whiteSpace:"nowrap"}}>{fmt(d.e)}</td>
                         <td>
@@ -1481,7 +1505,7 @@ function ProjectFormFields({form,setForm}){
   );
 }
 
-function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWork,onEditProject,onDeleteProject,onAddProject,onImportJson,onImportExcel,departments,canDeleteProjects,dispatch,loginUser}){
+function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWork,onEditProject,onDeleteProject,onAddProject,onImportJson,onImportExcel,departments,canDeleteProjects,dispatch,loginUser,activityLog}){
   const[dashTab,setDashTab]=useState("overview");
   const[horizonDays,setHorizonDays]=useState(30);
   const[statusFilters,setStatusFilters]=useState([]);
@@ -1543,9 +1567,12 @@ function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWo
       <div className="dash-stabs" role="tablist" aria-label="Dashboard views">
         <button type="button" role="tab" aria-selected={dashTab==="overview"} className={`dash-stab${dashTab==="overview"?" act":""}`} onClick={()=>setDashTab("overview")}>Overview</button>
         <button type="button" role="tab" aria-selected={dashTab==="calendar"} className={`dash-stab${dashTab==="calendar"?" act":""}`} onClick={()=>setDashTab("calendar")}>Work Calendar</button>
+        <button type="button" role="tab" aria-selected={dashTab==="reports"} className={`dash-stab${dashTab==="reports"?" act":""}`} onClick={()=>setDashTab("reports")}>Reports</button>
       </div>
       {dashTab==="calendar"?(
         <DashboardCalendarView projects={displayProjects} sourceProjects={projects} departments={departments} dispatch={dispatch} toast={toast} loginUser={loginUser} onOpenProject={onOpenProject}/>
+      ):dashTab==="reports"?(
+        <DashboardReportsView activityLog={activityLog||[]} projects={displayProjects}/>
       ):(
       <>
       <PortfolioRagMatrix projects={displayProjects} departments={departments} onOpenProject={onOpenProject}/>
@@ -1666,11 +1693,14 @@ function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWo
 }
 
 // ── REDUCER ──────────────────────────────────────────────
+const STRUCTURAL_ACTIONS=new Set(["addTask","delTask","addPhase","delPhase","addProject","delProject","reorderTask","reorderPhase"]);
+
 function reducer(state,action){
   const S=JSON.parse(JSON.stringify(state));
   const fp=(pid)=>S.projects.find(p=>p.id===pid);
   const fph=(pid,phid)=>fp(pid)?.phases.find(ph=>ph.id===phid);
   const ft=(pid,phid,tid)=>fph(pid,phid)?.tasks.find(t=>t.id===tid);
+  let activityAction=action;
   switch(action.type){
     case"setKO":{
       const p=fp(action.pid);
@@ -1690,7 +1720,13 @@ function reducer(state,action){
       if(d)d.head=typeof action.head==="string"?action.head:"";
       break;
     }
-    case"setMS":{const t=ft(action.projId,action.phId,action.tId);if(t)t.ms=action.v;break;}
+    case"setMS":{
+      const t=ft(action.projId,action.phId,action.tId);
+      if(!t)break;
+      t.ms=action.v||null;
+      t.msManual=!!action.v;
+      break;
+    }
     case"setTaskStatus":{
       const t=ft(action.projId,action.phId,action.tId);if(!t)break;
       const td=todayIso();const v=action.v;
@@ -1701,10 +1737,18 @@ function reducer(state,action){
       break;
     }
     case"markDone":{const t=ft(action.projId,action.phId,action.tId);if(t){const td=todayIso();t.status="completed";t.ae=td;if(!t.as)t.as=td;}break;}
-    case"delTask":{const ph=fph(action.projId,action.phId);if(ph)ph.tasks=ph.tasks.filter(t=>t.id!==action.tId);break;}
+    case"delTask":{
+      const ph=fph(action.projId,action.phId);
+      if(ph){
+        const doomed=ph.tasks.find(t=>t.id===action.tId);
+        ph.tasks=ph.tasks.filter(t=>t.id!==action.tId);
+        activityAction={...action,taskName:doomed?.name||""};
+      }
+      break;
+    }
     case"addTask":{
       const ph=fph(action.projId,action.phId);if(!ph)break;
-      const id=uid();const nt=mkT(id,action.name||"New Task",action.dur||7,action.pred||[],null,action.ex||{});
+      const id=uid();const nt=mkT(id,action.name||"New Task",action.dur||7,action.pred||[],null,{source:"user",...action.ex||{}});
       if(action.afterId){const i=ph.tasks.findIndex(t=>t.id===action.afterId);if(i>=0){ph.tasks.splice(i+1,0,nt);break;}}
       ph.tasks.push(nt);break;
     }
@@ -1771,7 +1815,12 @@ function reducer(state,action){
       if(S.__commentsRepairPending)delete S.__commentsRepairPending;
       return S;
     }
+    case"clearFlushFlag":{
+      if(S.__flushPending)delete S.__flushPending;
+      return S;
+    }
     case"loadState":{
+      const preservedLog=Array.isArray(action.state?.activityLog)?action.state.activityLog:null;
       const{state:merged,totalAdded}=mergeLifecycleIntoState(action.state);
       migratePreWorkFollowUpState(merged);
       mergeAkashActivitiesIntoState(merged);
@@ -1779,6 +1828,7 @@ function reducer(state,action){
       const{changed:commentsRepaired}=repairAllTaskComments(merged);
       if(commentsRepaired)merged.__commentsRepairPending=true;
       ensureStateDepartments(merged);
+      merged.activityLog=Array.isArray(preservedLog)?preservedLog:(Array.isArray(merged.activityLog)?merged.activityLog:[]);
       (merged.projects||[]).forEach(proj=>{
         (proj.phases||[]).forEach(ph=>{
           (ph.tasks||[]).forEach(t=>{
@@ -1800,6 +1850,10 @@ function reducer(state,action){
     }
     default:break;
   }
+  if(action.type!=="loadState"&&action.type!=="clearFlushFlag"&&action.type!=="clearCommentRepairFlag"){
+    recordActivityFromAction(S,activityAction);
+  }
+  if(STRUCTURAL_ACTIONS.has(action.type))S.__flushPending=true;
   return S;
 }
 
@@ -1861,6 +1915,9 @@ export default function App(){
   const mongoReloadRef=useRef(null);
   const deleteFlushPendingRef=useRef(false);
   const loginUser=useLoginUser();
+  useEffect(()=>{
+    setPreconActivityActor(loginUser?.ready?loginUser.name:null);
+  },[loginUser?.ready,loginUser?.name]);
   const canDeleteProjects=useMemo(()=>canDeletePreconProjects(loginUser),[loginUser]);
   const{navHint,toast}=useNavStatus();
   const visibleProjects=useMemo(()=>filterProjectsForUser(state.projects,loginUser),[state.projects,loginUser]);
@@ -1997,7 +2054,7 @@ export default function App(){
 
       <main className={`main${curProj?" main-proj":""}`}>
         {curView==="dashboard"
-          ?<Dashboard projects={state.projects} cloudUrl={cloudUrl} setCloudUrl={setCloudUrl} toast={toast} onOpenProject={id=>setCurView(id)} onOpenMyWork={()=>setCurView("mywork")} onEditProject={openEditProject} onDeleteProject={confirmDeleteProject} onAddProject={()=>setModal("addProj")} onImportJson={importJSON} onImportExcel={importExcel} departments={state.departments} canDeleteProjects={canDeleteProjects} dispatch={dispatch} loginUser={loginUser}/>
+          ?<Dashboard projects={state.projects} cloudUrl={cloudUrl} setCloudUrl={setCloudUrl} toast={toast} onOpenProject={id=>setCurView(id)} onOpenMyWork={()=>setCurView("mywork")} onEditProject={openEditProject} onDeleteProject={confirmDeleteProject} onAddProject={()=>setModal("addProj")} onImportJson={importJSON} onImportExcel={importExcel} departments={state.departments} canDeleteProjects={canDeleteProjects} dispatch={dispatch} loginUser={loginUser} activityLog={state.activityLog}/>
           :curView==="mywork"
           ?<MyWorkView projects={visibleProjects} loginUser={loginUser} departments={state.departments} dispatch={dispatch} toast={toast} onOpenProject={id=>{setCurView(id);setSubTab(p=>({...p,[id]:"tasks"}));}}/>
           :curProj?(()=>{

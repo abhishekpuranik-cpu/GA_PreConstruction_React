@@ -23,9 +23,17 @@ function kickoffSortKey(project) {
   return Number.isFinite(t) ? t : Number.POSITIVE_INFINITY;
 }
 
-/** Earliest kickoff first; ties broken by project name. Projects without kickoff go last. */
+/** True when project location is Goa (Dashboard deprioritizes these to the bottom). */
+export function isGoaProject(project) {
+  return String(project?.loc || '').trim().toLowerCase().includes('goa');
+}
+
+/** Earliest kickoff first; ties broken by project name. Goa projects last; no-kickoff last within each group. */
 export function sortProjectsByKickoff(projects) {
   return [...(projects || [])].sort((a, b) => {
+    const ga = isGoaProject(a) ? 1 : 0;
+    const gb = isGoaProject(b) ? 1 : 0;
+    if (ga !== gb) return ga - gb;
     const ka = kickoffSortKey(a);
     const kb = kickoffSortKey(b);
     if (ka !== kb) return ka - kb;

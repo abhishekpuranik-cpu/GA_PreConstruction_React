@@ -225,6 +225,15 @@ export function MongoSyncAdapter({
   }, [syncReady, state.__commentsRepairPending, dispatch]);
 
   useEffect(() => {
+    if (!syncReady || !state.__flushPending) return undefined;
+    dispatch({ type: 'clearFlushFlag' });
+    const timer = setTimeout(() => {
+      void flushSave();
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [syncReady, state.__flushPending, dispatch]);
+
+  useEffect(() => {
     if (!syncReady || !isMongoAutsaveEnabled() || !canUseMongoState()) return;
     const schedule = scheduleSaveRef.current;
     if (!schedule) return;
