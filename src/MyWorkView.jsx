@@ -8,11 +8,14 @@ import { fmtYmd, parseYmd, todayYmd } from './activityCalendarUtils.js';
 import {
   buildMyWorkItems,
   calendarDateLabel,
+  filterItemsByDepartment,
   formatShortDate,
   getItemCalendarDates,
   itemMatchesCalendarDay,
   myWorkSummary,
+  summarizeDepartments,
 } from './preconMyWork.js';
+import { MyWorkLevelFilters } from './MyWorkLevelFilters.jsx';
 import './activityCalendar.css';
 
 const SCOL = {
@@ -39,6 +42,8 @@ export function MyWorkView({ projects, loginUser, departments, dispatch, toast, 
   const [scopeDepartment, setScopeDepartment] = useState(false);
   const [projectFilter, setProjectFilter] = useState([]);
   const [statusFilters, setStatusFilters] = useState([]);
+  const [viewLevel, setViewLevel] = useState('overall');
+  const [departmentFilter, setDepartmentFilter] = useState('');
   const [view, setView] = useState('month');
   const [cursorDate, setCursorDate] = useState(() => new Date());
   const [selectedYmd, setSelectedYmd] = useState(todayYmd());
@@ -80,9 +85,40 @@ export function MyWorkView({ projects, loginUser, departments, dispatch, toast, 
     () => (hideCompleted ? items.filter((i) => i.st !== 'completed') : items),
     [items, hideCompleted],
   );
-  const summary = useMemo(() => myWorkSummary(items, todayStr), [items, todayStr]);
+
+  const deptSummaries = useMemo(
+    () => summarizeDepartments(filtered, todayStr),
+    [filtered, todayStr],
+  );
+
+  const levelFiltered = useMemo(() => {
+    if (!departmentFilter) return filtered;
+    return filterItemsByDepartment(filtered, departmentFilter);
+  }, [filtered, departmentFilter]);
+
+  const summary = useMemo(() => myWorkSummary(levelFiltered, todayStr), [levelFiltered, todayStr]);
 
   const allProjectIds = useMemo(() => projects.map((p) => p.id), [projects]);
+
+  const myDepts = useMemo(
+    () => (departments || []).filter((d) => assigneeMatches(d.head, effectivePerson)),
+    [departments, effectivePerson],
+  );
+
+  const handleViewLevelChange = (level) => {
+    setViewLevel(level);
+    if (level === 'department') {
+      setDepartmentFilter((prev) => {
+        if (prev) return prev;
+        if (myDepts[0]?.id) return myDepts[0].id;
+        const busiest = deptSummaries.find((s) => s.open > 0);
+        return busiest?.id || departments[0]?.id || '';
+      });
+    } else {
+      setDepartmentFilter('');
+    }
+  };
+
   const toggleProject = (id) => {
     setProjectFilter((prev) => {
       if (prev.length === 0) return allProjectIds.filter((x) => x !== id);
@@ -92,11 +128,9 @@ export function MyWorkView({ projects, loginUser, departments, dispatch, toast, 
     });
   };
 
-  const myDepts = useMemo(() => (departments || []).filter((d) => assigneeMatches(d.head, effectivePerson)), [departments, effectivePerson]);
-
   const selectedDayItems = useMemo(
-    () => filtered.filter((i) => itemMatchesCalendarDay(i, selectedYmd)),
-    [filtered, selectedYmd],
+    () => levelFiltered.filter((i) => itemMatchesCalendarDay(i, selectedYmd)),
+    [levelFiltered, selectedYmd],
   );
 
   return (
@@ -163,6 +197,14 @@ export function MyWorkView({ projects, loginUser, departments, dispatch, toast, 
           </details>
         ) : null}
         <label className="mw-check"><input type="checkbox" checked={hideCompleted} onChange={(e) => setHideCompleted(e.target.checked)} />Hide completed</label>
+        <MyWorkLevelFilters
+          viewLevel={viewLevel}
+          onViewLevelChange={handleViewLevelChange}
+          departmentFilter={departmentFilter}
+          onDepartmentFilterChange={setDepartmentFilter}
+          departments={departments}
+          deptSummaries={deptSummaries}
+        />
       </div>
 
       {!effectivePerson ? (
@@ -177,10 +219,17 @@ export function MyWorkView({ projects, loginUser, departments, dispatch, toast, 
             view={view}
             cursorDate={cursorDate}
             selectedYmd={selectedYmd}
-            tasks={filtered}
+            tasks={levelFiltered}
             getTaskYmd={(item) => getItemCalendarDates(item)}
             getTaskId={(item) => `${item.proj.id}-${item.task.id}`}
-            getTaskTitle={(item) => `${item.task.name} · ${item.proj.name}`}
+            getTaskTitle={(item) => {
+              const base = `${item.task.name} · ${item.proj.name}`;
+              if (viewLevel === 'overall' && !departmentFilter && item.dept?.name) {
+                const short = item.dept.name.split(/[&/]/)[0].trim();
+                return `${base} · ${short}`;
+              }
+              return base;
+            }}
             getTaskColor={(item) => SCOL[item.st] || '#1A304A'}
             onViewChange={setView}
             onCursorChange={setCursorDate}
@@ -213,7 +262,12 @@ export function MyWorkView({ projects, loginUser, departments, dispatch, toast, 
                       <button type="button" className="mw-cal-day-list-btn" onClick={() => setActiveItem(item)}>
                         <span className={`badge ${statusBadgeClass(item.st)}`}>{statusLabel(item.st)}</span>
                         <strong>{item.task.name}</strong>
-                        <span className="mw-sub">{item.proj.name} · {calendarDateLabel(item, selectedYmd)}</span>
+                        <span className="mw-sub">
+                          {item.proj.name}
+                          {item.dept?.name ? ` · ${item.dept.name}` : ''}
+                          {' · '}
+                          {calendarDateLabel(item, selectedYmd)}
+                        </span>
                       </button>
                     </li>
                   ))}

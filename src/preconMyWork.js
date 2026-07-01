@@ -225,6 +225,30 @@ export function groupMyWorkItems(items, todayStr) {
   return groups.filter((g) => g.items.length > 0);
 }
 
+export function summarizeDepartments(items, todayStr) {
+  const byId = new Map();
+  for (const it of items || []) {
+    const id = it.dept?.id || '_other';
+    const name = it.dept?.name || 'Unmapped';
+    if (!byId.has(id)) {
+      byId.set(id, { id, name, open: 0, overdue: 0, today: 0, total: 0 });
+    }
+    const g = byId.get(id);
+    g.total += 1;
+    if (it.st === 'completed') continue;
+    g.open += 1;
+    const dates = getItemCalendarDates(it);
+    if (dates.some((d) => d < todayStr)) g.overdue += 1;
+    if (dates.includes(todayStr)) g.today += 1;
+  }
+  return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export function filterItemsByDepartment(items, departmentId) {
+  if (!departmentId) return items || [];
+  return (items || []).filter((it) => (it.dept?.id || '_other') === departmentId);
+}
+
 export function myWorkSummary(items, todayStr) {
   const open = items.filter((i) => i.st !== 'completed');
   const overdue = open.filter((i) => getItemCalendarDates(i).some((d) => d < todayStr));
