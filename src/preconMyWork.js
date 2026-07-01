@@ -2,7 +2,7 @@ import { cDates, dbDays } from './preconDates.js';
 import { taskMatchesStatusFilters, taskStatus, todayIso } from './preconTaskStatus.js';
 import { getDepartmentForPhase, taskMatchesRoleFilter } from './preconDepartments.js';
 import { assigneeMatches, nameMatches } from './preconAssignees.js';
-import { commentSortKey } from './preconComments.js';
+import { commentSortKey, normalizeTaskComments } from './preconComments.js';
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -40,6 +40,7 @@ export function effectiveChronologyDate(task, dm, st) {
 
 /** Latest comment with next action date. */
 export function getLatestNextActionEntry(comments) {
+  const list = normalizeTaskComments(comments);
   let best = null;
   let bestScore = -1;
   let commentIndex = -1;
@@ -165,6 +166,20 @@ export function buildPortfolioWorkItems(projects, opts = {}) {
   }
 
   return { items: sortWorkItems(items), todayStr };
+}
+
+/** Resolve live project / phase / task from workspace (drawer must not use stale snapshots). */
+export function resolveWorkItemFromProjects(projects, item) {
+  if (!item?.proj?.id || !item?.ph?.id || !item?.task?.id) return item;
+  for (const proj of projects || []) {
+    if (proj.id !== item.proj.id) continue;
+    for (const ph of proj.phases || []) {
+      if (ph.id !== item.ph.id) continue;
+      const task = (ph.tasks || []).find((t) => t.id === item.task.id);
+      if (task) return { ...item, proj, ph, task };
+    }
+  }
+  return item;
 }
 
 /**

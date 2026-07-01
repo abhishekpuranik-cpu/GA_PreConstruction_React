@@ -11,8 +11,10 @@ import {
   filterItemsByDepartment,
   formatShortDate,
   getItemCalendarDates,
+  getLatestNextActionEntry,
   itemMatchesCalendarDay,
   myWorkSummary,
+  resolveWorkItemFromProjects,
   summarizeDepartments,
 } from './preconMyWork.js';
 import { MyWorkLevelFilters } from './MyWorkLevelFilters.jsx';
@@ -36,6 +38,7 @@ const LEGEND = [
 
 export function DashboardCalendarView({
   projects,
+  sourceProjects,
   departments,
   dispatch,
   toast,
@@ -121,6 +124,16 @@ export function DashboardCalendarView({
     () => levelFiltered.filter((i) => itemMatchesCalendarDay(i, selectedYmd)),
     [levelFiltered, selectedYmd],
   );
+
+  const drawerItem = useMemo(() => {
+    if (!activeItem) return null;
+    const lookup = sourceProjects || projects;
+    const live = resolveWorkItemFromProjects(lookup, activeItem);
+    return {
+      ...live,
+      nextAction: getLatestNextActionEntry(live.task?.comments),
+    };
+  }, [activeItem, projects, sourceProjects]);
 
   const taskTitle = (item) => {
     const who = item.task.who ? ` · ${item.task.who}` : '';
@@ -280,26 +293,26 @@ export function DashboardCalendarView({
         </section>
       ) : null}
 
-      {activeItem ? (
+      {drawerItem ? (
         <div className="mw-cal-drawer-backdrop" onClick={() => setActiveItem(null)} role="presentation">
           <aside className="mw-cal-drawer" onClick={(e) => e.stopPropagation()}>
             <div className="mw-cal-drawer-head">
               <div>
-                <div className="mw-cal-drawer-kicker">{activeItem.proj.name} · {activeItem.ph.name}</div>
-                <h3>{activeItem.task.name}</h3>
+                <div className="mw-cal-drawer-kicker">{drawerItem.proj.name} · {drawerItem.ph.name}</div>
+                <h3>{drawerItem.task.name}</h3>
               </div>
               <button type="button" className="btg" onClick={() => setActiveItem(null)}>Close</button>
             </div>
-            <span className={`badge ${statusBadgeClass(activeItem.st)}`}>{statusLabel(activeItem.st)}</span>
+            <span className={`badge ${statusBadgeClass(drawerItem.st)}`}>{statusLabel(drawerItem.st)}</span>
             <p className="mw-sub" style={{ margin: 0, color: '#55504A' }}>
-              {activeItem.task.who ? `Assignee: ${activeItem.task.who} · ` : ''}
-              Next / due: {formatShortDate(activeItem.sortDate)}
-              {activeItem.nextAction?.nextAction ? ` · ${activeItem.nextAction.nextAction}` : ''}
+              {drawerItem.task.who ? `Assignee: ${drawerItem.task.who} · ` : ''}
+              Next / due: {formatShortDate(drawerItem.sortDate)}
+              {drawerItem.nextAction?.nextAction ? ` · ${drawerItem.nextAction.nextAction}` : ''}
             </p>
             <TaskCommentPanel
-              proj={activeItem.proj}
-              ph={activeItem.ph}
-              task={activeItem.task}
+              proj={drawerItem.proj}
+              ph={drawerItem.ph}
+              task={drawerItem.task}
               dispatch={dispatch}
               toast={toast}
               authorName={authorName}
@@ -309,7 +322,7 @@ export function DashboardCalendarView({
               hideNotifyBanner
               compactForm
             />
-            <button type="button" className="btg mw-open-task" onClick={() => onOpenProject(activeItem.proj.id)}>
+            <button type="button" className="btg mw-open-task" onClick={() => onOpenProject(drawerItem.proj.id)}>
               Open task in project
             </button>
           </aside>

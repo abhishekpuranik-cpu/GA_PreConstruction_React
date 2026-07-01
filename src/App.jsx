@@ -19,7 +19,7 @@ import {
   collectAllRoles,
 } from "./preconDepartments.js";
 import { PortfolioRagMatrix } from "./PortfolioRagMatrix.jsx";
-import { ensureCommentCreatedAt, formatCommentLine, getLatestComment, sortCommentsChronologically } from "./preconComments.js";
+import { ensureCommentCreatedAt, formatCommentLine, getLatestComment, normalizeTaskComments, sortCommentsChronologically } from "./preconComments.js";
 import { useLoginUser } from "./useLoginUser.js";
 import { canDeletePreconProjects } from "./preconPermissions.js";
 import { MyWorkView } from "./MyWorkView.jsx";
@@ -665,7 +665,8 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .tcc-entry-latest .tcc-entry-seq{color:#1A304A;background:#EEF4FC}
 .tcc-entry-next-text{font-weight:500}
 .dash-cal-proj-search{min-height:40px}
-.mw-cal-drawer .tcc-history{max-height:min(36vh,280px)}
+.mw-cal-drawer .tcc-history{flex:1 1 auto;min-height:100px;max-height:min(40vh,300px)}
+.mw-cal-drawer .cform-section{flex-shrink:0}
 .mw-cal-drawer .cform-rich{max-width:100%}
 .c-email-meta{font-size:10px;color:#1B5E9E;margin-top:6px}
 .att-pick{margin-top:4px;padding:10px 12px;background:#F8F6F1;border:1px dashed #E2DDD4;border-radius:8px;max-width:100%;min-width:0;box-sizing:border-box}
@@ -1542,7 +1543,7 @@ function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWo
         <button type="button" role="tab" aria-selected={dashTab==="calendar"} className={`dash-stab${dashTab==="calendar"?" act":""}`} onClick={()=>setDashTab("calendar")}>Work Calendar</button>
       </div>
       {dashTab==="calendar"?(
-        <DashboardCalendarView projects={displayProjects} departments={departments} dispatch={dispatch} toast={toast} loginUser={loginUser} onOpenProject={onOpenProject}/>
+        <DashboardCalendarView projects={displayProjects} sourceProjects={projects} departments={departments} dispatch={dispatch} toast={toast} loginUser={loginUser} onOpenProject={onOpenProject}/>
       ):(
       <>
       <PortfolioRagMatrix projects={displayProjects} departments={departments} onOpenProject={onOpenProject}/>
@@ -1779,8 +1780,12 @@ function reducer(state,action){
               else t.status="notstarted";
             }
             if(!Array.isArray(t.roles))t.roles=parseRolesInput(t.roles);
-            if(Array.isArray(t.comments)){
+            if(typeof t.comments==="string"){
+              t.comments=normalizeTaskComments(t.comments);
+            }else if(Array.isArray(t.comments)){
               t.comments=t.comments.map((c)=>ensureCommentCreatedAt(c));
+            }else{
+              t.comments=[];
             }
           });
         });

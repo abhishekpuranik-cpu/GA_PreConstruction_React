@@ -28,9 +28,48 @@ export function commentSortKey(c) {
   return 0;
 }
 
+/** Coerce legacy / string / JSON comment fields into displayable objects. */
+export function normalizeTaskComments(comments) {
+  if (comments == null) return [];
+  if (typeof comments === 'string') {
+    const raw = comments.trim();
+    if (!raw) return [];
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed.map(normalizeCommentRow).filter(Boolean);
+    } catch {
+      /* plain text */
+    }
+    return [{ author: 'Note', ts: '', text: raw }];
+  }
+  if (!Array.isArray(comments)) return [];
+  return comments.map(normalizeCommentRow).filter(Boolean);
+}
+
+function normalizeCommentRow(c) {
+  if (c == null) return null;
+  if (typeof c === 'string') {
+    const text = c.trim();
+    return text ? { author: 'Note', ts: '', text } : null;
+  }
+  if (typeof c !== 'object') return null;
+  const text = String(c.text ?? c.comment ?? c.body ?? c.message ?? c.note ?? '').trim();
+  const nextAction = String(c.nextAction ?? c.next_action ?? c.nextActionText ?? '').trim();
+  const nextActionDate = String(c.nextActionDate ?? c.next_action_date ?? c.due ?? c.dueDate ?? '').trim();
+  if (!text && !nextAction && !nextActionDate) return null;
+  return {
+    ...c,
+    text,
+    nextAction,
+    nextActionDate,
+    author: c.author || c.by || c.user || 'Anon',
+    ts: c.ts || c.date || c.createdAt || '',
+  };
+}
+
 /** Oldest first; preserves stable order for equal/unknown timestamps. */
 export function sortCommentsChronologically(comments) {
-  return (comments || [])
+  return normalizeTaskComments(comments)
     .map((comment, index) => ({ comment, index }))
     .sort((a, b) => {
       const ka = commentSortKey(a.comment);

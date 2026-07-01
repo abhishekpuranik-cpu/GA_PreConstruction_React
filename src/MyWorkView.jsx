@@ -13,6 +13,7 @@ import {
   getItemCalendarDates,
   itemMatchesCalendarDay,
   myWorkSummary,
+  resolveWorkItemFromProjects,
   summarizeDepartments,
 } from './preconMyWork.js';
 import { MyWorkLevelFilters } from './MyWorkLevelFilters.jsx';
@@ -132,6 +133,15 @@ export function MyWorkView({ projects, loginUser, departments, dispatch, toast, 
     () => levelFiltered.filter((i) => itemMatchesCalendarDay(i, selectedYmd)),
     [levelFiltered, selectedYmd],
   );
+
+  const drawerItem = useMemo(() => {
+    if (!activeItem) return null;
+    const live = resolveWorkItemFromProjects(projects, activeItem);
+    return {
+      ...live,
+      nextAction: getLatestNextActionEntry(live.task?.comments),
+    };
+  }, [activeItem, projects]);
 
   return (
     <div className="mywork">
@@ -278,25 +288,25 @@ export function MyWorkView({ projects, loginUser, departments, dispatch, toast, 
         </>
       )}
 
-      {activeItem ? (
+      {drawerItem ? (
         <div className="mw-cal-drawer-backdrop" onClick={() => setActiveItem(null)} role="presentation">
           <aside className="mw-cal-drawer" onClick={(e) => e.stopPropagation()}>
             <div className="mw-cal-drawer-head">
               <div>
-                <div className="mw-cal-drawer-kicker">{activeItem.proj.name} · {activeItem.ph.name}</div>
-                <h3>{activeItem.task.name}</h3>
+                <div className="mw-cal-drawer-kicker">{drawerItem.proj.name} · {drawerItem.ph.name}</div>
+                <h3>{drawerItem.task.name}</h3>
               </div>
               <button type="button" className="btg" onClick={() => setActiveItem(null)}>Close</button>
             </div>
-            <span className={`badge ${statusBadgeClass(activeItem.st)}`}>{statusLabel(activeItem.st)}</span>
-            <p className="mw-sub" style={{ margin: 0 }}>
-              Next / due: {formatShortDate(activeItem.sortDate)}
-              {activeItem.nextAction?.nextAction ? ` · ${activeItem.nextAction.nextAction}` : ''}
+            <span className={`badge ${statusBadgeClass(drawerItem.st)}`}>{statusLabel(drawerItem.st)}</span>
+            <p className="mw-sub" style={{ margin: 0, color: '#55504A' }}>
+              Next / due: {formatShortDate(drawerItem.sortDate)}
+              {drawerItem.nextAction?.nextAction ? ` · ${drawerItem.nextAction.nextAction}` : ''}
             </p>
             <TaskCommentPanel
-              proj={activeItem.proj}
-              ph={activeItem.ph}
-              task={activeItem.task}
+              proj={drawerItem.proj}
+              ph={drawerItem.ph}
+              task={drawerItem.task}
               dispatch={dispatch}
               toast={toast}
               authorName={effectivePerson || 'User'}
@@ -306,7 +316,7 @@ export function MyWorkView({ projects, loginUser, departments, dispatch, toast, 
               hideNotifyBanner
               compactForm
             />
-            <button type="button" className="btg mw-open-task" onClick={() => onOpenProject(activeItem.proj.id)}>
+            <button type="button" className="btg mw-open-task" onClick={() => onOpenProject(drawerItem.proj.id)}>
               Open task in project
             </button>
           </aside>
