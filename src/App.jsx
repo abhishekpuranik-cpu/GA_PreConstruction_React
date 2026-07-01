@@ -647,6 +647,26 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .cform-foot{display:flex;justify-content:flex-end;padding-top:2px}
 .cform-foot .btp{min-height:44px;padding:10px 20px;font-size:13px}
 .cform-rich{max-width:min(480px,100%);min-width:0}
+.cform-compact .cform-inp,.cform-compact .cform-textarea{font-size:13px;padding:8px 10px;line-height:1.4}
+.cform-compact .cform-inp-date{min-height:38px}
+.cform-compact .cform-textarea{min-height:72px}
+.cform-compact .cform-lbl{font-size:9px}
+.cform-compact .cform-meta{font-size:10px;margin-bottom:6px}
+.cform-compact .cform-foot .btp{min-height:38px;padding:8px 16px;font-size:12px}
+.cform-section{margin-top:14px;padding-top:14px;border-top:1px solid #E2DDD4}
+.cform-section-title{margin:0 0 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#1A304A;font-family:'DM Sans',sans-serif}
+.tcc-history{margin:0 0 14px;max-height:min(42vh,320px);overflow-y:auto;padding-right:2px}
+.tcc-history-title{margin:0 0 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#1A304A;display:flex;align-items:center;gap:8px;font-family:'DM Sans',sans-serif}
+.tcc-history-count{font-size:10px;font-weight:600;color:#96918A;background:#F3F0EA;border-radius:999px;padding:2px 8px}
+.tcc-timeline-v2{gap:10px}
+.tcc-timeline-v2 .tcc-entry{padding:10px 12px;border-radius:8px}
+.tcc-entry-latest{border-left-color:#1A304A;background:#F8FAFD;box-shadow:0 1px 3px rgba(26,48,74,.06)}
+.tcc-entry-seq{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.35px;color:#96918A;background:#F3F0EA;padding:2px 7px;border-radius:999px;flex-shrink:0}
+.tcc-entry-latest .tcc-entry-seq{color:#1A304A;background:#EEF4FC}
+.tcc-entry-next-text{font-weight:500}
+.dash-cal-proj-search{min-height:40px}
+.mw-cal-drawer .tcc-history{max-height:min(36vh,280px)}
+.mw-cal-drawer .cform-rich{max-width:100%}
 .c-email-meta{font-size:10px;color:#1B5E9E;margin-top:6px}
 .att-pick{margin-top:4px;padding:10px 12px;background:#F8F6F1;border:1px dashed #E2DDD4;border-radius:8px;max-width:100%;min-width:0;box-sizing:border-box}
 .att-pick-compact{padding:8px 10px}
@@ -1401,6 +1421,9 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                     authorName={authorName}
                     authorEmail={loginUser?.email}
                     departments={departments}
+                    blankForm
+                    hideNotifyBanner
+                    compactForm
                   />
                 </div>
               </div>

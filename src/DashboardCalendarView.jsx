@@ -16,6 +16,7 @@ import {
   summarizeDepartments,
 } from './preconMyWork.js';
 import { MyWorkLevelFilters } from './MyWorkLevelFilters.jsx';
+import { filterAndSortProjects } from './projectSearch.js';
 import './activityCalendar.css';
 
 const SCOL = {
@@ -44,6 +45,8 @@ export function DashboardCalendarView({
   const [hideCompleted, setHideCompleted] = useState(true);
   const [statusFilters, setStatusFilters] = useState([]);
   const [assigneeFilter, setAssigneeFilter] = useState('');
+  const [projSearch, setProjSearch] = useState('');
+  const [projectFilter, setProjectFilter] = useState([]);
   const [viewLevel, setViewLevel] = useState('overall');
   const [departmentFilter, setDepartmentFilter] = useState('');
   const [view, setView] = useState('month');
@@ -54,14 +57,34 @@ export function DashboardCalendarView({
   const assignees = useMemo(() => collectAssignees(projects), [projects]);
   const authorName = loginUser?.ready ? loginUser.name || 'User' : 'User';
 
+  const displayProjects = useMemo(
+    () => filterAndSortProjects(projects, projSearch),
+    [projects, projSearch],
+  );
+  const allProjectIds = useMemo(() => displayProjects.map((p) => p.id), [displayProjects]);
+  const scopedProjects = useMemo(() => {
+    if (!projectFilter.length) return displayProjects;
+    const set = new Set(projectFilter);
+    return displayProjects.filter((p) => set.has(p.id));
+  }, [displayProjects, projectFilter]);
+
+  const toggleProject = (id) => {
+    setProjectFilter((prev) => {
+      if (prev.length === 0) return allProjectIds.filter((x) => x !== id);
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      const next = [...prev, id];
+      return next.length >= allProjectIds.length ? [] : next;
+    });
+  };
+
   const { items, todayStr } = useMemo(
     () =>
-      buildPortfolioWorkItems(projects, {
+      buildPortfolioWorkItems(scopedProjects, {
         departments,
         statusFilters,
         assigneeFilter,
       }),
-    [projects, departments, statusFilters, assigneeFilter],
+    [scopedProjects, departments, statusFilters, assigneeFilter],
   );
 
   const filtered = useMemo(
@@ -116,7 +139,9 @@ export function DashboardCalendarView({
           <p className="mw-eyebrow">Portfolio workboard</p>
           <h2 className="mw-title disp">Work Calendar</h2>
           <p className="mw-sub">
-            All assignees across {projects.length} project{projects.length !== 1 ? 's' : ''}. Filter by department to see every task in that team.
+            All assignees across {scopedProjects.length}
+            {projSearch.trim() || projectFilter.length ? ` of ${projects.length}` : ''} project
+            {scopedProjects.length !== 1 ? 's' : ''}. Filter by project or department.
           </p>
         </div>
         <div className="mw-stats">
@@ -129,6 +154,17 @@ export function DashboardCalendarView({
 
       <div className="mw-toolbar card mw-cal-filters">
         <div className="mw-filter-grid">
+          <div className="mw-toolbar-field">
+            <label htmlFor="dash-cal-proj-search">Project</label>
+            <input
+              id="dash-cal-proj-search"
+              type="search"
+              className="mw-select dash-cal-proj-search"
+              placeholder="Search by name, location…"
+              value={projSearch}
+              onChange={(e) => setProjSearch(e.target.value)}
+            />
+          </div>
           <div className="mw-toolbar-field">
             <label htmlFor="dash-cal-assignee">Assignee</label>
             <select
@@ -148,6 +184,29 @@ export function DashboardCalendarView({
             <StatusFilterChips value={statusFilters} onChange={setStatusFilters} />
           </div>
         </div>
+        {displayProjects.length > 1 ? (
+          <details className="mw-projects-compact">
+            <summary>
+              Projects {projectFilter.length ? `(${projectFilter.length} selected)` : '(all matching)'}
+            </summary>
+            <div className="mw-proj-toolbar">
+              <button type="button" className="mw-proj-mini-btn" onClick={() => setProjectFilter([])}>All</button>
+              <button type="button" className="mw-proj-mini-btn" onClick={() => setProjectFilter(allProjectIds)}>None</button>
+            </div>
+            <div className="mw-proj-chips">
+              {displayProjects.map((p) => (
+                <label key={p.id} className={`mw-proj-chip${projectFilter.length === 0 || projectFilter.includes(p.id) ? ' on' : ''}`}>
+                  <input
+                    type="checkbox"
+                    checked={projectFilter.length === 0 || projectFilter.includes(p.id)}
+                    onChange={() => toggleProject(p.id)}
+                  />
+                  {p.name}
+                </label>
+              ))}
+            </div>
+          </details>
+        ) : null}
         <label className="mw-check">
           <input type="checkbox" checked={hideCompleted} onChange={(e) => setHideCompleted(e.target.checked)} />
           Hide completed
@@ -246,6 +305,9 @@ export function DashboardCalendarView({
               authorName={authorName}
               authorEmail={loginUser?.email}
               departments={departments}
+              blankForm
+              hideNotifyBanner
+              compactForm
             />
             <button type="button" className="btg mw-open-task" onClick={() => onOpenProject(activeItem.proj.id)}>
               Open task in project

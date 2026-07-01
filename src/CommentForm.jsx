@@ -52,6 +52,10 @@ export function CommentForm({
 
   busy: externalBusy,
 
+  hideNotifyBanner = false,
+
+  compact = false,
+
 }) {
 
   const [text, setText] = useState(initial.text || '');
@@ -454,7 +458,7 @@ export function CommentForm({
 
   return (
 
-    <div className="cform cform-rich">
+    <div className={`cform cform-rich${compact ? ' cform-compact' : ''}`}>
 
       <p className="cform-meta">
 
@@ -464,19 +468,19 @@ export function CommentForm({
 
       </p>
 
-      {emailConfig?.setupRequired && !emailEnabled ? (
+      {!hideNotifyBanner && emailConfig?.setupRequired && !emailEnabled ? (
         <div className="nrp-auto-banner nrp-auto-warn">
           <strong>Email notifications need setup on Render</strong> — set{' '}
           <code>EMAIL_PROVIDER=resend</code> + <code>RESEND_API_KEY</code>, or use the Google Apps Script relay (
           <code>EMAIL_PROVIDER=gas</code>). Comments still save locally.
         </div>
       ) : null}
-      {emailEnabled && autoRecipients.length > 0 && !autoRecipients.some((r) => String(r.email || '').includes('@')) ? (
+      {!hideNotifyBanner && emailEnabled && autoRecipients.length > 0 && !autoRecipients.some((r) => String(r.email || '').includes('@')) ? (
         <p className="nrp-warn" style={{ marginTop: 6, fontSize: 11 }}>
           Email is on but <strong>no auto-recipients have an address</strong> in Admin Security — add work emails for assignees.
         </p>
       ) : null}
-      {emailEnabled || whatsappEnabled ? (
+      {!hideNotifyBanner && (emailEnabled || whatsappEnabled) ? (
         <div className="nrp-auto-banner">
           <strong>✉ Sends automatically</strong> to dept heads, leadership &amp; assignees on this project
           {emailEnabled ? (
@@ -492,7 +496,7 @@ export function CommentForm({
             <span className="nrp-auto-names"> — add work email per user in Admin Security</span>
           )}
         </div>
-      ) : !emailConfig?.setupRequired ? (
+      ) : !hideNotifyBanner && !emailConfig?.setupRequired ? (
         <div className="nrp-auto-banner nrp-auto-warn">Notifications not configured on server — comment saves locally only</div>
       ) : null}
 

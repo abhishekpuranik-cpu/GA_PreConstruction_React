@@ -17,36 +17,46 @@ export function TaskCommentPanel({
   departments,
   allowEditLatest = true,
   hideHistory = false,
+  blankForm = false,
+  hideNotifyBanner = false,
+  compactForm = false,
+  historyTitle = 'Previous comments',
 }) {
-  const editable = allowEditLatest ? getEditableComment(task) : null;
-  const initial = editable?.comment
-    ? {
+  const editable = !blankForm && allowEditLatest ? getEditableComment(task) : null;
+  const initial = blankForm || !editable?.comment
+    ? {}
+    : {
         text: editable.comment.text || '',
         nextAction: editable.comment.nextAction || '',
         nextActionDate: editable.comment.nextActionDate || '',
-      }
-    : {};
+      };
 
   return (
     <>
-      {!hideHistory ? <TaskCommentsSummary comments={task.comments} /> : null}
-      <CommentForm
-        key={`${task.id}-${editable?.commentIndex ?? 'new'}`}
-        projectId={proj.id}
-        taskId={task.id}
-        taskWho={task.who || ''}
-        departments={departments}
-        authorName={authorName}
-        authorEmail={authorEmail}
-        projectName={proj.name}
-        phaseName={ph.name}
-        taskName={task.name}
-        taskAttachmentIds={(task.attachments || []).map((a) => a.id).filter(Boolean)}
-        initial={initial}
-        submitLabel={editable ? 'Save changes' : 'Post comment'}
-        toast={toast}
+      {!hideHistory ? (
+        <TaskCommentsSummary comments={task.comments} title={historyTitle} hideNotifyMeta />
+      ) : null}
+      <div className="cform-section">
+        <h4 className="cform-section-title">New comment &amp; next action</h4>
+        <CommentForm
+          key={blankForm ? `${task.id}-new` : `${task.id}-${editable?.commentIndex ?? 'new'}`}
+          projectId={proj.id}
+          taskId={task.id}
+          taskWho={task.who || ''}
+          departments={departments}
+          authorName={authorName}
+          authorEmail={authorEmail}
+          projectName={proj.name}
+          phaseName={ph.name}
+          taskName={task.name}
+          taskAttachmentIds={(task.attachments || []).map((a) => a.id).filter(Boolean)}
+          initial={initial}
+          submitLabel={editable && !blankForm ? 'Save changes' : 'Post comment'}
+          hideNotifyBanner={hideNotifyBanner}
+          compact={compactForm}
+          toast={toast}
         onSaved={(comment) => {
-          if (editable) {
+          if (editable && !blankForm) {
             dispatch({
               type: 'updComment',
               projId: proj.id,
@@ -88,6 +98,7 @@ export function TaskCommentPanel({
           });
         }}
       />
+      </div>
     </>
   );
 }

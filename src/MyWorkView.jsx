@@ -302,6 +302,9 @@ export function MyWorkView({ projects, loginUser, departments, dispatch, toast, 
               authorName={effectivePerson || 'User'}
               authorEmail={loginUser?.email}
               departments={departments}
+              blankForm
+              hideNotifyBanner
+              compactForm
             />
             <button type="button" className="btg mw-open-task" onClick={() => onOpenProject(activeItem.proj.id)}>
               Open task in project
