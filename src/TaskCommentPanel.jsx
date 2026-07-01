@@ -21,11 +21,12 @@ export function TaskCommentPanel({
   blankForm = false,
   hideNotifyBanner = false,
   compactForm = false,
+  displayComments: displayCommentsProp,
   historyTitle = 'Previous comments',
 }) {
   const displayComments = useMemo(
-    () => collectTaskComments(proj, ph, task),
-    [proj, ph, task],
+    () => displayCommentsProp ?? collectTaskComments(proj, ph, task),
+    [displayCommentsProp, proj, ph, task],
   );
   const editable = !blankForm && allowEditLatest ? getEditableComment(task, { proj, ph }) : null;
   const initial = blankForm || !editable?.comment

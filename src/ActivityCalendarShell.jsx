@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   DOW,
   MONTHS,
@@ -44,7 +44,15 @@ export function ActivityCalendarShell({
 }) {
   const title = calendarTitle(view, cursorDate);
   const today = todayYmd();
-  const byDay = indexTasksByYmd(tasks, getTaskYmd);
+  const byDay = useMemo(() => indexTasksByYmd(tasks, getTaskYmd), [tasks, getTaskYmd]);
+  const monthCells = useMemo(
+    () => (view === 'month' ? buildMonthCells(cursorDate) : null),
+    [view, cursorDate],
+  );
+  const weekDays = useMemo(
+    () => (view === 'week' ? weekCellDates(cursorDate) : null),
+    [view, cursorDate],
+  );
 
   const renderEvent = (task) => (
     <div
@@ -66,7 +74,7 @@ export function ActivityCalendarShell({
 
   let body = null;
   if (view === 'month') {
-    const cells = buildMonthCells(cursorDate);
+    const cells = monthCells;
     body = (
       <div className="hr-cal-month">
         {DOW.map((w) => <div key={w} className="hr-cal-dow">{w}</div>)}
@@ -89,7 +97,7 @@ export function ActivityCalendarShell({
       </div>
     );
   } else if (view === 'week') {
-    const days = weekCellDates(cursorDate);
+    const days = weekDays;
     body = (
       <div className="hr-cal-week">
         {days.map((day) => (

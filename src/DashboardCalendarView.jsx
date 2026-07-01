@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { collectAssignees } from './preconExport.js';
-import { TaskCommentPanel } from './TaskCommentPanel.jsx';
+import { CalendarTaskDrawer } from './CalendarTaskDrawer.jsx';
 import { StatusFilterChips } from './StatusFilterChips.jsx';
 import { statusLabel, statusBadgeClass } from './preconTaskStatus.js';
 import { ActivityCalendarShell } from './ActivityCalendarShell.jsx';
@@ -17,6 +17,7 @@ import {
   resolveWorkItemFromProjects,
   summarizeDepartments,
 } from './preconMyWork.js';
+import { collectTaskComments } from './preconComments.js';
 import { MyWorkLevelFilters } from './MyWorkLevelFilters.jsx';
 import { filterAndSortProjects } from './projectSearch.js';
 import './activityCalendar.css';
@@ -129,12 +130,17 @@ export function DashboardCalendarView({
     if (!activeItem) return null;
     const lookup = sourceProjects || projects;
     const live = resolveWorkItemFromProjects(lookup, activeItem);
+    if (!live?.task || !live?.proj || !live?.ph) return null;
+    const displayComments = collectTaskComments(live.proj, live.ph, live.task);
     return {
       ...live,
-      nextAction: getLatestNextActionEntry(live.task?.comments),
+      displayComments,
+      nextAction: getLatestNextActionEntry(displayComments),
     };
   }, [activeItem, projects, sourceProjects]);
 
+  const getTaskYmd = useCallback((item) => getItemCalendarDates(item), []);
+  const getTaskId = useCallback((item) => `${item.proj.id}-${item.task.id}`, []);
   const taskTitle = (item) => {
     const who = item.task.who ? ` · ${item.task.who}` : '';
     const base = `${item.task.name} · ${item.proj.name}${who}`;
@@ -243,9 +249,8 @@ export function DashboardCalendarView({
           cursorDate={cursorDate}
           selectedYmd={selectedYmd}
           tasks={levelFiltered}
-          getTaskYmd={(item) => getItemCalendarDates(item)}
-          getTaskId={(item) => `${item.proj.id}-${item.task.id}`}
-          getTaskTitle={taskTitle}
+          getTaskYmd={getTaskYmd}
+          getTaskId={getTaskId}          getTaskTitle={taskTitle}
           getTaskColor={(item) => SCOL[item.st] || '#1A304A'}
           onViewChange={setView}
           onCursorChange={setCursorDate}
@@ -294,40 +299,17 @@ export function DashboardCalendarView({
       ) : null}
 
       {drawerItem ? (
-        <div className="mw-cal-drawer-backdrop" onClick={() => setActiveItem(null)} role="presentation">
-          <aside className="mw-cal-drawer" onClick={(e) => e.stopPropagation()}>
-            <div className="mw-cal-drawer-head">
-              <div>
-                <div className="mw-cal-drawer-kicker">{drawerItem.proj.name} · {drawerItem.ph.name}</div>
-                <h3>{drawerItem.task.name}</h3>
-              </div>
-              <button type="button" className="btg" onClick={() => setActiveItem(null)}>Close</button>
-            </div>
-            <span className={`badge ${statusBadgeClass(drawerItem.st)}`}>{statusLabel(drawerItem.st)}</span>
-            <p className="mw-sub" style={{ margin: 0, color: '#55504A' }}>
-              {drawerItem.task.who ? `Assignee: ${drawerItem.task.who} · ` : ''}
-              Next / due: {formatShortDate(drawerItem.sortDate)}
-              {drawerItem.nextAction?.nextAction ? ` · ${drawerItem.nextAction.nextAction}` : ''}
-            </p>
-            <TaskCommentPanel
-              proj={drawerItem.proj}
-              ph={drawerItem.ph}
-              task={drawerItem.task}
-              dispatch={dispatch}
-              toast={toast}
-              authorName={authorName}
-              authorEmail={loginUser?.email}
-              departments={departments}
-              blankForm
-              hideNotifyBanner
-              compactForm
-            />
-            <button type="button" className="btg mw-open-task" onClick={() => onOpenProject(drawerItem.proj.id)}>
-              Open task in project
-            </button>
-          </aside>
-        </div>
-      ) : null}
-    </div>
+        <CalendarTaskDrawer
+          item={drawerItem}
+          authorName={authorName}
+          authorEmail={loginUser?.email}
+          departments={departments}
+          dispatch={dispatch}
+          toast={toast}
+          onClose={() => setActiveItem(null)}
+          onOpenProject={onOpenProject}
+          showAssignee
+        />
+      ) : null}    </div>
   );
 }

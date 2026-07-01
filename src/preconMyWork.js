@@ -67,9 +67,8 @@ export function getLatestNextActionEntry(comments) {
 
 /** Comment to edit inline (latest with next action, else latest comment). */
 export function getEditableComment(task, ctx = null) {
-  const comments = ctx?.proj
-    ? collectTaskComments(ctx.proj, ctx.ph, task)
-    : normalizeTaskComments(task?.comments);
+  const comments = ctx?.displayComments
+    ?? (ctx?.proj ? collectTaskComments(ctx.proj, ctx.ph, task) : normalizeTaskComments(task?.comments));
   if (!comments.length) return null;
   const withNa = getLatestNextActionEntry(comments);
   if (withNa) {
@@ -225,12 +224,7 @@ export function resolveWorkItemFromProjects(projects, item) {
 
     if (!task) return item;
 
-    const comments = collectTaskComments(proj, ph, task);
-    const liveTask = comments.length > normalizeTaskComments(task.comments).length
-      ? { ...task, comments }
-      : task;
-
-    return { ...item, proj, ph, task: liveTask };
+    return { ...item, proj, ph, task };
   }
 
   return item;
