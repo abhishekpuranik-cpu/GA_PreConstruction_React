@@ -244,7 +244,11 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .file-lbl:hover{border-color:#1A304A;color:#1A304A}
 .file-lbl input{display:none}
 .dash-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;margin-bottom:4px}
-.dash-stabs{margin-top:4px;margin-bottom:20px}
+.dash-stabs{display:flex;border-bottom:2px solid #E2DDD4;margin-top:8px;margin-bottom:22px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;background:#fff;border-radius:10px 10px 0 0;padding:4px 6px 0;box-shadow:0 1px 0 rgba(26,48,74,.06)}
+.dash-stabs::-webkit-scrollbar{display:none}
+.dash-stab{padding:10px 18px;border:none;background:none;color:#55504A;font-size:13px;font-weight:600;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s;font-family:'DM Sans',sans-serif;white-space:nowrap;min-height:44px}
+.dash-stab:hover{color:#1A304A;background:rgba(26,48,74,.04);border-radius:8px 8px 0 0}
+.dash-stab.act{color:#1A304A;border-bottom-color:#C89A3A;font-weight:700}
 .dash-cal .mw-hero{margin-top:0}
 .dash-cal .mw-sub{color:rgba(255,255,255,.78)}
 .dash-cal .mw-cal-day-panel .mw-sub{color:#55504A}
@@ -832,6 +836,7 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
   .mbox.wide{width:calc(100vw - 20px)}
   .nact-grp .btg,.nact-grp .btp,.nact-grp .file-lbl{min-height:40px}
   .tnav-status-hint{max-width:min(100px,24vw)}
+  .dash-stab{padding:10px 14px;font-size:12px}
   .disp[style*="fontSize:30"]{font-size:24px!important}
   .disp[style*="fontSize:24"]{font-size:20px!important}
   .disp[style*="fontSize:40"]{font-size:32px!important}
@@ -1509,9 +1514,9 @@ function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWo
           {onImportExcel?<label className="file-lbl">Import Excel<input type="file" accept=".xlsx,.xls" onChange={e=>{const f=e.target.files?.[0];if(f)onImportExcel(f);e.target.value="";}}/></label>:null}
         </div>
       </div>
-      <div className="stabs dash-stabs" role="tablist" aria-label="Dashboard views">
-        <button type="button" role="tab" aria-selected={dashTab==="overview"} className={`stab${dashTab==="overview"?" act":""}`} onClick={()=>setDashTab("overview")}>Overview</button>
-        <button type="button" role="tab" aria-selected={dashTab==="calendar"} className={`stab${dashTab==="calendar"?" act":""}`} onClick={()=>setDashTab("calendar")}>Work Calendar</button>
+      <div className="dash-stabs" role="tablist" aria-label="Dashboard views">
+        <button type="button" role="tab" aria-selected={dashTab==="overview"} className={`dash-stab${dashTab==="overview"?" act":""}`} onClick={()=>setDashTab("overview")}>Overview</button>
+        <button type="button" role="tab" aria-selected={dashTab==="calendar"} className={`dash-stab${dashTab==="calendar"?" act":""}`} onClick={()=>setDashTab("calendar")}>Work Calendar</button>
       </div>
       {dashTab==="calendar"?(
         <DashboardCalendarView projects={displayProjects} departments={departments} dispatch={dispatch} toast={toast} loginUser={loginUser} onOpenProject={onOpenProject}/>
