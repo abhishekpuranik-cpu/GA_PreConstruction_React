@@ -1,8 +1,6 @@
 import React, { useMemo } from 'react';
 import { sortCommentsNewestFirst } from './preconComments.js';
 import { formatShortDate } from './preconMyWork.js';
-import { TaskActivityFiles } from './TaskActivityFiles.jsx';
-import { TaskCommentPanel } from './TaskCommentPanel.jsx';
 
 function truncate(text, max = 120) {
   const t = String(text || '').trim();
@@ -51,14 +49,7 @@ export function TaskCommentsListSection({
   statusLabel,
   taskStatus,
   fmt,
-  expandedC,
-  openCommentPanel,
-  closeCommentPanel,
-  dispatch,
-  toast,
-  authorName,
-  loginUser,
-  departments,
+  onOpenComments,
   showOnlyWithComments,
   setShowOnlyWithComments,
 }) {
@@ -132,71 +123,36 @@ export function TaskCommentsListSection({
                 <th>Status</th>
                 <th>Assignee</th>
                 <th>Comments</th>
-                <th style={{ width: 88 }} />
+                <th style={{ width: 120 }} />
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ ph, task, seqIdx, commentCount, endDate, status }) => {
-                const showC = !!expandedC[task.id];
-                return (
-                  <React.Fragment key={task.id}>
-                    <tr className="clv-row" id={`cexp-${task.id}`}>
-                      <td className="clv-phase" title={ph.name}>
-                        {truncate(ph.name, 28)}
-                      </td>
-                      <td className="clv-num">{seqIdx}</td>
-                      <td className="clv-task">
-                        <span className="clv-task-name">{task.name}</span>
-                        {endDate ? <span className="clv-task-due">Due {fmt(endDate)}</span> : null}
-                      </td>
-                      <td className="clv-st">{statusLabel(status)}</td>
-                      <td className="clv-who">{task.who || '—'}</td>
-                      <td className="clv-comments">
-                        <CommentInlineList comments={task.comments} />
-                      </td>
-                      <td className="clv-act">
-                        <button
-                          type="button"
-                          className="bts"
-                          onClick={() => (showC ? closeCommentPanel(task.id) : openCommentPanel(task.id))}
-                        >
-                          {showC ? '▴' : commentCount ? 'Reply' : 'Add'}
-                        </button>
-                      </td>
-                    </tr>
-                    {showC ? (
-                      <tr className="clv-expand">
-                        <td colSpan={7}>
-                          <div className="clv-expand-inner">
-                            <div className="clv-expand-lbl">
-                              Post comment — {ph.name} · {task.name}
-                            </div>
-                            <TaskActivityFiles
-                              proj={proj}
-                              ph={ph}
-                              task={task}
-                              dispatch={dispatch}
-                              toast={toast}
-                              authorName={authorName}
-                            />
-                            <TaskCommentPanel
-                              proj={proj}
-                              ph={ph}
-                              task={task}
-                              dispatch={dispatch}
-                              toast={toast}
-                              authorName={authorName}
-                              authorEmail={loginUser?.email}
-                              departments={departments}
-                              hideHistory
-                            />
-                          </div>
-                        </td>
-                      </tr>
-                    ) : null}
-                  </React.Fragment>
-                );
-              })}
+              {rows.map(({ ph, task, seqIdx, commentCount, endDate, status }) => (
+                <tr key={task.id} className="clv-row">
+                  <td className="clv-phase" title={ph.name}>
+                    {truncate(ph.name, 28)}
+                  </td>
+                  <td className="clv-num">{seqIdx}</td>
+                  <td className="clv-task">
+                    <span className="clv-task-name">{task.name}</span>
+                    {endDate ? <span className="clv-task-due">Due {fmt(endDate)}</span> : null}
+                  </td>
+                  <td className="clv-st">{statusLabel(status)}</td>
+                  <td className="clv-who">{task.who || '—'}</td>
+                  <td className="clv-comments">
+                    <CommentInlineList comments={task.comments} />
+                  </td>
+                  <td className="clv-act">
+                    <button
+                      type="button"
+                      className="bts tcm-open-btn"
+                      onClick={() => onOpenComments?.(ph, task)}
+                    >
+                      {commentCount ? 'View / update' : 'Add comment'}
+                    </button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

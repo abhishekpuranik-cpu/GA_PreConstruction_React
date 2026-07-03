@@ -456,6 +456,11 @@ export function CommentForm({
 
 
 
+  const canSubmit =
+    String(text || '').trim() &&
+    String(nextAction || '').trim() &&
+    String(nextActionDate || '').trim();
+
   return (
 
     <div className={`cform cform-rich${compact ? ' cform-compact' : ''}`}>
@@ -514,6 +519,8 @@ export function CommentForm({
 
           disabled={isBusy}
 
+          required
+
           placeholder="Progress update, issue, or decision…"
 
           onChange={(e) => setText(e.target.value)}
@@ -535,6 +542,8 @@ export function CommentForm({
           value={nextAction}
 
           disabled={isBusy}
+
+          required
 
           placeholder="What needs to happen next?"
 
@@ -572,7 +581,7 @@ export function CommentForm({
 
       <div className="cform-foot">
 
-        <button type="button" className="btp" disabled={isBusy} onClick={handleSubmit}>
+        <button type="button" className="btp" disabled={isBusy || !canSubmit} onClick={handleSubmit}>
 
           {isBusy ? 'Saving…' : submitLabel}
 

@@ -4,6 +4,11 @@ import { collectTaskComments } from './preconComments.js';
 import { getEditableComment } from './preconMyWork.js';
 import { TaskCommentsSummary } from './TaskCommentsSummary.jsx';
 
+function composeModeLabel(editable, blankForm) {
+  if (editable && !blankForm) return 'Edit latest update';
+  return 'New comment & next action';
+}
+
 /**
  * Shared comment history + post/edit form (project tasks and My Work).
  */
@@ -43,7 +48,7 @@ export function TaskCommentPanel({
         <TaskCommentsSummary comments={displayComments} title={historyTitle} hideNotifyMeta />
       ) : null}
       <div className="cform-section">
-        <h4 className="cform-section-title">New comment &amp; next action</h4>
+        <h4 className="cform-section-title">{composeModeLabel(editable, blankForm)}</h4>
         <CommentForm
           key={blankForm ? `${task.id}-new` : `${task.id}-${editable?.commentIndex ?? 'new'}`}
           projectId={proj.id}

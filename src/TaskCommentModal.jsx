@@ -1,0 +1,179 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import { TaskCommentPanel } from './TaskCommentPanel.jsx';
+import { TaskCommentsSummary } from './TaskCommentsSummary.jsx';
+import { collectTaskComments } from './preconComments.js';
+import { getEditableComment } from './preconMyWork.js';
+import { cDates } from './preconDates.js';
+import { statusBadgeClass, statusLabel, taskStatus } from './preconTaskStatus.js';
+import { formatShortDate } from './preconMyWork.js';
+
+/**
+ * Full comment workspace modal — timeline + compose (project Tasks tab).
+ */
+export function TaskCommentModal({
+  open,
+  onClose,
+  proj,
+  ph,
+  task,
+  dispatch,
+  toast,
+  authorName,
+  authorEmail,
+  departments,
+}) {
+  const [composeMode, setComposeMode] = useState('edit');
+
+  const liveTask = useMemo(() => {
+    if (!open || !task?.id || !ph?.id || !proj?.id) return null;
+    const p = (proj.phases || []).find((x) => x.id === ph.id);
+    const t = p?.tasks?.find((x) => x.id === task.id);
+    return t || task;
+  }, [open, proj, ph, task]);
+
+  const displayComments = useMemo(
+    () => (liveTask && ph ? collectTaskComments(proj, ph, liveTask) : []),
+    [proj, ph, liveTask],
+  );
+
+  const editable = useMemo(
+    () => (liveTask ? getEditableComment(liveTask, { proj, ph, displayComments }) : null),
+    [liveTask, proj, ph, displayComments],
+  );
+
+  useEffect(() => {
+    if (!open) return undefined;
+    setComposeMode(editable ? 'edit' : 'new');
+    const onKey = (e) => {
+      if (e.key === 'Escape') onClose?.();
+    };
+    document.addEventListener('keydown', onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [open, editable, onClose]);
+
+  if (!open || !liveTask || !ph || !proj) return null;
+
+  const dm = cDates(proj);
+  const d = dm[liveTask.id] || { s: '', e: '' };
+  const st = taskStatus(liveTask, dm);
+  const commentCount = displayComments.length;
+
+  return (
+    <div className="tcm-backdrop" onClick={onClose} role="presentation">
+      <div
+        className="tcm-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tcm-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="tcm-hero">
+          <div className="tcm-hero-bg" aria-hidden />
+          <div className="tcm-hero-inner">
+            <div className="tcm-hero-top">
+              <div className="tcm-kicker">
+                <span>{proj.name}</span>
+                <span className="tcm-kicker-dot">·</span>
+                <span>{ph.name}</span>
+              </div>
+              <button type="button" className="tcm-close" onClick={onClose} aria-label="Close">
+                ✕
+              </button>
+            </div>
+            <h2 id="tcm-title" className="tcm-title disp">
+              {liveTask.name}
+            </h2>
+            <div className="tcm-chips">
+              <span className={`badge ${statusBadgeClass(st)}`}>{statusLabel(st)}</span>
+              {liveTask.who ? <span className="tcm-chip">👤 {liveTask.who}</span> : null}
+              {d.e ? <span className="tcm-chip">Due {formatShortDate(d.e)}</span> : null}
+              <span className="tcm-chip tcm-chip-gold">
+                {commentCount} comment{commentCount !== 1 ? 's' : ''}
+              </span>
+            </div>
+          </div>
+        </header>
+
+        <div className="tcm-body">
+          <section className="tcm-pane tcm-pane-history">
+            <div className="tcm-pane-head">
+              <h3 className="tcm-pane-title">Comment history</h3>
+              <span className="tcm-pane-hint">Newest first</span>
+            </div>
+            <div className="tcm-pane-scroll">
+              <TaskCommentsSummary
+                comments={displayComments}
+                title=""
+                emptyLabel="No comments yet — add your first update on the right."
+              />
+            </div>
+          </section>
+
+          <section className="tcm-pane tcm-pane-compose">
+            <div className="tcm-pane-head">
+              <h3 className="tcm-pane-title">Your update</h3>
+              {editable ? (
+                <div className="tcm-mode" role="tablist" aria-label="Comment mode">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={composeMode === 'edit'}
+                    className={`tcm-mode-btn${composeMode === 'edit' ? ' act' : ''}`}
+                    onClick={() => setComposeMode('edit')}
+                  >
+                    Edit latest
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={composeMode === 'new'}
+                    className={`tcm-mode-btn${composeMode === 'new' ? ' act' : ''}`}
+                    onClick={() => setComposeMode('new')}
+                  >
+                    New comment
+                  </button>
+                </div>
+              ) : (
+                <span className="tcm-pane-hint">Post a new update</span>
+              )}
+            </div>
+            <div className="tcm-pane-scroll tcm-pane-scroll-compose">
+              <TaskCommentPanel
+                key={`${liveTask.id}-${composeMode}`}
+                proj={proj}
+                ph={ph}
+                task={liveTask}
+                displayComments={displayComments}
+                dispatch={dispatch}
+                toast={toast}
+                authorName={authorName}
+                authorEmail={authorEmail}
+                departments={departments}
+                allowEditLatest={composeMode === 'edit'}
+                blankForm={composeMode === 'new'}
+                hideHistory
+                hideNotifyBanner={composeMode === 'edit'}
+                compactForm={false}
+                historyTitle=""
+              />
+            </div>
+          </section>
+        </div>
+
+        <footer className="tcm-foot">
+          <p className="tcm-foot-note">
+            Updates save to Mongo automatically · Email &amp; WhatsApp notify dept heads and assignees when configured
+          </p>
+          <button type="button" className="btg" onClick={onClose}>
+            Done
+          </button>
+        </footer>
+      </div>
+    </div>
+  );
+}

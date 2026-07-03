@@ -24,8 +24,7 @@ import { useLoginUser } from "./useLoginUser.js";
 import { canDeletePreconProjects } from "./preconPermissions.js";
 import { MyWorkView } from "./MyWorkView.jsx";
 import { DashboardCalendarView } from "./DashboardCalendarView.jsx";
-import { TaskActivityFiles } from "./TaskActivityFiles.jsx";
-import { TaskCommentPanel } from "./TaskCommentPanel.jsx";
+import { TaskCommentModal } from "./TaskCommentModal.jsx";
 import { ProjectPageShell } from "./ProjectPageShell.jsx";
 import { TaskCommentsListSection } from "./TaskCommentsListSection.jsx";
 import { StatusFilterChips } from "./StatusFilterChips.jsx";
@@ -254,6 +253,22 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .dash-stab:hover{color:#1A304A;background:rgba(26,48,74,.04);border-radius:8px 8px 0 0}
 .dash-stab.act{color:#1A304A;border-bottom-color:#C89A3A;font-weight:700}
 .dash-reports{margin-bottom:20px}
+.dash-reports-hub{margin-bottom:20px}
+.dash-reports-hub-head{margin-bottom:14px}
+.dash-reports-subtabs{display:flex;gap:6px;margin-bottom:18px;border-bottom:1px solid #E2DDD4;padding-bottom:0}
+.dash-reports-subtab{padding:10px 16px;border:none;background:none;color:#55504A;font-size:13px;font-weight:600;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px;font-family:'DM Sans',sans-serif;transition:all .15s}
+.dash-reports-subtab:hover{color:#1A304A;background:rgba(26,48,74,.04);border-radius:8px 8px 0 0}
+.dash-reports-subtab.act{color:#1A304A;border-bottom-color:#C89A3A;font-weight:700}
+.dash-reports-stat-alert{border-color:rgba(179,46,30,.35);background:rgba(252,236,234,.5)}
+.dash-reports-stat-alert .dash-reports-stat-n{color:#B32E1E}
+.dash-reports-chip-warn{background:#FCECEA;border-color:#EFBAB0;color:#B32E1E}
+.dash-compliance-asof{font-size:11px;color:#96918A;align-self:center;margin-left:auto}
+.dash-compliance-days{display:inline-flex;align-items:center;justify-content:center;min-width:36px;padding:4px 8px;border-radius:8px;background:#FCECEA;color:#B32E1E;font-weight:700;font-size:12px}
+.dash-compliance-badges{display:flex;flex-wrap:wrap;gap:5px}
+.dash-compliance-badge{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.35px;padding:3px 8px;border-radius:999px;white-space:nowrap}
+.dash-compliance-badge-schedule{background:#FCECEA;color:#B32E1E;border:1px solid #EFBAB0}
+.dash-compliance-badge-next_action{background:#FDF3E8;color:#AE6418;border:1px solid #E8C490}
+.dash-compliance-row:hover td{background:#FDF8F8}
 .dash-reports-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:14px;margin-bottom:16px}
 .dash-reports-dl{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start}
 .dash-reports-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
@@ -775,6 +790,39 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .rdocs li{font-size:12px;color:#55504A;margin-bottom:2px}
 .rnote{background:#FDF3E8;border:1px solid #E8C490;border-radius:5px;padding:8px 11px;margin-top:9px;font-size:12px;color:#AE6418}
 .mb{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:500;backdrop-filter:blur(2px)}
+.tcm-backdrop{position:fixed;inset:0;z-index:700;display:flex;align-items:center;justify-content:center;padding:20px 16px;background:rgba(26,48,74,.52);backdrop-filter:blur(6px);animation:tcm-fade-in .2s ease}
+.tcm-dialog{position:relative;width:min(960px,100%);max-height:min(90vh,880px);display:flex;flex-direction:column;background:#fff;border-radius:14px;border:1px solid #E2DDD4;box-shadow:0 24px 80px rgba(26,48,74,.28),0 0 0 1px rgba(255,255,255,.08) inset;overflow:hidden;animation:tcm-rise .28s cubic-bezier(.22,1,.36,1)}
+@keyframes tcm-fade-in{from{opacity:0}to{opacity:1}}
+@keyframes tcm-rise{from{opacity:0;transform:translateY(16px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+.tcm-hero{position:relative;color:#fff;flex-shrink:0;border-bottom:3px solid #C89A3A}
+.tcm-hero-bg{position:absolute;inset:0;background:linear-gradient(135deg,#1A304A 0%,#253E60 45%,#2A4A6E 100%);opacity:1}
+.tcm-hero-bg::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 80% 120% at 100% 0%,rgba(200,154,58,.22),transparent 55%)}
+.tcm-hero-inner{position:relative;padding:18px 22px 16px}
+.tcm-hero-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px}
+.tcm-kicker{font-size:11px;font-weight:600;letter-spacing:.35px;color:rgba(255,255,255,.78);display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.tcm-kicker-dot{opacity:.5}
+.tcm-close{width:36px;height:36px;border:none;border-radius:8px;background:rgba(255,255,255,.12);color:#fff;font-size:18px;cursor:pointer;flex-shrink:0;transition:background .15s}
+.tcm-close:hover{background:rgba(255,255,255,.22)}
+.tcm-title{margin:0;font-size:clamp(22px,3vw,28px);font-weight:600;line-height:1.15;color:#fff}
+.tcm-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;align-items:center}
+.tcm-chip{font-size:11px;font-weight:500;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.12);color:rgba(255,255,255,.92);border:1px solid rgba(255,255,255,.15)}
+.tcm-chip-gold{background:rgba(200,154,58,.25);border-color:rgba(232,212,160,.45);color:#F5E6C8}
+.tcm-body{display:grid;grid-template-columns:1fr 1fr;flex:1;min-height:0;overflow:hidden}
+.tcm-pane{display:flex;flex-direction:column;min-height:0;min-width:0;border-right:1px solid #E2DDD4}
+.tcm-pane-compose{border-right:none;background:#FBF9F5}
+.tcm-pane-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;border-bottom:1px solid #EAE6DC;background:#F8F6F1;flex-shrink:0;flex-wrap:wrap}
+.tcm-pane-title{margin:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#1A304A}
+.tcm-pane-hint{font-size:10px;color:#96918A}
+.tcm-pane-scroll{flex:1;overflow-y:auto;padding:14px 16px 16px;min-height:120px}
+.tcm-pane-scroll-compose .cform-section{margin-top:0;padding-top:0;border-top:none}
+.tcm-pane-scroll .tcc-history{max-height:none;margin-bottom:0}
+.tcm-mode{display:flex;gap:4px;background:#fff;border:1px solid #E2DDD4;border-radius:8px;padding:3px}
+.tcm-mode-btn{border:none;background:transparent;padding:6px 12px;font-size:11px;font-weight:600;color:#55504A;border-radius:6px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
+.tcm-mode-btn.act{background:#1A304A;color:#fff;box-shadow:0 1px 4px rgba(26,48,74,.2)}
+.tcm-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 18px;border-top:1px solid #E2DDD4;background:#fff;flex-shrink:0;flex-wrap:wrap}
+.tcm-foot-note{margin:0;font-size:10px;color:#96918A;line-height:1.45;flex:1;min-width:200px}
+.tcm-open-btn{white-space:nowrap;font-weight:600}
+.tcm-hero .badge{background:rgba(255,255,255,.15)!important;border-color:rgba(255,255,255,.25)!important;color:#fff!important}
 .mbox{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:600;background:#fff;border:1px solid #E2DDD4;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.12);width:560px;max-width:calc(100vw - 32px);max-height:80vh;display:flex;flex-direction:column}
 .mbox.wide{width:700px}
 .fg{margin-bottom:13px}
@@ -810,6 +858,12 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 @media (max-width:768px){
   .dash-reports-stats{grid-template-columns:repeat(2,1fr)}
   .dash-reports-stat.wide{grid-column:span 2}
+  .tcm-body{grid-template-columns:1fr}
+  .tcm-pane{border-right:none;border-bottom:1px solid #E2DDD4;max-height:min(38vh,320px)}
+  .tcm-pane-compose{max-height:none}
+  .tcm-backdrop{padding:12px 8px;align-items:flex-end}
+  .tcm-dialog{max-height:min(92vh,100dvh - 16px);border-radius:14px 14px 10px 10px}
+  .tcm-foot .btg{width:100%}
   .tnav{position:sticky;top:0;flex-direction:column;align-items:stretch;padding:10px 12px;gap:8px}
   .tnav-row{display:flex;align-items:center;width:100%;gap:8px;min-width:0}
   .tnav-brand{border-right:none;padding-right:0;margin-right:0;flex:1;min-width:0}
@@ -1162,7 +1216,7 @@ function truncateText(text, max = 72) {
 
 function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
   const dm=cDates(proj);
-  const[expandedC,setExpandedC]=useState({});
+  const[commentTarget,setCommentTarget]=useState(null);
   const[expandedPh,setExpandedPh]=useState({});
   const[showCommentsConsolidated,setShowCommentsConsolidated]=useState(true);
   const[showOnlyWithComments,setShowOnlyWithComments]=useState(true);
@@ -1180,22 +1234,6 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
   const todayStr=todayIso();
   const filters={statusFilters,assigneeFilter,departmentFilter,departments,roleFilter,horizonDays,todayStr};
   const filtersActive=!!(statusFilters.length||assigneeFilter||departmentFilter||roleFilter||horizonDays!=null);
-  useEffect(()=>{
-    const visibleIds=new Set();
-    proj.phases.forEach(ph=>{
-      ph.tasks.forEach(t=>{
-        if(taskPassesFilters(t,dm,ph.name,filters))visibleIds.add(t.id);
-      });
-    });
-    setExpandedC(p=>{
-      const next={...p};
-      let changed=false;
-      Object.keys(next).forEach(id=>{
-        if(!visibleIds.has(id)){delete next[id];changed=true;}
-      });
-      return changed?next:p;
-    });
-  },[proj,dm,horizonDays,statusFilters,assigneeFilter,departmentFilter,roleFilter,todayStr,departments]);
   const expandAll=()=>{
     const next={};
     proj.phases.forEach(ph=>{next[phaseExpandKey(proj.id,ph.id)]=true;});
@@ -1223,31 +1261,8 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
     dispatch({type:"reorderTask",projId:proj.id,phId:ph.id,fromId:tId,toId:ph.tasks[to].id});
   };
   const authorName=loginUser?.ready?(loginUser.name||"User"):"";
-  const openCommentPanel=(taskId)=>{
-    setExpandedC(p=>{
-      if(p[taskId])return p;
-      return{...p,[taskId]:true};
-    });
-    requestAnimationFrame(()=>document.getElementById(`cexp-${taskId}`)?.scrollIntoView({behavior:"smooth",block:"nearest"}));
-  };
-  const closeCommentPanel=(taskId)=>{
-    setExpandedC(p=>{
-      if(!p[taskId])return p;
-      const next={...p};
-      delete next[taskId];
-      return next;
-    });
-  };
-  const closeCommentsForPhase=(ph)=>{
-    setExpandedC(p=>{
-      let changed=false;
-      const next={...p};
-      (ph.tasks||[]).forEach(t=>{
-        if(next[t.id]){delete next[t.id];changed=true;}
-      });
-      return changed?next:p;
-    });
-  };
+  const openCommentModal=(ph,task)=>setCommentTarget({ph,task});
+  const closeCommentModal=()=>setCommentTarget(null);
   const statusLabelFor=(v)=>TASK_STATUS_OPTIONS.find(o=>o.value===v)?.label||v;
   const notifyStatus=(ph,t,oldVal,newVal)=>{
     if(!oldVal||oldVal===newVal||!authorName)return;
@@ -1309,10 +1324,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
               setDragPhase(null);
             }}
           >
-            <div className="psh" onClick={()=>{
-              if(isOpen)closeCommentsForPhase(ph);
-              setExpandedPh(p=>({...p,[ek]:!isOpen}));
-            }}>
+            <div className="psh" onClick={()=>setExpandedPh(p=>({...p,[ek]:!isOpen}))}>
               <div className="psh-left">
                 <span className="pdrag" draggable title="Drag section to reorder"
                   onClick={e=>e.stopPropagation()}
@@ -1344,7 +1356,6 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                   const d=dm[t.id]||{s:"",e:""};const st=taskStatus(t,dm);const od=st==="overdue"?dbDays(d.e,todayStr):0;
                   const taskComments=collectTaskComments(proj,ph,t);
                   const cc=taskComments.length;
-                  const showC=!!expandedC[t.id];
                   const latestComment=getLatestComment(taskComments);
                   const canDrag=!filtersActive;
                   const isDragOver=dragOverId===t.id&&dragTask?.phId===ph.id;
@@ -1403,15 +1414,10 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                             </div>
                           ):null}
                           {cc>0?<span className="tcol-count" title={`${cc} comment${cc!==1?"s":""}`}>{cc}</span>:null}
-                          <button type="button" className="bts" title={showC?"Scroll to comments":"Post comment"} onClick={(e)=>{
+                          <button type="button" className="bts tcm-open-btn" title="View comment history and post an update" onClick={(e)=>{
                             e.stopPropagation();
-                            if(showCommentsConsolidated){
-                              if(showC)document.getElementById(`cexp-${t.id}`)?.scrollIntoView({behavior:"smooth",block:"nearest"});
-                              else openCommentPanel(t.id);
-                            }else if(showC)document.getElementById(`cexp-${t.id}`)?.scrollIntoView({behavior:"smooth",block:"nearest"});
-                            else openCommentPanel(t.id);
-                          }}>{showCommentsConsolidated?(showC?"Reply":"Add"):"Post"}{cc?` (${cc})`:""}</button>
-                          {showC&&!showCommentsConsolidated?<button type="button" className="bts" style={{marginLeft:4}} title="Hide comments" onClick={(e)=>{e.stopPropagation();closeCommentPanel(t.id);}}>▴</button>:null}
+                            openCommentModal(ph,t);
+                          }}>{cc?`Comments (${cc})`:"Add comment"}</button>
                         </td>
                         <td><div className="tact">
                           <button type="button" className="abt" title="Move up" disabled={filtersActive||seqIdx<=1} onClick={()=>moveTaskByStep(ph,t.id,-1)}>↑</button>
@@ -1431,30 +1437,6 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                 })}
               </tbody>
             </table></div>}
-            {isOpen&&!showCommentsConsolidated&&visible.filter(t=>!!expandedC[t.id]).map(t=>(
-              <div key={`cexp-${t.id}`} className="cexp-panel" id={`cexp-${t.id}`}>
-                <div className="cexp-inner">
-                  <div className="cexp-head">
-                    <div className="cexp-head-title">Comments — {t.name}</div>
-                    <button type="button" className="bts cexp-close" title="Hide comments" onClick={(e)=>{e.stopPropagation();closeCommentPanel(t.id);}}>▴ Hide</button>
-                  </div>
-                  <TaskActivityFiles proj={proj} ph={ph} task={t} dispatch={dispatch} toast={toast} authorName={authorName}/>
-                  <TaskCommentPanel
-                    proj={proj}
-                    ph={ph}
-                    task={t}
-                    dispatch={dispatch}
-                    toast={toast}
-                    authorName={authorName}
-                    authorEmail={loginUser?.email}
-                    departments={departments}
-                    blankForm
-                    hideNotifyBanner
-                    compactForm
-                  />
-                </div>
-              </div>
-            ))}
           </div>
         );
       }).filter(Boolean)}
@@ -1469,18 +1451,23 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
           statusLabel={statusLabel}
           taskStatus={taskStatus}
           fmt={fmt}
-          expandedC={expandedC}
-          openCommentPanel={openCommentPanel}
-          closeCommentPanel={closeCommentPanel}
-          dispatch={dispatch}
-          toast={toast}
-          authorName={authorName}
-          loginUser={loginUser}
-          departments={departments}
+          onOpenComments={openCommentModal}
           showOnlyWithComments={showOnlyWithComments}
           setShowOnlyWithComments={setShowOnlyWithComments}
         />
       ):null}
+      <TaskCommentModal
+        open={!!commentTarget}
+        onClose={closeCommentModal}
+        proj={proj}
+        ph={commentTarget?.ph}
+        task={commentTarget?.task}
+        dispatch={dispatch}
+        toast={toast}
+        authorName={authorName}
+        authorEmail={loginUser?.email}
+        departments={departments}
+      />
     </div>
   );
 }
@@ -1572,7 +1559,7 @@ function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWo
       {dashTab==="calendar"?(
         <DashboardCalendarView projects={displayProjects} sourceProjects={projects} departments={departments} dispatch={dispatch} toast={toast} loginUser={loginUser} onOpenProject={onOpenProject}/>
       ):dashTab==="reports"?(
-        <DashboardReportsView activityLog={activityLog||[]} projects={displayProjects}/>
+        <DashboardReportsView activityLog={activityLog||[]} projects={displayProjects} onOpenProject={onOpenProject}/>
       ):(
       <>
       <PortfolioRagMatrix projects={displayProjects} departments={departments} onOpenProject={onOpenProject}/>
