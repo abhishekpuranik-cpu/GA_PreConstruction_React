@@ -17,7 +17,7 @@ import {
   summarizeDepartments,
 } from './preconMyWork.js';
 import { collectTaskComments } from './preconComments.js';
-import { CalendarTaskDrawer } from './CalendarTaskDrawer.jsx';
+import { TaskCommentModal } from './TaskCommentModal.jsx';
 import { MyWorkLevelFilters } from './MyWorkLevelFilters.jsx';
 import './activityCalendar.css';
 
@@ -297,14 +297,17 @@ export function MyWorkView({ projects, loginUser, departments, dispatch, toast, 
       )}
 
       {drawerItem ? (
-        <CalendarTaskDrawer
-          item={drawerItem}
+        <TaskCommentModal
+          open
+          onClose={() => setActiveItem(null)}
+          proj={drawerItem.proj}
+          ph={drawerItem.ph}
+          task={drawerItem.task}
+          dispatch={dispatch}
+          toast={toast}
           authorName={effectivePerson || 'User'}
           authorEmail={loginUser?.email}
           departments={departments}
-          dispatch={dispatch}
-          toast={toast}
-          onClose={() => setActiveItem(null)}
           onOpenProject={onOpenProject}
         />
       ) : null}

@@ -21,6 +21,7 @@ export function TaskCommentModal({
   authorName,
   authorEmail,
   departments,
+  onOpenProject,
 }) {
   const [composeMode, setComposeMode] = useState('new');
 
@@ -169,9 +170,16 @@ export function TaskCommentModal({
           <p className="tcm-foot-note">
             Updates save to Mongo automatically · Email &amp; WhatsApp notify dept heads and assignees when configured
           </p>
-          <button type="button" className="btg" onClick={onClose}>
-            Done
-          </button>
+          <div className="tcm-foot-actions">
+            {onOpenProject ? (
+              <button type="button" className="btg" onClick={() => onOpenProject(proj.id)}>
+                Open task in project
+              </button>
+            ) : null}
+            <button type="button" className="btp" onClick={onClose}>
+              Done
+            </button>
+          </div>
         </footer>
       </div>
     </div>

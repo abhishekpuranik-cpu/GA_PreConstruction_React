@@ -820,6 +820,7 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .tcm-mode-btn{border:none;background:transparent;padding:6px 12px;font-size:11px;font-weight:600;color:#55504A;border-radius:6px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
 .tcm-mode-btn.act{background:#1A304A;color:#fff;box-shadow:0 1px 4px rgba(26,48,74,.2)}
 .tcm-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 18px;border-top:1px solid #E2DDD4;background:#fff;flex-shrink:0;flex-wrap:wrap}
+.tcm-foot-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .tcm-foot-note{margin:0;font-size:10px;color:#96918A;line-height:1.45;flex:1;min-width:200px}
 .tcm-open-btn{white-space:nowrap;font-weight:600}
 .tcm-hero .badge{background:rgba(255,255,255,.15)!important;border-color:rgba(255,255,255,.25)!important;color:#fff!important}

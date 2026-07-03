@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { collectAssignees } from './preconExport.js';
-import { CalendarTaskDrawer } from './CalendarTaskDrawer.jsx';
+import { TaskCommentModal } from './TaskCommentModal.jsx';
 import { StatusFilterChips } from './StatusFilterChips.jsx';
 import { statusLabel, statusBadgeClass } from './preconTaskStatus.js';
 import { ActivityCalendarShell } from './ActivityCalendarShell.jsx';
@@ -299,16 +299,18 @@ export function DashboardCalendarView({
       ) : null}
 
       {drawerItem ? (
-        <CalendarTaskDrawer
-          item={drawerItem}
+        <TaskCommentModal
+          open
+          onClose={() => setActiveItem(null)}
+          proj={drawerItem.proj}
+          ph={drawerItem.ph}
+          task={drawerItem.task}
+          dispatch={dispatch}
+          toast={toast}
           authorName={authorName}
           authorEmail={loginUser?.email}
           departments={departments}
-          dispatch={dispatch}
-          toast={toast}
-          onClose={() => setActiveItem(null)}
           onOpenProject={onOpenProject}
-          showAssignee
         />
       ) : null}    </div>
   );
