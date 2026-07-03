@@ -22,7 +22,7 @@ export function TaskCommentModal({
   authorEmail,
   departments,
 }) {
-  const [composeMode, setComposeMode] = useState('edit');
+  const [composeMode, setComposeMode] = useState('new');
 
   const liveTask = useMemo(() => {
     if (!open || !task?.id || !ph?.id || !proj?.id) return null;
@@ -43,7 +43,7 @@ export function TaskCommentModal({
 
   useEffect(() => {
     if (!open) return undefined;
-    setComposeMode(editable ? 'edit' : 'new');
+    setComposeMode('new');
     const onKey = (e) => {
       if (e.key === 'Escape') onClose?.();
     };
@@ -54,7 +54,7 @@ export function TaskCommentModal({
       document.removeEventListener('keydown', onKey);
       document.body.style.overflow = prev;
     };
-  }, [open, editable, onClose]);
+  }, [open, task?.id, onClose]);
 
   if (!open || !liveTask || !ph || !proj) return null;
 
