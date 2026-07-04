@@ -37,10 +37,77 @@ function entry(base) {
   };
 }
 
+function normalizeDetail(detail) {
+  if (!detail || typeof detail !== 'object') return '';
+  try {
+    return JSON.stringify(detail, Object.keys(detail).sort());
+  } catch {
+    return String(detail);
+  }
+}
+
+/** Stable key for the same logical change (ignores log row id / exact ms). */
+export function activityEntryKey(row) {
+  if (!row) return '';
+  return [
+    row.action || '',
+    row.actor || '',
+    row.projectId || '',
+    row.phaseId || '',
+    row.taskId || '',
+    row.summary || '',
+    normalizeDetail(row.detail),
+  ].join('|');
+}
+
+function activityMinuteBucket(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** Dedupe key: same change by same actor in the same clock minute. */
+export function activityDedupeKey(row) {
+  return `${activityEntryKey(row)}|${activityMinuteBucket(row.at)}`;
+}
+
+/**
+ * Collapse repeated saves of the same change (e.g. Mongo sync, rapid field edits).
+ * Keeps newest row per bucket; sets repeatCount when merged.
+ */
+export function dedupeActivityLog(logs) {
+  const sorted = [...(logs || [])].sort((a, b) => String(b.at).localeCompare(String(a.at)));
+  const out = [];
+  const indexByKey = new Map();
+
+  for (const row of sorted) {
+    const key = activityDedupeKey(row);
+    const existingIdx = indexByKey.get(key);
+    if (existingIdx != null) {
+      const kept = out[existingIdx];
+      kept.repeatCount = (kept.repeatCount || 1) + 1;
+      if (String(row.at) > String(kept.at)) kept.at = row.at;
+      continue;
+    }
+    const copy = { ...row, repeatCount: row.repeatCount || 1 };
+    indexByKey.set(key, out.length);
+    out.push(copy);
+  }
+
+  return out.slice(0, ACTIVITY_LOG_MAX);
+}
+
 function appendLog(state, logEntry) {
   if (!logEntry) return;
   if (!Array.isArray(state.activityLog)) state.activityLog = [];
-  state.activityLog.unshift(logEntry);
+  const head = state.activityLog[0];
+  if (head && activityDedupeKey(head) === activityDedupeKey(logEntry)) {
+    head.at = logEntry.at;
+    head.repeatCount = (head.repeatCount || 1) + 1;
+    return;
+  }
+  state.activityLog.unshift({ ...logEntry, repeatCount: 1 });
   if (state.activityLog.length > ACTIVITY_LOG_MAX) {
     state.activityLog.length = ACTIVITY_LOG_MAX;
   }
@@ -54,7 +121,7 @@ export function mergeActivityLogs(...sources) {
       if (row?.id) byId.set(row.id, row);
     }
   }
-  return [...byId.values()].sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, ACTIVITY_LOG_MAX);
+  return dedupeActivityLog([...byId.values()]);
 }
 
 const FIELD_LABELS = {
@@ -260,7 +327,7 @@ export function formatActivityAction(action) {
 
 export function filterActivityLog(logs, { query = '', projectId = '', action = '', from = '', to = '' } = {}) {
   const q = String(query || '').trim().toLowerCase();
-  return (logs || []).filter((row) => {
+  return dedupeActivityLog(logs).filter((row) => {
     if (projectId && row.projectId !== projectId) return false;
     if (action && row.action !== action) return false;
     if (from && String(row.at).slice(0, 10) < from) return false;

@@ -38,7 +38,7 @@ import { repairAllTaskComments } from "./preconCommentReconcile.js";
 import { mergeAkashActivitiesIntoState } from "./preconAkashGhqMerge.js";
 import { migrateAssigneeNamesState } from "./preconAssigneeNames.js";
 import { formatNavStatusMessage } from './preconNavStatus.js';
-import { recordActivityFromAction, setPreconActivityActor } from './preconActivityLog.js';
+import { recordActivityFromAction, setPreconActivityActor, dedupeActivityLog } from './preconActivityLog.js';
 import { DashboardReportsView } from './DashboardReportsView.jsx';
 import {
   taskStatus,
@@ -1816,7 +1816,7 @@ function reducer(state,action){
       const{changed:commentsRepaired}=repairAllTaskComments(merged);
       if(commentsRepaired)merged.__commentsRepairPending=true;
       ensureStateDepartments(merged);
-      merged.activityLog=Array.isArray(preservedLog)?preservedLog:(Array.isArray(merged.activityLog)?merged.activityLog:[]);
+      merged.activityLog=dedupeActivityLog(Array.isArray(preservedLog)?preservedLog:(Array.isArray(merged.activityLog)?merged.activityLog:[]));
       (merged.projects||[]).forEach(proj=>{
         (proj.phases||[]).forEach(ph=>{
           (ph.tasks||[]).forEach(t=>{

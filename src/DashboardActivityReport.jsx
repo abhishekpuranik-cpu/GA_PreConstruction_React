@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
   activityLogToCsv,
+  dedupeActivityLog,
   filterActivityLog,
   formatActivityAction,
   ACTIVITY_ACTION_LABELS,
@@ -40,6 +41,7 @@ export function DashboardActivityReport({ activityLog = [], projects = [] }) {
   );
 
   const stats = useMemo(() => {
+    const deduped = dedupeActivityLog(activityLog);
     const byAction = {};
     const byActor = {};
     for (const row of filtered) {
@@ -54,8 +56,8 @@ export function DashboardActivityReport({ activityLog = [], projects = [] }) {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 6)
       .map(([k, n]) => ({ label: formatActivityAction(k), n }));
-    return { topActors, topActions, total: filtered.length };
-  }, [filtered]);
+    return { topActors, topActions, total: filtered.length, loggedUnique: deduped.length, rawTotal: activityLog.length };
+  }, [filtered, activityLog]);
 
   const download = (kind) => {
     const stamp = new Date().toISOString().slice(0, 10);
@@ -101,9 +103,17 @@ export function DashboardActivityReport({ activityLog = [], projects = [] }) {
           <span className="dash-reports-stat-l">Matching events</span>
         </div>
         <div className="dash-reports-stat">
-          <span className="dash-reports-stat-n disp">{activityLog.length}</span>
-          <span className="dash-reports-stat-l">Total logged</span>
+          <span className="dash-reports-stat-n disp">{stats.loggedUnique}</span>
+          <span className="dash-reports-stat-l">Unique events</span>
         </div>
+        {stats.rawTotal > stats.loggedUnique ? (
+          <div className="dash-reports-stat">
+            <span className="dash-reports-stat-n disp" style={{ fontSize: 18, color: '#96918A' }}>
+              {stats.rawTotal}
+            </span>
+            <span className="dash-reports-stat-l">Raw saves (incl. dupes)</span>
+          </div>
+        ) : null}
         <div className="dash-reports-stat wide">
           <span className="dash-reports-stat-l" style={{ marginBottom: 6 }}>
             Top contributors
@@ -189,6 +199,11 @@ export function DashboardActivityReport({ activityLog = [], projects = [] }) {
                   </td>
                   <td>
                     <div>{row.summary}</div>
+                    {row.repeatCount > 1 ? (
+                      <div style={{ fontSize: 10, color: C.tx3, marginTop: 2 }}>
+                        Saved {row.repeatCount}× in the same minute
+                      </div>
+                    ) : null}
                     {row.taskName ? (
                       <div style={{ fontSize: 10, color: C.tx3, marginTop: 2 }}>{row.taskName}</div>
                     ) : null}
