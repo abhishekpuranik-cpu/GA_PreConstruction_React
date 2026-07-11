@@ -38,6 +38,7 @@ function rowSnapshot({ proj, ph, t }) {
     Location: proj.loc,
     Phase: ph.name,
     'Task ID': t.id,
+    Parent_ID: t.parentId || '',
     Task: t.name,
     'Roles (Process)': formatRoles(t),
     Assignee: t.who || '',
@@ -60,6 +61,8 @@ function rowReport({ proj, ph, t }) {
   return {
     Project: proj.name,
     Phase: ph.name,
+    'Task ID': t.id,
+    Parent_ID: t.parentId || '',
     Task: t.name,
     'Roles (Process)': formatRoles(t),
     Assignee: t.who || '',

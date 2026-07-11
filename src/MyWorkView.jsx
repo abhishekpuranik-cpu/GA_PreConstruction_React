@@ -16,6 +16,11 @@ import {
   resolveWorkItemFromProjects,
   summarizeDepartments,
 } from './preconMyWork.js';
+import {
+  projectChipOn,
+  projectFilterLabel,
+  toggleProjectFilter,
+} from './preconProjectFilter.js';
 import { collectTaskComments } from './preconComments.js';
 import { TaskCommentModal } from './TaskCommentModal.jsx';
 import { MyWorkLevelFilters } from './MyWorkLevelFilters.jsx';
@@ -43,7 +48,7 @@ export function MyWorkView({ projects, loginUser, departments, dispatch, toast, 
   const [scopeAssigned, setScopeAssigned] = useState(true);
   const [scopeComments, setScopeComments] = useState(false);
   const [scopeDepartment, setScopeDepartment] = useState(false);
-  const [projectFilter, setProjectFilter] = useState([]);
+  const [projectFilter, setProjectFilter] = useState(null);
   const [statusFilters, setStatusFilters] = useState([]);
   const [viewLevel, setViewLevel] = useState('overall');
   const [departmentFilter, setDepartmentFilter] = useState('');
@@ -123,12 +128,7 @@ export function MyWorkView({ projects, loginUser, departments, dispatch, toast, 
   };
 
   const toggleProject = (id) => {
-    setProjectFilter((prev) => {
-      if (prev.length === 0) return allProjectIds.filter((x) => x !== id);
-      if (prev.includes(id)) return prev.filter((x) => x !== id);
-      const next = [...prev, id];
-      return next.length >= allProjectIds.length ? [] : next;
-    });
+    setProjectFilter((prev) => toggleProjectFilter(prev, id, allProjectIds));
   };
 
   const selectedDayItems = useMemo(
@@ -194,18 +194,18 @@ export function MyWorkView({ projects, loginUser, departments, dispatch, toast, 
         {projects.length > 1 ? (
           <details className="mw-projects-compact">
             <summary>
-              Projects {projectFilter.length ? `(${projectFilter.length} selected)` : '(all)'}
+              Projects {projectFilterLabel(projectFilter)}
             </summary>
             <div className="mw-proj-toolbar">
-              <button type="button" className="mw-proj-mini-btn" onClick={() => setProjectFilter([])}>All</button>
-              <button type="button" className="mw-proj-mini-btn" onClick={() => setProjectFilter(allProjectIds)}>None</button>
+              <button type="button" className="mw-proj-mini-btn" onClick={() => setProjectFilter(null)}>All</button>
+              <button type="button" className="mw-proj-mini-btn" onClick={() => setProjectFilter([])}>None</button>
             </div>
             <div className="mw-proj-chips">
               {projects.map((p) => (
-                <label key={p.id} className={`mw-proj-chip${projectFilter.length === 0 || projectFilter.includes(p.id) ? ' on' : ''}`}>
+                <label key={p.id} className={`mw-proj-chip${projectChipOn(projectFilter, p.id) ? ' on' : ''}`}>
                   <input
                     type="checkbox"
-                    checked={projectFilter.length === 0 || projectFilter.includes(p.id)}
+                    checked={projectChipOn(projectFilter, p.id)}
                     onChange={() => toggleProject(p.id)}
                   />
                   {p.name}

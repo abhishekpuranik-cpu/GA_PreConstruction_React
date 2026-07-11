@@ -33,12 +33,18 @@ function newProjectId() {
 }
 
 function mkTask(name, dur = 7, extra = {}) {
+  const parentRaw = extra.parentId;
+  const parentId =
+    parentRaw == null || parentRaw === ''
+      ? null
+      : String(parentRaw).trim() || null;
   return {
     id: extra.id || newTaskId(),
     name: String(name || 'New task').trim() || 'New task',
     dur: Math.max(1, Number(extra.dur) || Number(dur) || 7),
     pred: Array.isArray(extra.pred) ? extra.pred : [],
     par: extra.par || null,
+    parentId,
     who: String(extra.who || '').trim(),
     ms: extra.ms || '',
     as: extra.as || '',
@@ -91,7 +97,8 @@ function rowToTaskPatch(row) {
       comments = [{ author: 'Import', ts: new Date().toISOString().slice(0, 10), text: String(commentsRaw) }];
     }
   }
-  const t = mkTask(name, dur, { id: tid || undefined, who, ms, as, ae, comments, roles });
+  const parentId = pick(row, ['Parent_ID', 'Parent ID', 'ParentId', 'parent_id']);
+  const t = mkTask(name, dur, { id: tid || undefined, who, ms, as, ae, comments, roles, parentId: parentId || null });
   if (stored) {
     const s = String(stored).toLowerCase().replace(/\s+/g, '');
     if (s.includes('complete')) t.status = 'completed';
@@ -106,11 +113,15 @@ function rowToTaskPatch(row) {
 }
 
 function mergeTask(existing, incoming) {
-  ['who', 'ms', 'as', 'ae', 'dur', 'status'].forEach((k) => {
+  ['who', 'ms', 'as', 'ae', 'dur', 'status', 'parentId'].forEach((k) => {
     const v = incoming[k];
     if (v === undefined || v === null) return;
     if (k === 'dur') {
       existing[k] = Math.max(1, Number(v) || existing[k] || 7);
+      return;
+    }
+    if (k === 'parentId') {
+      existing.parentId = v === '' ? null : String(v);
       return;
     }
     if (k !== 'dur' && v === '') return;

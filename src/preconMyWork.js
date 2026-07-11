@@ -164,10 +164,13 @@ export function buildPortfolioWorkItems(projects, opts = {}) {
   const statusFilters = opts.statusFilters || [];
   const assigneeFilter = String(opts.assigneeFilter || '').trim();
   const roleFilter = opts.roleFilter || '';
-  const projectIds = opts.projectIds || [];
+  const projectIds = Object.prototype.hasOwnProperty.call(opts, 'projectIds')
+    ? opts.projectIds
+    : null;
   const todayStr = todayIso();
   const items = [];
-  const idSet = projectIds.length ? new Set(projectIds) : null;
+  // null/undefined = all projects; [] = none; [ids] = subset
+  const idSet = projectIds == null ? null : new Set(projectIds);
 
   for (const proj of projects || []) {
     if (idSet && !idSet.has(proj.id)) continue;
@@ -236,7 +239,7 @@ export function resolveWorkItemFromProjects(projects, item) {
  * @param {string} opts.person
  * @param {object} opts.departments
  * @param {{ assigned?: boolean, myComments?: boolean, myDepartment?: boolean }} opts.scopes
- * @param {string[]} opts.projectIds — empty = all visible projects
+ * @param {string[]|null|undefined} opts.projectIds — null/undefined = all; [] = none; otherwise subset
  * @param {string[]} opts.statusFilters — task status codes; empty = all
  */
 export function buildMyWorkItems(projects, opts = {}) {
@@ -247,11 +250,13 @@ export function buildMyWorkItems(projects, opts = {}) {
     myComments: !!opts.scopes?.myComments,
     myDepartment: !!opts.scopes?.myDepartment,
   };
-  const projectIds = opts.projectIds || [];
+  const projectIds = Object.prototype.hasOwnProperty.call(opts, 'projectIds')
+    ? opts.projectIds
+    : null;
   const statusFilters = opts.statusFilters || [];
   const todayStr = todayIso();
   const items = [];
-  const idSet = projectIds.length ? new Set(projectIds) : null;
+  const idSet = projectIds == null ? null : new Set(projectIds);
 
   for (const proj of projects || []) {
     if (idSet && !idSet.has(proj.id)) continue;

@@ -9,8 +9,7 @@ import {
   mergeLifecycleIntoState,
   applyKickoffOffsets,
 } from "./preconLifecycle.js";
-import {
-  ensureStateDepartments,
+import { ensureStateDepartments,
   getDepartmentForPhase,
   formatRoles,
   parseRolesInput,
@@ -18,6 +17,7 @@ import {
   taskMatchesRoleFilter,
   collectAllRoles,
 } from "./preconDepartments.js";
+import { taskHasRole, taskInDepartment } from "./bulkAssign.js";
 import { PortfolioRagMatrix } from "./PortfolioRagMatrix.jsx";
 import { ensureCommentCreatedAt, formatCommentLine, getLatestComment, normalizeTaskComments, sortCommentsChronologically, collectTaskComments } from "./preconComments.js";
 import { useLoginUser } from "./useLoginUser.js";
@@ -39,7 +39,19 @@ import { mergeAkashActivitiesIntoState } from "./preconAkashGhqMerge.js";
 import { migrateAssigneeNamesState } from "./preconAssigneeNames.js";
 import { formatNavStatusMessage } from './preconNavStatus.js';
 import { recordActivityFromAction, setPreconActivityActor, dedupeActivityLog } from './preconActivityLog.js';
+import { applyTaskTombstonesToProject } from './preconProjectMerge.js';
+import {
+  annotateTreeMeta,
+  orderTasksAsTree,
+  indexTasksById,
+  insertIndexAfterParent,
+  idsToDeleteWithDescendants,
+  reorderSubtree,
+  taskParentId,
+  normalizeParentIdOnTask,
+} from './preconTaskTree.js';
 import { DashboardReportsView } from './DashboardReportsView.jsx';
+import { BulkAllocateView } from './BulkAllocateView.jsx';
 import {
   taskStatus,
   taskStatusSelectValue,
@@ -79,7 +91,7 @@ const iso=d=>{const dt=new Date(d);return `${dt.getFullYear()}-${String(dt.getMo
 const fmt=d=>{if(!d)return"—";const dt=new Date(d);return `${dt.getDate()} ${MON[dt.getMonth()]} ${String(dt.getFullYear()).slice(2)}`;};
 const db=(a,b)=>Math.round((new Date(b)-new Date(a))/864e5);
 const now=()=>new Date().toLocaleString("en-IN",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"});
-const mkT=(id,nm,dur,pred=[],par=null,ex={})=>({id,name:nm,dur,pred,par,ms:null,who:"",roles:Array.isArray(ex.roles)?ex.roles:[],comments:[],as:null,ae:null,status:"notstarted",...ex});
+const mkT=(id,nm,dur,pred=[],par=null,ex={})=>({id,name:nm,dur,pred,par,parentId:ex.parentId??null,ms:null,who:"",roles:Array.isArray(ex.roles)?ex.roles:[],comments:[],as:null,ae:null,status:"notstarted",...ex});
 const uid=()=>"t_"+Date.now()+"_"+Math.random().toString(36).slice(2,6);
 
 // ── PHASE TEMPLATES ──────────────────────────────────────
@@ -545,6 +557,62 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .pj-tab:hover{color:#1A304A}
 .pj-tab-active{color:#1A304A;font-weight:600;border-bottom-color:var(--pj-accent)}
 .pj-workspace-body{padding:18px 20px 22px}
+.alloc-panel{padding:0}
+.alloc-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;margin-bottom:10px}
+.alloc-title{margin:0;font-size:16px;font-weight:600;color:#1A304A}
+.alloc-meta{margin:4px 0 0;font-size:12px;color:#96918A}
+.alloc-hint{margin:0 0 16px;font-size:12px;color:#55504A;line-height:1.5}
+.alloc-toggle{display:flex;align-items:center;gap:8px;font-size:12px;color:#1A304A;cursor:pointer}
+.alloc-table-wrap{overflow:auto;border:1px solid #E2DDD4;border-radius:10px;background:#fff}
+.alloc-table{width:100%;border-collapse:collapse;font-size:12px}
+.alloc-table th{position:sticky;top:0;background:#F3F0EA;text-align:left;padding:10px 12px;border-bottom:1px solid #E2DDD4;font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:#96918A;white-space:nowrap}
+.alloc-table td{padding:10px 12px;border-bottom:1px solid #EAE6DC;vertical-align:middle;color:#1A1815}
+.alloc-row:hover td{background:#FBF9F5}
+.alloc-role{font-weight:600;color:#1A304A;display:flex;align-items:center;gap:6px}
+.alloc-expand{border:none;background:none;cursor:pointer;color:#96918A;padding:0 2px;font-size:11px;line-height:1}
+.alloc-warn{font-weight:700;color:#B45309}
+.alloc-muted{color:#96918A}
+.alloc-current{max-width:180px;word-break:break-word}
+.alloc-picker{min-width:160px}
+.alloc-actions{display:flex;gap:6px;flex-wrap:wrap;white-space:nowrap}
+.alloc-apply{padding:6px 12px;font-size:11px}
+.alloc-overwrite{padding:6px 10px;font-size:11px}
+.alloc-detail-row td{background:#FAFAF8;padding:0 12px 12px}
+.alloc-task-list{list-style:none;margin:0;padding:8px 0 0;display:flex;flex-direction:column;gap:6px}
+.alloc-task-list li{display:grid;grid-template-columns:minmax(120px,22%) 1fr minmax(100px,20%);gap:10px;font-size:11px;padding:6px 8px;background:#fff;border:1px solid #E2DDD4;border-radius:6px}
+.alloc-task-phase{color:#96918A}
+.alloc-task-name{color:#1A304A;font-weight:500}
+.alloc-task-who{color:#55504A;text-align:right}
+.alloc-foot{margin-top:16px;padding-top:14px;border-top:1px solid #E2DDD4}
+.alloc-empty{padding:40px 20px;text-align:center;color:#55504A}
+.alloc-empty h3{margin:0 0 8px;color:#1A304A}
+.alloc-empty p{margin:0;font-size:13px;line-height:1.55;max-width:480px;margin-inline:auto}
+.alloc-toggle input{margin:0}
+.alloc-modes{display:flex;gap:6px;margin-bottom:18px;border-bottom:1px solid #E2DDD4;padding-bottom:0}
+.alloc-mode{padding:10px 16px;border:none;background:none;color:#55504A;font-size:13px;font-weight:600;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px;font-family:'DM Sans',sans-serif;transition:all .15s}
+.alloc-mode:hover{color:#1A304A;background:rgba(26,48,74,.04);border-radius:8px 8px 0 0}
+.alloc-mode.act{color:#1A304A;border-bottom-color:#C89A3A;font-weight:700}
+.alloc-head-cell{white-space:nowrap;color:#55504A}
+.alloc-head-cards{display:flex;flex-direction:column;gap:12px}
+.alloc-head-card{border:1px solid #E2DDD4;border-radius:10px;background:#fff;padding:14px 16px}
+.alloc-head-card h4{margin:0 0 4px;font-size:14px;color:#1A304A}
+.alloc-head-card-meta{margin:0 0 6px;font-size:12px;color:#96918A}
+.alloc-head-card-person{margin:0 0 12px;font-size:12px;color:#55504A}
+.alloc-head-card-actions{display:flex;flex-wrap:wrap;gap:8px}
+.alloc-task-list-card{margin-top:12px;padding-top:12px;border-top:1px dashed #E2DDD4}
+.alloc-modes{display:flex;gap:6px;margin-bottom:18px;border-bottom:1px solid #E2DDD4;padding-bottom:0}
+.alloc-mode{padding:10px 16px;border:none;background:none;color:#55504A;font-size:13px;font-weight:600;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px;font-family:'DM Sans',sans-serif;transition:all .15s}
+.alloc-mode:hover{color:#1A304A;background:rgba(26,48,74,.04);border-radius:8px 8px 0 0}
+.alloc-mode.act{color:#1A304A;border-bottom-color:#C89A3A;font-weight:700}
+.alloc-head-cell{white-space:nowrap;color:#55504A}
+.alloc-head-cards{display:flex;flex-direction:column;gap:12px}
+.alloc-head-card{border:1px solid #E2DDD4;border-radius:10px;background:#fff;padding:14px 16px}
+.alloc-head-card h4{margin:0 0 4px;font-size:14px;color:#1A304A}
+.alloc-head-card-meta{margin:0 0 6px;font-size:12px;color:#96918A}
+.alloc-head-card-person{margin:0 0 12px;font-size:12px;color:#55504A}
+.alloc-head-card-actions{display:flex;flex-wrap:wrap;gap:8px}
+.alloc-task-list-card{margin-top:12px;padding-top:12px;border-top:1px dashed #E2DDD4}
+.alloc-foot{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .tasks-view{display:flex;flex-direction:column;gap:16px}
 .tasks-filters-card{background:#F8F6F1;border:1px solid #E2DDD4;border-radius:12px;padding:14px 16px}
 .tasks-filters-card .fbar{margin-bottom:0;background:#fff;border:1px solid #E2DDD4;padding:12px 14px;border-radius:10px;box-shadow:none}
@@ -560,8 +628,11 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .ps-phase-name{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
 .ps-dept{font-size:10px;color:#55504A;background:#fff;border:1px solid #E2DDD4;padding:3px 10px;border-radius:999px;font-weight:500}
 .ps-meta{font-size:11px;color:#96918A;font-weight:500}
-.ps-actions{display:flex;gap:6px;flex-shrink:0}
+.ps-actions{display:flex;gap:6px;flex-shrink:0;align-items:center}
 .ps-actions .bts{border-radius:8px;padding:5px 12px}
+.ps-complete-all{color:#1A6A3C;border-color:#A8D5B5;font-weight:600}
+.ps-complete-all:hover{background:#EAF5EE;border-color:#1A6A3C}
+.ps-all-done{font-size:11px;color:#1A6A3C;font-weight:600;padding:5px 10px;white-space:nowrap}
 .ppbar{height:4px;background:#E2DDD4;border-radius:999px;width:88px;overflow:hidden;display:inline-block;vertical-align:middle}
 .ppfill{height:100%;border-radius:999px;transition:width .25s ease}
 .ttable{width:100%;border-collapse:collapse;font-size:12px}
@@ -571,6 +642,12 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .trow:nth-child(even) td{background:#FDFCFA}
 .trow:hover td{background:#FBF7EE!important}
 .trow.trow-drag-over td{background:#FBF7EE!important;border-top:2px solid #C89A3A}
+.trow-sub td{background:#FAFAF8}
+.ttree-cell{display:flex;align-items:flex-start;gap:6px;min-width:160px}
+.ttree-indent{flex-shrink:0;height:1px}
+.ttree-branch{flex-shrink:0;width:14px;color:#C4BEB6;font-size:11px;line-height:22px;user-select:none}
+.ttree-parent-tag{font-size:9px;font-weight:700;color:#9A6E20;background:#FBF7EE;border:1px solid #E8D4A0;border-radius:999px;padding:1px 6px;margin-left:6px;vertical-align:middle;white-space:nowrap}
+.abt-sub{color:#1A5A30;font-weight:700}
 .ec{border-radius:8px;padding:6px 8px;outline:none;font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:text;min-width:100px;line-height:1.4;color:#1A1815}
 .ec:hover{background:#F3F0EA}
 .ec:focus{outline:none;border:1.5px solid #C89A3A;background:#fff;box-shadow:0 0 0 3px rgba(200,154,58,.12)}
@@ -675,9 +752,28 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .clv-expand-lbl{font-size:11px;font-weight:600;color:#9A6E20;margin-bottom:10px;text-transform:uppercase;letter-spacing:.4px}
 .cexp-inner{width:100%;max-width:min(480px,100%);box-sizing:border-box;min-width:0}
 .cform{display:flex;flex-direction:column;gap:12px;width:100%;max-width:min(480px,100%);min-width:0}
+.cform-context{margin-bottom:12px;padding:12px 14px;background:#F8F6F1;border-radius:10px;border:1px solid #EAE6DC}
+.cform-context-proj{font-size:17px;font-weight:700;color:#1A304A;line-height:1.25;letter-spacing:-.01em}
+.cform-context-phase{font-size:15px;font-weight:600;color:#55504A;margin-top:5px;line-height:1.3}
+.cform-context-assignee{font-size:13px;font-weight:600;color:#1B5E9E;margin-top:8px;line-height:1.35}
+.cform-context-assignee-empty{color:#96918A;font-weight:500}
+.cform-complete{display:flex;align-items:flex-start;gap:10px;margin:4px 0 2px;padding:10px 12px;background:#EAF5EE;border:1px solid #C5E0CF;border-radius:8px;cursor:pointer;font-size:12px;color:#1A304A;line-height:1.35}
+.cform-complete input{margin-top:2px;width:16px;height:16px;accent-color:#1A6A3C;flex-shrink:0}
+.cform-complete strong{display:block;font-size:13px}
+.cform-complete-hint{display:block;font-size:11px;color:#55504A;margin-top:2px;font-weight:400}
+.cform-complete-done{font-size:11px;color:#1A6A3C;font-weight:600;margin:0 0 8px;padding:6px 10px;background:#EAF5EE;border-radius:6px}
 .cform-meta{font-size:11px;color:#55504A;line-height:1.45;word-break:break-word}
 .cform-field{display:flex;flex-direction:column;gap:4px;margin:0}
 .cform-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.45px;color:#96918A}
+.cform-lbl-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.cform-mic{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border:1px solid #E2DDD4;border-radius:999px;background:#fff;color:#1A304A;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;line-height:1.2;flex-shrink:0}
+.cform-mic:hover:not(:disabled){border-color:#C89A3A;background:#FBF7EE}
+.cform-mic-on{border-color:#B32E1E;background:#FCECEA;color:#B32E1E;animation:cform-mic-pulse 1.4s ease-in-out infinite}
+.cform-mic-off{opacity:.45;cursor:not-allowed}
+.cform-mic:disabled{opacity:.5;cursor:not-allowed}
+.cform-mic-lbl{font-size:10px;letter-spacing:.02em}
+.cform-mic-hint{margin:2px 0 0;font-size:11px;color:#9A6E20;font-weight:500}
+@keyframes cform-mic-pulse{0%,100%{box-shadow:0 0 0 0 rgba(179,46,30,.25)}50%{box-shadow:0 0 0 4px rgba(179,46,30,.12)}}
 .cform-inp,.cform-textarea{width:100%;max-width:100%;box-sizing:border-box;padding:10px 11px;border:1.5px solid #E2DDD4;border-radius:6px;background:#fff;font-size:16px;font-family:'DM Sans',sans-serif;color:#1A1815}
 .cform-inp:focus,.cform-textarea:focus{outline:none;border-color:#C89A3A;box-shadow:0 0 0 2px rgba(200,154,58,.2)}
 .cform-inp-date{min-height:44px}
@@ -799,14 +895,18 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .tcm-hero-bg::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 80% 120% at 100% 0%,rgba(200,154,58,.22),transparent 55%)}
 .tcm-hero-inner{position:relative;padding:18px 22px 16px}
 .tcm-hero-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px}
-.tcm-kicker{font-size:11px;font-weight:600;letter-spacing:.35px;color:rgba(255,255,255,.78);display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.tcm-kicker-dot{opacity:.5}
+.tcm-kicker{font-size:13px;font-weight:600;letter-spacing:.2px;color:rgba(255,255,255,.88);display:flex;flex-wrap:wrap;gap:8px;align-items:baseline;line-height:1.35}
+.tcm-kicker-proj{font-size:16px;font-weight:700;color:#fff;letter-spacing:-.01em}
+.tcm-kicker-phase{font-size:14px;font-weight:600;color:rgba(255,255,255,.92)}
+.tcm-kicker-dot{opacity:.45;font-size:12px}
 .tcm-close{width:36px;height:36px;border:none;border-radius:8px;background:rgba(255,255,255,.12);color:#fff;font-size:18px;cursor:pointer;flex-shrink:0;transition:background .15s}
 .tcm-close:hover{background:rgba(255,255,255,.22)}
 .tcm-title{margin:0;font-size:clamp(22px,3vw,28px);font-weight:600;line-height:1.15;color:#fff}
 .tcm-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;align-items:center}
 .tcm-chip{font-size:11px;font-weight:500;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.12);color:rgba(255,255,255,.92);border:1px solid rgba(255,255,255,.15)}
 .tcm-chip-gold{background:rgba(200,154,58,.25);border-color:rgba(232,212,160,.45);color:#F5E6C8}
+.tcm-chip-assignee{font-size:12px;font-weight:600;background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.28)}
+.tcm-chip-muted{opacity:.75;font-weight:500}
 .tcm-body{display:grid;grid-template-columns:1fr 1fr;flex:1;min-height:0;overflow:hidden}
 .tcm-pane{display:flex;flex-direction:column;min-height:0;min-width:0;border-right:1px solid #E2DDD4}
 .tcm-pane-compose{border-right:none;background:#FBF9F5}
@@ -1106,22 +1206,31 @@ function GanttView({proj}){
       <div className="gsplit">
         <div ref={namesRef} className="gnames">
           <div style={{height:28,background:"#F3F0EA",borderBottom:"1px solid #E2DDD4",display:"flex",alignItems:"center",padding:"0 11px",fontSize:10,textTransform:"uppercase",letterSpacing:".7px",color:"#96918A",flexShrink:0}}>Task / Phase</div>
-          {proj.phases.map(ph=>(
+          {proj.phases.map(ph=>{
+            const treeRows=annotateTreeMeta(ph.tasks);
+            return(
             <div key={ph.id}>
               <div className="gphn" style={{color:ph.col,borderLeft:`3px solid ${ph.col}`}}>{ph.name}</div>
-              {ph.tasks.map(t=><div key={t.id} className="gtn" title={t.name}><span style={{fontSize:11.5,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t.name}</span></div>)}
+              {treeRows.map(({task:t,depth})=>(
+                <div key={t.id} className="gtn" title={t.name} style={{paddingLeft:11+Math.max(0,depth)*12}}>
+                  <span style={{fontSize:11.5,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{depth>0?"└ ":""}{t.name}</span>
+                </div>
+              ))}
             </div>
-          ))}
+            );
+          })}
         </div>
         <div ref={chartRef} className="gchart">
           <div className="gmhdr" style={{minWidth:TW}}>
             {months.map((m,i)=><div key={i} className="gmon" style={{width:Math.round(m.d*DPX)}}>{m.lbl}</div>)}
             {TL}
           </div>
-          {proj.phases.map(ph=>(
+          {proj.phases.map(ph=>{
+            const treeRows=annotateTreeMeta(ph.tasks);
+            return(
             <div key={ph.id}>
               <div className="gphc" style={{minWidth:TW,background:ph.col+"10"}}>{gridLines}{TL}</div>
-              {ph.tasks.map(t=>{
+              {treeRows.map(({task:t})=>{
                 const d=dm[t.id];const st=gSt(t,dm);const sc=SCOL[st]||"#9A9590";
                 let bar=null;
                 if(d?.s){
@@ -1138,7 +1247,8 @@ function GanttView({proj}){
                 return <div key={t.id} className="gtc" style={{minWidth:TW}}>{gridLines}{TL}{bar}</div>;
               })}
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
       {tip&&<div className="gtt show" style={{left:Math.min(tipPos.x+12,window.innerWidth-240),top:Math.min(tipPos.y-10,window.innerHeight-120)}}>
@@ -1256,10 +1366,11 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
     toast("Section order updated","ok");
   };
   const moveTaskByStep=(ph,tId,dir)=>{
-    const idx=ph.tasks.findIndex(x=>x.id===tId);
+    const ordered=orderTasksAsTree(ph.tasks);
+    const idx=ordered.findIndex(x=>x.id===tId);
     const to=idx+dir;
-    if(idx<0||to<0||to>=ph.tasks.length)return;
-    dispatch({type:"reorderTask",projId:proj.id,phId:ph.id,fromId:tId,toId:ph.tasks[to].id});
+    if(idx<0||to<0||to>=ordered.length)return;
+    dispatch({type:"reorderTask",projId:proj.id,phId:ph.id,fromId:tId,toId:ordered[to].id});
   };
   const authorName=loginUser?.ready?(loginUser.name||"User"):"";
   const openCommentModal=(ph,task)=>setCommentTarget({ph,task});
@@ -1285,19 +1396,19 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
         <ActionFilters horizonDays={horizonDays} setHorizonDays={setHorizonDays} statusFilters={statusFilters} setStatusFilters={setStatusFilters} assigneeFilter={assigneeFilter} setAssigneeFilter={setAssigneeFilter} assignees={assignees} departmentFilter={departmentFilter} setDepartmentFilter={setDepartmentFilter} departments={departments} roleFilter={roleFilter} setRoleFilter={setRoleFilter} roleOptions={roleOptions} allowAllHorizon/>
       </div>
       <div className="tasks-toolbar">
-        <p className="tasks-toolbar-tip">Drag ⋮⋮ on a section or task to reorder · {filtersActive?"Clear filters to enable drag reorder":"Expand phases to edit tasks"}</p>
+        <p className="tasks-toolbar-tip">Drag ⋮⋮ to reorder (moves subtasks with parent) · Use ⊞ to add a subtask · {filtersActive?"Clear filters to enable drag reorder":"Expand phases to edit tasks"}</p>
         <div className="tasks-toolbar-actions">
           <button type="button" className={`btg${showCommentsConsolidated?" btg-on":""}`} onClick={()=>setShowCommentsConsolidated(v=>!v)} title="Show comment list for filtered tasks">{showCommentsConsolidated?"Comments on":"Show comments"}</button>
           <button type="button" className="btg" onClick={expandAll}>Expand all</button>
           <button type="button" className="btg" onClick={collapseAll}>Collapse all</button>
           <button className="btg" onClick={()=>dispatch({type:"addPhase",projId:proj.id})}>+ Phase</button>
           <button className="btg" onClick={()=>{
-            const dm2=cDates(proj);let csv="Phase,Task,Start,End,Dur,Assignee,Status,Comments\n";
-            proj.phases.forEach(ph=>ph.tasks.forEach(t=>{
+            const dm2=cDates(proj);let csv="Phase,Parent_ID,Task ID,Task,Start,End,Dur,Assignee,Status,Comments\n";
+            proj.phases.forEach(ph=>orderTasksAsTree(ph.tasks).forEach(t=>{
               if(!taskPassesFilters(t,dm2,ph.name,filters))return;
               const d=dm2[t.id]||{s:"",e:""};
               const cm=sortCommentsChronologically(t.comments).map(({comment:c})=>formatCommentLine(c)).join(" | ");
-              csv+=`"${ph.name}","${t.name}","${d.s}","${d.e}","${t.dur}","${t.who||""}","${statusLabel(taskStatus(t,dm2))}","${cm.replace(/"/g,'""')}"\n`;
+              csv+=`"${ph.name}","${taskParentId(t)||""}","${t.id}","${t.name}","${d.s}","${d.e}","${t.dur}","${t.who||""}","${statusLabel(taskStatus(t,dm2))}","${cm.replace(/"/g,'""')}"\n`;
             }));
             const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download=proj.name.replace(/\s+/g,"_")+"_Schedule.csv";a.click();toast("CSV exported","ok");
           }}>Export CSV</button>
@@ -1305,7 +1416,8 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
       </div>
       <div className="phases-stack">
       {proj.phases.map((ph,pi)=>{
-        const visible=ph.tasks.filter(t=>taskPassesFilters(t,dm,ph.name,filters));
+        const treeRows=annotateTreeMeta(ph.tasks).filter(({task:t})=>taskPassesFilters(t,dm,ph.name,filters));
+        const visible=treeRows.map((r)=>r.task);
         if(departmentFilter&&visible.length===0)return null;
         const comp=visible.filter(t=>taskStatus(t,dm)==="completed").length;
         const pct=visible.length?Math.round(comp/visible.length*100):0;
@@ -1313,6 +1425,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
         const isOpen=expandedPh[ek]!==false;
         const dept=getDepartmentForPhase(ph.name,departments);
         const isPhDragOver=dragOverPhId===ph.id&&dragPhase?.phId&&dragPhase.phId!==ph.id;
+        const orderedAll=orderTasksAsTree(ph.tasks);
         return(
           <div key={ph.id} className={`ps${isPhDragOver?" ps-drag-over":""}`} style={{"--phase-accent":ph.col||"#CEC8BB"}}
             onDragOver={e=>{if(!dragPhase||dragPhase.phId===ph.id)return;e.preventDefault();e.dataTransfer.dropEffect="move";setDragOverPhId(ph.id);}}
@@ -1341,6 +1454,23 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                 <span className="ps-meta">{pct}%</span>
               </div>
               <div className="ps-actions" onClick={e=>e.stopPropagation()}>
+                {(()=>{
+                  const incomplete=visible.filter(t=>taskStatus(t,dm)!=="completed");
+                  if(!incomplete.length){
+                    return visible.length>0?<span className="ps-all-done" title="All visible tasks complete">All done</span>:null;
+                  }
+                  return(
+                    <button type="button" className="bts ps-complete-all" title={`Mark ${incomplete.length} task(s) complete`}
+                      onClick={()=>{
+                        const n=incomplete.length;
+                        const scope=filtersActive?"visible ":"";
+                        if(!confirm(`Complete all ${n} ${scope}task${n!==1?"s":""} in "${ph.name}"?`))return;
+                        dispatch({type:"bulkCompletePhase",projId:proj.id,phId:ph.id,taskIds:incomplete.map(t=>t.id)});
+                        toast(`Marked ${n} complete`,"ok");
+                      }}
+                    >Complete all</button>
+                  );
+                })()}
                 <button className="bts" onClick={()=>dispatch({type:"addTask",projId:proj.id,phId:ph.id,afterId:null})}>+ Task</button>
                 <button className="bts" onClick={()=>{if(confirm(`Delete phase "${ph.name}"?`))dispatch({type:"delPhase",projId:proj.id,phId:ph.id});}}>✕</button>
               </div>
@@ -1348,21 +1478,22 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
             {isOpen&&<div className="ttable-wrap"><table className="ttable">
               <thead><tr>
                 <th style={{width:22}} aria-label="Reorder"/>
-                <th style={{width:26}}>#</th><th>Task</th><th>Start</th><th>Dur</th><th>End</th>
+                <th style={{width:26}}>#</th><th>Task / subtask</th><th>Start</th><th>Dur</th><th>End</th>
                 <th>Assignee</th><th>Status</th><th>Comments</th><th>Actions</th>
               </tr></thead>
               <tbody>
-                {visible.map((t)=>{
-                  const seqIdx=ph.tasks.findIndex(x=>x.id===t.id)+1;
+                {treeRows.map(({task:t,depth,hasChildren},rowIdx)=>{
+                  const seqIdx=rowIdx+1;
                   const d=dm[t.id]||{s:"",e:""};const st=taskStatus(t,dm);const od=st==="overdue"?dbDays(d.e,todayStr):0;
                   const taskComments=collectTaskComments(proj,ph,t);
                   const cc=taskComments.length;
                   const latestComment=getLatestComment(taskComments);
                   const canDrag=!filtersActive;
                   const isDragOver=dragOverId===t.id&&dragTask?.phId===ph.id;
+                  const ordIdx=orderedAll.findIndex(x=>x.id===t.id);
                   return(
                     <React.Fragment key={t.id}>
-                      <tr className={`trow${isDragOver?" trow-drag-over":""}`}
+                      <tr className={`trow${depth>0?" trow-sub":""}${isDragOver?" trow-drag-over":""}`}
                         onDragOver={e=>{if(!canDrag||!dragTask||dragTask.phId!==ph.id)return;e.preventDefault();e.dataTransfer.dropEffect="move";setDragOverId(t.id);}}
                         onDragLeave={()=>{if(dragOverId===t.id)setDragOverId(null);}}
                         onDrop={e=>{
@@ -1374,17 +1505,24 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                         }}
                       >
                         <td style={{textAlign:"center",verticalAlign:"middle"}}>
-                          <span className={`tdrag${canDrag?"":" tdrag-off"}`} draggable={canDrag} title={canDrag?"Drag to reorder":"Clear filters to reorder"}
+                          <span className={`tdrag${canDrag?"":" tdrag-off"}`} draggable={canDrag} title={canDrag?"Drag to reorder (subtree moves together)":"Clear filters to reorder"}
                             onDragStart={e=>{if(!canDrag){e.preventDefault();return;}setDragTask({phId:ph.id,tId:t.id});e.dataTransfer.effectAllowed="move";}}
                             onDragEnd={()=>{setDragTask(null);setDragOverId(null);}}
                           >⋮⋮</span>
                         </td>
                         <td style={{textAlign:"center",color:C.tx3,fontSize:11}}>{seqIdx}</td>
                         <td style={{minWidth:160}}>
-                          <div className="ec" contentEditable suppressContentEditableWarning
-                            onBlur={e=>dispatch({type:"updTask",projId:proj.id,phId:ph.id,tId:t.id,f:"name",v:e.target.textContent.trim()})}
-                            onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();e.target.blur();}}}
-                          >{t.name}</div>
+                          <div className="ttree-cell">
+                            <span className="ttree-indent" style={{width:Math.max(0,depth)*16}} aria-hidden/>
+                            {depth>0?<span className="ttree-branch" aria-hidden>└</span>:null}
+                            <div style={{flex:1,minWidth:0}}>
+                              <div className="ec" contentEditable suppressContentEditableWarning
+                                onBlur={e=>dispatch({type:"updTask",projId:proj.id,phId:ph.id,tId:t.id,f:"name",v:e.target.textContent.trim()})}
+                                onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();e.target.blur();}}}
+                              >{t.name}</div>
+                              {hasChildren?<span className="ttree-parent-tag">has subtasks</span>:null}
+                            </div>
+                          </div>
                         </td>
                         <td><input type="date" className="di" value={t.ms||d.s||""} onChange={e=>dispatch({type:"setMS",projId:proj.id,phId:ph.id,tId:t.id,v:e.target.value||null})}/></td>
                         <td><input type="number" className="ni" defaultValue={t.dur} min={1} max={999} onChange={e=>dispatch({type:"updTask",projId:proj.id,phId:ph.id,tId:t.id,f:"dur",v:parseInt(e.target.value)||1})}/></td>
@@ -1421,16 +1559,26 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                           }}>{cc?`Comments (${cc})`:"Add comment"}</button>
                         </td>
                         <td><div className="tact">
-                          <button type="button" className="abt" title="Move up" disabled={filtersActive||seqIdx<=1} onClick={()=>moveTaskByStep(ph,t.id,-1)}>↑</button>
-                          <button type="button" className="abt" title="Move down" disabled={filtersActive||seqIdx>=ph.tasks.length} onClick={()=>moveTaskByStep(ph,t.id,1)}>↓</button>
+                          <button type="button" className="abt" title="Move up" disabled={filtersActive||ordIdx<=0} onClick={()=>moveTaskByStep(ph,t.id,-1)}>↑</button>
+                          <button type="button" className="abt" title="Move down" disabled={filtersActive||ordIdx<0||ordIdx>=orderedAll.length-1} onClick={()=>moveTaskByStep(ph,t.id,1)}>↓</button>
                           <button className="abt" title="Done" onClick={()=>{
                             const prev=taskStatusSelectValue(t);
                             dispatch({type:"markDone",projId:proj.id,phId:ph.id,tId:t.id});
                             toast("Marked complete","ok");
                             notifyStatus(ph,t,prev,"completed");
                           }}>✓</button>
-                          <button className="abt" title="Add after" onClick={()=>dispatch({type:"addTask",projId:proj.id,phId:ph.id,afterId:t.id})}>+</button>
-                          <button className="abt del" title="Delete" onClick={()=>{if(confirm(`Delete "${t.name}"?`))dispatch({type:"delTask",projId:proj.id,phId:ph.id,tId:t.id});}}>🗑</button>
+                          <button type="button" className="abt abt-sub" title="Add subtask under this activity" onClick={()=>{
+                            dispatch({type:"addTask",projId:proj.id,phId:ph.id,parentId:t.id,name:"New subtask"});
+                            toast("Subtask added","ok");
+                          }}>⊞</button>
+                          <button className="abt" title="Add sibling after" onClick={()=>dispatch({type:"addTask",projId:proj.id,phId:ph.id,afterId:t.id,parentId:taskParentId(t)||null})}>+</button>
+                          <button className="abt del" title="Delete (includes subtasks)" onClick={()=>{
+                            const nKids=annotateTreeMeta(ph.tasks).find(r=>r.task.id===t.id)?.hasChildren;
+                            const msg=nKids
+                              ?`Delete "${t.name}" and all its subtasks?`
+                              :`Delete "${t.name}"?`;
+                            if(confirm(msg))dispatch({type:"delTask",projId:proj.id,phId:ph.id,tId:t.id});
+                          }}>🗑</button>
                         </div></td>
                       </tr>
                     </React.Fragment>
@@ -1682,6 +1830,11 @@ function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWo
 
 // ── REDUCER ──────────────────────────────────────────────
 const STRUCTURAL_ACTIONS=new Set(["addTask","delTask","addPhase","delPhase","addProject","delProject","reorderTask","reorderPhase"]);
+/** Persist to Mongo soon after comments / structural changes; task field edits use top-bar Save or debounced sync. */
+const MONGO_FLUSH_ACTIONS=new Set([
+  ...STRUCTURAL_ACTIONS,
+  "addComment","updComment","markDone","setTaskStatus",
+]);
 
 function reducer(state,action){
   const S=JSON.parse(JSON.stringify(state));
@@ -1701,6 +1854,43 @@ function reducer(state,action){
       if(action.f==="roles")t.roles=parseRolesInput(action.v);
       else if(action.f==="dur")t.dur=parseInt(action.v,10)||1;
       else t[action.f]=action.v;
+      break;
+    }
+    case"bulkAssignByRole":{
+      const p=fp(action.projId);
+      if(!p||!action.role)break;
+      const role=String(action.role).trim();
+      const who=String(action.who||"").trim();
+      if(!who)break;
+      let updated=0;
+      (p.phases||[]).forEach((ph)=>{
+        (ph.tasks||[]).forEach((t)=>{
+          if(!taskHasRole(t,role))return;
+          if(action.onlyUnassigned&&String(t.who||"").trim())return;
+          if(!action.overwrite&&t.who===who)return;
+          t.who=who;
+          updated+=1;
+        });
+      });
+      activityAction={...action,updatedCount:updated,role,who};
+      break;
+    }
+    case"bulkAssignByDepartment":{
+      const p=fp(action.projId);
+      if(!p||!action.deptId)break;
+      const who=String(action.who||"").trim();
+      if(!who)break;
+      let updated=0;
+      (p.phases||[]).forEach((ph)=>{
+        if(!taskInDepartment(ph,action.deptId,S.departments))return;
+        (ph.tasks||[]).forEach((t)=>{
+          if(action.onlyUnassigned&&String(t.who||"").trim())return;
+          if(!action.overwrite&&t.who===who)return;
+          t.who=who;
+          updated+=1;
+        });
+      });
+      activityAction={...action,updatedCount:updated,deptId:action.deptId,who};
       break;
     }
     case"setDepartmentHead":{
@@ -1725,28 +1915,62 @@ function reducer(state,action){
       break;
     }
     case"markDone":{const t=ft(action.projId,action.phId,action.tId);if(t){const td=todayIso();t.status="completed";t.ae=td;if(!t.as)t.as=td;}break;}
+    case"bulkCompletePhase":{
+      const ph=fph(action.projId,action.phId);
+      if(!ph)break;
+      const td=todayIso();
+      const idSet=Array.isArray(action.taskIds)?new Set(action.taskIds):null;
+      let updated=0;
+      (ph.tasks||[]).forEach((t)=>{
+        if(idSet&&!idSet.has(t.id))return;
+        if(t.status==="completed"&&t.ae)return;
+        t.status="completed";
+        t.ae=td;
+        if(!t.as)t.as=td;
+        updated+=1;
+      });
+      activityAction={...action,updatedCount:updated,phaseName:ph.name};
+      break;
+    }
     case"delTask":{
+      const p=fp(action.projId);
       const ph=fph(action.projId,action.phId);
       if(ph){
+        const doomedIds=idsToDeleteWithDescendants(ph.tasks,action.tId);
+        const doomedSet=new Set(doomedIds.map(String));
         const doomed=ph.tasks.find(t=>t.id===action.tId);
-        ph.tasks=ph.tasks.filter(t=>t.id!==action.tId);
-        activityAction={...action,taskName:doomed?.name||""};
+        ph.tasks=ph.tasks.filter(t=>!doomedSet.has(String(t.id)));
+        if(p){
+          if(!Array.isArray(p._removedTaskIds))p._removedTaskIds=[];
+          doomedIds.forEach((rid)=>{
+            const id=String(rid||"").trim();
+            if(id&&!p._removedTaskIds.includes(id))p._removedTaskIds.push(id);
+          });
+        }
+        activityAction={...action,taskName:doomed?.name||"",deletedCount:doomedIds.length};
       }
       break;
     }
     case"addTask":{
       const ph=fph(action.projId,action.phId);if(!ph)break;
-      const id=uid();const nt=mkT(id,action.name||"New Task",action.dur||7,action.pred||[],null,{source:"user",...action.ex||{}});
+      const parentId=action.parentId||action.ex?.parentId||null;
+      const id=uid();
+      const nt=mkT(id,action.name||(parentId?"New subtask":"New Task"),action.dur||7,action.pred||[],null,{source:"user",parentId:parentId||null,...action.ex||{}});
+      if(parentId){
+        const byId=indexTasksById(ph.tasks);
+        if(!byId.has(String(parentId))){nt.parentId=null;}
+        else{
+          const insertAt=insertIndexAfterParent(ph.tasks,parentId);
+          ph.tasks.splice(insertAt,0,nt);
+          break;
+        }
+      }
       if(action.afterId){const i=ph.tasks.findIndex(t=>t.id===action.afterId);if(i>=0){ph.tasks.splice(i+1,0,nt);break;}}
       ph.tasks.push(nt);break;
     }
     case"reorderTask":{
       const ph=fph(action.projId,action.phId);if(!ph||!ph.tasks?.length)break;
-      const fromIdx=ph.tasks.findIndex(t=>t.id===action.fromId);
-      const toIdx=ph.tasks.findIndex(t=>t.id===action.toId);
-      if(fromIdx<0||toIdx<0||fromIdx===toIdx)break;
-      const[item]=ph.tasks.splice(fromIdx,1);
-      ph.tasks.splice(toIdx,0,item);
+      ph.tasks=reorderSubtree(ph.tasks,action.fromId,action.toId);
       break;
     }
     case"reorderPhase":{
@@ -1816,10 +2040,12 @@ function reducer(state,action){
       const{changed:commentsRepaired}=repairAllTaskComments(merged);
       if(commentsRepaired)merged.__commentsRepairPending=true;
       ensureStateDepartments(merged);
+      (merged.projects||[]).forEach((proj)=>applyTaskTombstonesToProject(proj));
       merged.activityLog=dedupeActivityLog(Array.isArray(preservedLog)?preservedLog:(Array.isArray(merged.activityLog)?merged.activityLog:[]));
       (merged.projects||[]).forEach(proj=>{
         (proj.phases||[]).forEach(ph=>{
           (ph.tasks||[]).forEach(t=>{
+            normalizeParentIdOnTask(t);
             if(!t.status){
               if(t.ae)t.status="completed";
               else if(t.as)t.status="inprogress";
@@ -1841,7 +2067,7 @@ function reducer(state,action){
   if(action.type!=="loadState"&&action.type!=="clearFlushFlag"&&action.type!=="clearCommentRepairFlag"){
     recordActivityFromAction(S,activityAction);
   }
-  if(STRUCTURAL_ACTIONS.has(action.type))S.__flushPending=true;
+  if(MONGO_FLUSH_ACTIONS.has(action.type))S.__flushPending=true;
   return S;
 }
 
@@ -2036,7 +2262,11 @@ export default function App(){
           ):null}
           <span className="tnav-mongo" title="MongoDB sync">{CLOUD_LABELS[cloudStatus]||cloudStatus}</span>
           <button type="button" className="btg" title="Reload workspace from MongoDB" disabled={cloudStatus==="loading"} onClick={()=>{if(mongoReloadRef.current)void mongoReloadRef.current();else toast("Cloud reload unavailable","err");}}>↻ Reload</button>
-          <button type="button" className="btp" onClick={()=>{if(mongoFlushRef.current)mongoFlushRef.current();else toast("Cloud save unavailable","err");}}>Save</button>
+          <button type="button" className="btp" disabled={cloudStatus==="loading"||cloudStatus==="saving"} onClick={async()=>{
+            if(!mongoFlushRef.current){toast("Cloud save unavailable","err");return;}
+            const ok=await mongoFlushRef.current();
+            if(ok)toast("Saved to server — teammates can ↻ Reload to see comments & tasks","ok");
+          }}>Save</button>
         </div>
       </nav>
 
@@ -2060,6 +2290,7 @@ export default function App(){
                 canDeleteProjects={canDeleteProjects}
               >
                 {sub==="tasks"&&<TasksView proj={curProj} dispatch={dispatch} toast={toast} departments={state.departments} loginUser={loginUser} assigneeRoster={assigneeRoster}/>}
+                {sub==="allocate"&&<BulkAllocateView proj={curProj} dispatch={dispatch} assigneeRoster={assigneeRoster} departments={state.departments} toast={toast} onEditDepartments={()=>setModal("deptHeads")}/>}
                 {sub==="gantt"&&<GanttView proj={curProj}/>}
                 {sub==="regs"&&<RegView proj={curProj} regStatus={regStatus} setRegStatus={setRegStatus}/>}
               </ProjectPageShell>
