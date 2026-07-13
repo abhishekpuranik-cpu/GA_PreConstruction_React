@@ -52,6 +52,7 @@ import {
 } from './preconTaskTree.js';
 import { DashboardReportsView } from './DashboardReportsView.jsx';
 import { BulkAllocateView } from './BulkAllocateView.jsx';
+import { AnalyticsAskView } from './AnalyticsAskView.jsx';
 import {
   taskStatus,
   taskStatusSelectValue,
@@ -271,6 +272,47 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .dash-reports-subtab{padding:10px 16px;border:none;background:none;color:#55504A;font-size:13px;font-weight:600;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px;font-family:'DM Sans',sans-serif;transition:all .15s}
 .dash-reports-subtab:hover{color:#1A304A;background:rgba(26,48,74,.04);border-radius:8px 8px 0 0}
 .dash-reports-subtab.act{color:#1A304A;border-bottom-color:#C89A3A;font-weight:700}
+.ask-root{max-width:920px;margin:0 auto 28px}
+.ask-hero{margin-bottom:16px}
+.ask-eyebrow{margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9A6E20}
+.ask-title{margin:0;font-size:28px;font-weight:600;color:#1A304A}
+.ask-sub{margin:8px 0 0;font-size:13px;line-height:1.55;color:#55504A;max-width:640px}
+.ask-box{padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.ask-box-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.ask-scope{display:flex;flex-direction:column;gap:4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:#96918A}
+.ask-scope select{min-width:220px;padding:8px 10px;border:1.5px solid #E2DDD4;border-radius:6px;font-size:13px;font-family:'DM Sans',sans-serif;color:#1A304A;background:#fff;text-transform:none;letter-spacing:0;font-weight:500}
+.ask-input{width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid #E2DDD4;border-radius:8px;font-size:15px;line-height:1.45;font-family:'DM Sans',sans-serif;color:#1A1815;resize:vertical;min-height:84px}
+.ask-input:focus{outline:none;border-color:#C89A3A;box-shadow:0 0 0 2px rgba(200,154,58,.2)}
+.ask-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ask-kbd{font-size:11px;color:#96918A}
+.ask-mic-hint{margin:0;font-size:11px;color:#9A6E20;font-weight:500}
+.ask-examples{display:flex;flex-wrap:wrap;gap:6px}
+.ask-chip{border:1px solid #E2DDD4;background:#FBF9F5;color:#55504A;border-radius:999px;padding:5px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;text-align:left;max-width:100%}
+.ask-chip:hover:not(:disabled){border-color:#C89A3A;background:#FBF7EE;color:#1A304A}
+.ask-chip:disabled{opacity:.55;cursor:not-allowed}
+.ask-answer{padding:18px 20px;margin-top:14px}
+.ask-answer-meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.ask-source{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:3px 8px;border-radius:999px;border:1px solid #E2DDD4;background:#F3F0EA;color:#55504A}
+.ask-source-llm{background:#EEF4FC;border-color:#B5D0EF;color:#1B5E9E}
+.ask-source-local{background:#FBF7EE;border-color:#E8D4A0;color:#9A6E20}
+.ask-intent{font-size:11px;color:#96918A;text-transform:capitalize}
+.ask-hl{font-size:11px;color:#55504A}
+.ask-warn{margin:0 0 10px;padding:8px 10px;border-radius:6px;background:#FDF3E8;border:1px solid #E8C490;color:#AE6418;font-size:12px}
+.ask-md-h3{margin:0 0 10px;font-size:18px;color:#1A304A}
+.ask-md-h4{margin:14px 0 6px;font-size:14px;color:#1A304A}
+.ask-md-p{margin:0 0 6px;font-size:13px;line-height:1.55;color:#1A1815}
+.ask-md-li{margin:0 0 4px;padding-left:12px;font-size:13px;line-height:1.5;color:#1A1815;position:relative}
+.ask-md-li::before{content:"•";position:absolute;left:0;color:#9A6E20}
+.ask-md-ol::before{content:none}
+.ask-proposals{margin-top:16px;padding-top:14px;border-top:1px solid #E2DDD4}
+.ask-proposal-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.ask-proposal-list li{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:10px 12px;border:1px solid #E2DDD4;border-radius:8px;background:#FAFAF8}
+.ask-proposal-why{font-size:12px;color:#55504A;margin-top:3px}
+.ask-history{margin-top:18px}
+.ask-history ul{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.ask-hist-btn{border:none;background:none;color:#1B5E9E;font-size:12px;text-align:left;cursor:pointer;padding:0;font-family:'DM Sans',sans-serif;text-decoration:underline}
+.ask-footnote{font-size:11px;margin-top:16px}
+.ask-footnote code{font-size:10px;background:#F3F0EA;padding:1px 4px;border-radius:3px}
 .dash-reports-stat-alert{border-color:rgba(179,46,30,.35);background:rgba(252,236,234,.5)}
 .dash-reports-stat-alert .dash-reports-stat-n{color:#B32E1E}
 .dash-reports-chip-warn{background:#FCECEA;border-color:#EFBAB0;color:#B32E1E}
@@ -1701,14 +1743,17 @@ function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWo
         </div>
       </div>
       <div className="dash-stabs" role="tablist" aria-label="Dashboard views">
+        <button type="button" role="tab" aria-selected={dashTab==="ask"} className={`dash-stab${dashTab==="ask"?" act":""}`} onClick={()=>setDashTab("ask")}>Ask AI</button>
         <button type="button" role="tab" aria-selected={dashTab==="overview"} className={`dash-stab${dashTab==="overview"?" act":""}`} onClick={()=>setDashTab("overview")}>Overview</button>
         <button type="button" role="tab" aria-selected={dashTab==="calendar"} className={`dash-stab${dashTab==="calendar"?" act":""}`} onClick={()=>setDashTab("calendar")}>Work Calendar</button>
         <button type="button" role="tab" aria-selected={dashTab==="reports"} className={`dash-stab${dashTab==="reports"?" act":""}`} onClick={()=>setDashTab("reports")}>Reports</button>
       </div>
-      {dashTab==="calendar"?(
+      {dashTab==="ask"?(
+        <AnalyticsAskView projects={displayProjects} dispatch={dispatch} toast={toast} onOpenProject={onOpenProject} loginUser={loginUser}/>
+      ):dashTab==="calendar"?(
         <DashboardCalendarView projects={displayProjects} sourceProjects={projects} departments={departments} dispatch={dispatch} toast={toast} loginUser={loginUser} onOpenProject={onOpenProject}/>
       ):dashTab==="reports"?(
-        <DashboardReportsView activityLog={activityLog||[]} projects={displayProjects} onOpenProject={onOpenProject}/>
+        <DashboardReportsView activityLog={activityLog||[]} projects={displayProjects} onOpenProject={onOpenProject} dispatch={dispatch} toast={toast} loginUser={loginUser}/>
       ):(
       <>
       <PortfolioRagMatrix projects={displayProjects} departments={departments} onOpenProject={onOpenProject}/>
