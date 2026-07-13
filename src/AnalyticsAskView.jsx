@@ -3,66 +3,9 @@ import { SpeechDictationButton } from './SpeechDictationButton.jsx';
 import { ANALYTICS_PROMPT_EXAMPLES } from './preconAnalyticsContext.js';
 import { applyAnalyticsAction, askPreconAnalytics } from './preconAnalyticsClient.js';
 import { joinTranscript, useSpeechDictation } from './useSpeechDictation.js';
+import { AskAnswerVisuals } from './AskAnswerVisuals.jsx';
 
 const C = { navy: '#1A304A', tx2: '#55504A', tx3: '#96918A', gold: '#9A6E20' };
-
-function SimpleMarkdown({ text }) {
-  const blocks = String(text || '').split(/\n{2,}/);
-  return (
-    <div className="ask-md">
-      {blocks.map((block, i) => {
-        const lines = block.split('\n');
-        const first = lines[0] || '';
-        if (first.startsWith('### ')) {
-          return (
-            <h3 key={i} className="ask-md-h3">
-              {first.replace(/^###\s+/, '')}
-            </h3>
-          );
-        }
-        if (first.startsWith('#### ')) {
-          return (
-            <div key={i}>
-              <h4 className="ask-md-h4">{first.replace(/^####\s+/, '')}</h4>
-              {lines.slice(1).map((ln, j) => (
-                <MdLine key={j} line={ln} />
-              ))}
-            </div>
-          );
-        }
-        return (
-          <div key={i} className="ask-md-block">
-            {lines.map((ln, j) => (
-              <MdLine key={j} line={ln} />
-            ))}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function MdLine({ line }) {
-  const t = String(line || '');
-  if (!t.trim()) return <br />;
-  if (/^\s*[-*]\s+/.test(t)) {
-    return <div className="ask-md-li">{formatInline(t.replace(/^\s*[-*]\s+/, ''))}</div>;
-  }
-  if (/^\s*\d+\.\s+/.test(t)) {
-    return <div className="ask-md-li ask-md-ol">{formatInline(t.trim())}</div>;
-  }
-  return <p className="ask-md-p">{formatInline(t)}</p>;
-}
-
-function formatInline(s) {
-  const parts = String(s).split(/(\*\*[^*]+\*\*)/g);
-  return parts.map((p, i) => {
-    if (p.startsWith('**') && p.endsWith('**')) {
-      return <strong key={i}>{p.slice(2, -2)}</strong>;
-    }
-    return <span key={i}>{p}</span>;
-  });
-}
 
 export function AnalyticsAskView({
   projects = [],
@@ -256,8 +199,8 @@ export function AnalyticsAskView({
             ) : null}
           </div>
           {answer.warning ? <p className="ask-warn">{answer.warning}</p> : null}
-          {answer.error && !answer.markdown ? <p className="ask-warn">{answer.error}</p> : null}
-          <SimpleMarkdown text={answer.markdown || ''} />
+          {answer.error && !answer.markdown && !answer.sections?.length ? <p className="ask-warn">{answer.error}</p> : null}
+          <AskAnswerVisuals answer={answer} />
 
           {answer.proposedActions?.length ? (
             <div className="ask-proposals">

@@ -165,16 +165,51 @@ export function answerAnalyticsLocally(question, ctx) {
   const markdown = [
     `### Answer (${intent})`,
     '',
-    ...sections.flatMap((s) => [`#### ${s.title}`, s.body, '']),
+    ...sections.flatMap((s) => [`#### ${s.title}`, s.body || s.narrative || '', '']),
     '_Generated from live PreConstruction data (local analytics engine)._',
   ].join('\n');
+
+  const charts = [];
+  charts.push({
+    type: 'donut',
+    title: 'Task status mix',
+    narrative: 'Share of completed vs in-progress vs overdue vs other open work in the current scope.',
+    data: [
+      { label: 'Completed', value: T.completed || 0 },
+      { label: 'In progress', value: T.inprogress || 0 },
+      { label: 'Overdue', value: T.overdue || 0 },
+      { label: 'Not started', value: T.notstarted || 0 },
+      { label: 'Paused', value: T.paused || 0 },
+    ].filter((d) => d.value > 0),
+  });
+  if (hot.length) {
+    charts.push({
+      type: 'hbar',
+      title: 'Top risk tasks',
+      narrative: 'Relative risk pressure from overdue schedule, stale next actions, and compliance gaps.',
+      data: top(hot, 8).map((t) => ({
+        label: String(t.task || '').slice(0, 18),
+        value: t.risk || 1,
+      })),
+    });
+  }
+
+  const structuredSections = sections.map((s) => ({
+    kind: s.kind,
+    title: s.title,
+    narrative: s.body || s.narrative || '',
+  }));
 
   return {
     ok: true,
     source: 'local',
     intent,
+    headline: worstProj
+      ? `${T.overdue || 0} overdue · pressure on ${worstProj.name}`
+      : `Portfolio health · ${T.overdue || 0} overdue`,
+    sections: structuredSections,
+    charts: charts.filter((c) => c.data?.length),
     markdown,
-    sections,
     highlights: {
       overdue: T.overdue || 0,
       nextActionOverdue: T.nextActionOverdue || 0,

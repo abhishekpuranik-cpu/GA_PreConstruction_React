@@ -59,8 +59,10 @@ export async function askPreconAnalytics({
       ok: true,
       source: data.source || 'llm',
       intent: data.intent || local.intent,
+      headline: data.headline || local.headline,
       markdown: data.markdown || local.markdown,
-      sections: data.sections || local.sections,
+      sections: Array.isArray(data.sections) && data.sections.length ? data.sections : local.sections,
+      charts: Array.isArray(data.charts) && data.charts.length ? data.charts : local.charts,
       highlights: data.highlights || local.highlights,
       proposedActions: Array.isArray(data.proposedActions) && data.proposedActions.length
         ? data.proposedActions
