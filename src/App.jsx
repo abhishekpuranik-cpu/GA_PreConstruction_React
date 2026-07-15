@@ -689,7 +689,11 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .ttree-indent{flex-shrink:0;height:1px}
 .ttree-branch{flex-shrink:0;width:14px;color:#C4BEB6;font-size:11px;line-height:22px;user-select:none}
 .ttree-parent-tag{font-size:9px;font-weight:700;color:#9A6E20;background:#FBF7EE;border:1px solid #E8D4A0;border-radius:999px;padding:1px 6px;margin-left:6px;vertical-align:middle;white-space:nowrap}
-.abt-sub{color:#1A5A30;font-weight:700}
+.ttree-name-row{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap}
+.ttree-name-row .ec{flex:1;min-width:8rem}
+.abt-sub{color:#1A5A30;font-weight:700;flex-shrink:0;width:auto;min-width:28px;height:28px;padding:0 8px;gap:4px;white-space:nowrap;font-size:11px}
+.abt-sub:hover{background:#EAF5EE;border-color:#A7D4B5;color:#145226}
+.abt-sub-lbl{font-weight:700;letter-spacing:.01em}
 .ec{border-radius:8px;padding:6px 8px;outline:none;font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:text;min-width:100px;line-height:1.4;color:#1A1815}
 .ec:hover{background:#F3F0EA}
 .ec:focus{outline:none;border:1.5px solid #C89A3A;background:#fff;box-shadow:0 0 0 3px rgba(200,154,58,.12)}
@@ -1256,8 +1260,8 @@ function GanttView({proj}){
               {treeRows.map(({task:t,depth})=>(
                 <div key={t.id} className="gtn" title={t.name} style={{paddingLeft:11+Math.max(0,depth)*12}}>
                   <span style={{fontSize:11.5,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{depth>0?"└ ":""}{t.name}</span>
-                </div>
-              ))}
+            </div>
+          ))}
             </div>
             );
           })}
@@ -1407,13 +1411,6 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
     dispatch({type:"reorderPhase",projId:proj.id,fromId,toId});
     toast("Section order updated","ok");
   };
-  const moveTaskByStep=(ph,tId,dir)=>{
-    const ordered=orderTasksAsTree(ph.tasks);
-    const idx=ordered.findIndex(x=>x.id===tId);
-    const to=idx+dir;
-    if(idx<0||to<0||to>=ordered.length)return;
-    dispatch({type:"reorderTask",projId:proj.id,phId:ph.id,fromId:tId,toId:ordered[to].id});
-  };
   const authorName=loginUser?.ready?(loginUser.name||"User"):"";
   const openCommentModal=(ph,task)=>setCommentTarget({ph,task});
   const closeCommentModal=()=>setCommentTarget(null);
@@ -1438,7 +1435,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
         <ActionFilters horizonDays={horizonDays} setHorizonDays={setHorizonDays} statusFilters={statusFilters} setStatusFilters={setStatusFilters} assigneeFilter={assigneeFilter} setAssigneeFilter={setAssigneeFilter} assignees={assignees} departmentFilter={departmentFilter} setDepartmentFilter={setDepartmentFilter} departments={departments} roleFilter={roleFilter} setRoleFilter={setRoleFilter} roleOptions={roleOptions} allowAllHorizon/>
       </div>
       <div className="tasks-toolbar">
-        <p className="tasks-toolbar-tip">Drag ⋮⋮ to reorder (moves subtasks with parent) · Use ⊞ to add a subtask · {filtersActive?"Clear filters to enable drag reorder":"Expand phases to edit tasks"}</p>
+        <p className="tasks-toolbar-tip">Drag ⋮⋮ to reorder (moves subtasks with parent) · Use <strong>Add sub</strong> beside a task name to nest a subtask · {filtersActive?"Clear filters to enable drag reorder":"Expand phases to edit tasks"}</p>
         <div className="tasks-toolbar-actions">
           <button type="button" className={`btg${showCommentsConsolidated?" btg-on":""}`} onClick={()=>setShowCommentsConsolidated(v=>!v)} title="Show comment list for filtered tasks">{showCommentsConsolidated?"Comments on":"Show comments"}</button>
           <button type="button" className="btg" onClick={expandAll}>Expand all</button>
@@ -1467,7 +1464,6 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
         const isOpen=expandedPh[ek]!==false;
         const dept=getDepartmentForPhase(ph.name,departments);
         const isPhDragOver=dragOverPhId===ph.id&&dragPhase?.phId&&dragPhase.phId!==ph.id;
-        const orderedAll=orderTasksAsTree(ph.tasks);
         return(
           <div key={ph.id} className={`ps${isPhDragOver?" ps-drag-over":""}`} style={{"--phase-accent":ph.col||"#CEC8BB"}}
             onDragOver={e=>{if(!dragPhase||dragPhase.phId===ph.id)return;e.preventDefault();e.dataTransfer.dropEffect="move";setDragOverPhId(ph.id);}}
@@ -1521,7 +1517,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
               <thead><tr>
                 <th style={{width:22}} aria-label="Reorder"/>
                 <th style={{width:26}}>#</th><th>Task / subtask</th><th>Start</th><th>Dur</th><th>End</th>
-                <th>Assignee</th><th>Status</th><th>Comments</th><th>Actions</th>
+                <th>Assignee</th><th>Status</th><th>Comments</th><th style={{width:40}} aria-label="Delete"/>
               </tr></thead>
               <tbody>
                 {treeRows.map(({task:t,depth,hasChildren},rowIdx)=>{
@@ -1532,7 +1528,6 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                   const latestComment=getLatestComment(taskComments);
                   const canDrag=!filtersActive;
                   const isDragOver=dragOverId===t.id&&dragTask?.phId===ph.id;
-                  const ordIdx=orderedAll.findIndex(x=>x.id===t.id);
                   return(
                     <React.Fragment key={t.id}>
                       <tr className={`trow${depth>0?" trow-sub":""}${isDragOver?" trow-drag-over":""}`}
@@ -1553,15 +1548,21 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                           >⋮⋮</span>
                         </td>
                         <td style={{textAlign:"center",color:C.tx3,fontSize:11}}>{seqIdx}</td>
-                        <td style={{minWidth:160}}>
+                        <td style={{minWidth:200}}>
                           <div className="ttree-cell">
                             <span className="ttree-indent" style={{width:Math.max(0,depth)*16}} aria-hidden/>
                             {depth>0?<span className="ttree-branch" aria-hidden>└</span>:null}
                             <div style={{flex:1,minWidth:0}}>
-                              <div className="ec" contentEditable suppressContentEditableWarning
-                                onBlur={e=>dispatch({type:"updTask",projId:proj.id,phId:ph.id,tId:t.id,f:"name",v:e.target.textContent.trim()})}
-                                onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();e.target.blur();}}}
-                              >{t.name}</div>
+                              <div className="ttree-name-row">
+                                <div className="ec" contentEditable suppressContentEditableWarning
+                                  onBlur={e=>dispatch({type:"updTask",projId:proj.id,phId:ph.id,tId:t.id,f:"name",v:e.target.textContent.trim()})}
+                                  onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();e.target.blur();}}}
+                                >{t.name}</div>
+                                <button type="button" className="abt abt-sub" title="Add subtask under this activity" onClick={()=>{
+                                  dispatch({type:"addTask",projId:proj.id,phId:ph.id,parentId:t.id,name:"New subtask"});
+                                  toast("Subtask added","ok");
+                                }}><span aria-hidden>⊞</span><span className="abt-sub-lbl">Add sub</span></button>
+                              </div>
                               {hasChildren?<span className="ttree-parent-tag">has subtasks</span>:null}
                             </div>
                           </div>
@@ -1601,20 +1602,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                           }}>{cc?`Comments (${cc})`:"Add comment"}</button>
                         </td>
                         <td><div className="tact">
-                          <button type="button" className="abt" title="Move up" disabled={filtersActive||ordIdx<=0} onClick={()=>moveTaskByStep(ph,t.id,-1)}>↑</button>
-                          <button type="button" className="abt" title="Move down" disabled={filtersActive||ordIdx<0||ordIdx>=orderedAll.length-1} onClick={()=>moveTaskByStep(ph,t.id,1)}>↓</button>
-                          <button className="abt" title="Done" onClick={()=>{
-                            const prev=taskStatusSelectValue(t);
-                            dispatch({type:"markDone",projId:proj.id,phId:ph.id,tId:t.id});
-                            toast("Marked complete","ok");
-                            notifyStatus(ph,t,prev,"completed");
-                          }}>✓</button>
-                          <button type="button" className="abt abt-sub" title="Add subtask under this activity" onClick={()=>{
-                            dispatch({type:"addTask",projId:proj.id,phId:ph.id,parentId:t.id,name:"New subtask"});
-                            toast("Subtask added","ok");
-                          }}>⊞</button>
-                          <button className="abt" title="Add sibling after" onClick={()=>dispatch({type:"addTask",projId:proj.id,phId:ph.id,afterId:t.id,parentId:taskParentId(t)||null})}>+</button>
-                          <button className="abt del" title="Delete (includes subtasks)" onClick={()=>{
+                          <button type="button" className="abt del" title="Delete (includes subtasks)" onClick={()=>{
                             const nKids=annotateTreeMeta(ph.tasks).find(r=>r.task.id===t.id)?.hasChildren;
                             const msg=nKids
                               ?`Delete "${t.name}" and all its subtasks?`
@@ -1740,7 +1728,7 @@ function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWo
           {onAddProject?<button type="button" className="btp-add" onClick={onAddProject}>+ Add project</button>:null}
           {onImportJson?<label className="file-lbl">Import JSON<input type="file" accept=".json,application/json" onChange={e=>{const f=e.target.files?.[0];if(f)onImportJson(f);e.target.value="";}}/></label>:null}
           {onImportExcel?<label className="file-lbl">Import Excel<input type="file" accept=".xlsx,.xls" onChange={e=>{const f=e.target.files?.[0];if(f)onImportExcel(f);e.target.value="";}}/></label>:null}
-        </div>
+      </div>
       </div>
       <div className="dash-stabs" role="tablist" aria-label="Dashboard views">
         <button type="button" role="tab" aria-selected={dashTab==="ask"} className={`dash-stab${dashTab==="ask"?" act":""}`} onClick={()=>setDashTab("ask")}>Ask AI</button>
@@ -2260,12 +2248,12 @@ export default function App(){
       <nav className="tnav">
         <div className="tnav-row">
           <div className="tnav-brand" style={{borderRight:`1.5px solid ${C.bd}`,paddingRight:12,marginRight:2}}>
-            <div className="nlogo">GA</div>
+          <div className="nlogo">GA</div>
             <div style={{minWidth:0}}>
-              <div className="disp" style={{fontSize:14,fontWeight:600,color:C.navy}}>Command Centre</div>
-              <div style={{fontSize:10,color:C.tx3,letterSpacing:".5px",textTransform:"uppercase"}}>Pre-Construction</div>
-            </div>
+            <div className="disp" style={{fontSize:14,fontWeight:600,color:C.navy}}>Command Centre</div>
+            <div style={{fontSize:10,color:C.tx3,letterSpacing:".5px",textTransform:"uppercase"}}>Pre-Construction</div>
           </div>
+        </div>
           <button type="button" className="tnav-menu-btn" aria-expanded={navOpen} onClick={()=>setNavOpen(o=>!o)}>
             {navOpen?"Close":"Menu"}
           </button>
