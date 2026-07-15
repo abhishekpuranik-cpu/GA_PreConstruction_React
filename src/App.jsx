@@ -677,28 +677,38 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .ps-all-done{font-size:11px;color:#1A6A3C;font-weight:600;padding:5px 10px;white-space:nowrap}
 .ppbar{height:4px;background:#E2DDD4;border-radius:999px;width:88px;overflow:hidden;display:inline-block;vertical-align:middle}
 .ppfill{height:100%;border-radius:999px;transition:width .25s ease}
-.ttable{width:100%;border-collapse:collapse;font-size:12px}
+.ttable{width:100%;border-collapse:separate;border-spacing:0;font-size:12px;table-layout:fixed}
 .ttable thead th{position:sticky;top:0;z-index:2;background:#F5F3EE;box-shadow:0 1px 0 #E2DDD4}
-.ttable th{padding:10px 12px;font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#6A6560;text-align:left;border-bottom:1px solid #E2DDD4;white-space:nowrap;font-family:'DM Sans',sans-serif;font-weight:700}
-.ttable td{padding:10px 12px;border-bottom:1px solid rgba(226,221,212,.65);vertical-align:middle}
+.ttable th{padding:10px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#6A6560;text-align:left;border-bottom:1px solid #E2DDD4;white-space:nowrap;font-family:'DM Sans',sans-serif;font-weight:700}
+.ttable td{padding:8px 10px;border-bottom:1px solid rgba(226,221,212,.65);vertical-align:middle;overflow:hidden}
+.ttable .tcol-drag{width:28px;padding-left:6px;padding-right:4px;overflow:visible}
+.ttable .tcol-num{width:30px;text-align:center;color:#6A6560}
+.ttable .tcol-task{width:auto;min-width:0;overflow:visible}
+.ttable .tcol-start{width:132px}
+.ttable .tcol-dur{width:64px}
+.ttable .tcol-end{width:88px}
+.ttable .tcol-who{width:128px}
+.ttable .tcol-status{width:132px}
+.ttable .tcol-comments{width:140px}
+.ttable .tcol-del{width:40px;overflow:visible}
 .trow:nth-child(even) td{background:#FDFCFA}
 .trow:hover td{background:#FBF7EE!important}
 .trow.trow-drag-over td{background:#FBF7EE!important;border-top:2px solid #C89A3A}
 .trow-sub td{background:#FAFAF8}
-.ttree-cell{display:flex;align-items:flex-start;gap:6px;min-width:160px}
+.ttree-cell{display:flex;align-items:center;gap:4px;min-width:0;max-width:100%}
 .ttree-indent{flex-shrink:0;height:1px}
-.ttree-branch{flex-shrink:0;width:14px;color:#C4BEB6;font-size:11px;line-height:22px;user-select:none}
-.ttree-parent-tag{font-size:9px;font-weight:700;color:#9A6E20;background:#FBF7EE;border:1px solid #E8D4A0;border-radius:999px;padding:1px 6px;margin-left:6px;vertical-align:middle;white-space:nowrap}
-.ttree-name-row{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap}
-.ttree-name-row .ec{flex:1;min-width:8rem}
-.abt-sub{color:#1A5A30;font-weight:700;flex-shrink:0;width:auto;min-width:28px;height:28px;padding:0 8px;gap:4px;white-space:nowrap;font-size:11px}
+.ttree-branch{flex-shrink:0;width:12px;color:#C4BEB6;font-size:11px;line-height:1;user-select:none}
+.ttree-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.ttree-name-row{display:flex;align-items:center;gap:6px;min-width:0;flex-wrap:nowrap}
+.ttree-name-row .ec{flex:1 1 auto;min-width:0;max-width:100%}
+.ttree-parent-tag{font-size:9px;font-weight:700;color:#9A6E20;background:#FBF7EE;border:1px solid #E8D4A0;border-radius:999px;padding:1px 6px;white-space:nowrap;align-self:flex-start}
+.abt-sub{color:#1A5A30;font-weight:700;flex:0 0 auto;width:26px;min-width:26px;height:26px;padding:0;font-size:14px;line-height:1}
 .abt-sub:hover{background:#EAF5EE;border-color:#A7D4B5;color:#145226}
-.abt-sub-lbl{font-weight:700;letter-spacing:.01em}
-.ec{border-radius:8px;padding:6px 8px;outline:none;font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:text;min-width:100px;line-height:1.4;color:#1A1815}
+.ec{border-radius:8px;padding:5px 8px;outline:none;font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:text;line-height:1.35;color:#1A1815;border:1.5px solid transparent;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ec:hover{background:#F3F0EA}
-.ec:focus{outline:none;border:1.5px solid #C89A3A;background:#fff;box-shadow:0 0 0 3px rgba(200,154,58,.12)}
-.di,.ni{padding:6px 8px;border:1px solid #E2DDD4;border-radius:8px;background:#FAFAF8;font-size:12px;outline:none;font-family:'DM Sans',sans-serif}
-.di{width:122px}.ni{width:54px}
+.ec:focus{outline:none;border-color:#C89A3A;background:#fff;box-shadow:0 0 0 3px rgba(200,154,58,.12);white-space:normal;overflow:visible}
+.di,.ni{padding:6px 8px;border:1px solid #E2DDD4;border-radius:8px;background:#FAFAF8;font-size:12px;outline:none;font-family:'DM Sans',sans-serif;box-sizing:border-box;max-width:100%}
+.di{width:100%;max-width:122px}.ni{width:100%;max-width:54px}
 .di:focus,.ni:focus{border-color:#C89A3A;box-shadow:0 0 0 3px rgba(200,154,58,.12)}
 .status-wrap{display:inline-flex;align-items:center;gap:4px;padding:2px;border-radius:8px}
 .status-wrap-completed{background:#EAF5EE}
@@ -991,7 +1001,7 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .tnav-row{display:contents}
 .tnav-menu-btn{display:none;align-items:center;justify-content:center;padding:8px 12px;border:1px solid #E2DDD4;border-radius:6px;background:#fff;color:#1A304A;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;margin-left:auto}
 .ttable-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
-.ttable-wrap .ttable{min-width:520px}
+.ttable-wrap .ttable{min-width:900px}
 .phases-stack{display:flex;flex-direction:column;gap:12px}
 .task-tip{flex:1;min-width:0}
 .stabs{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
@@ -1073,9 +1083,12 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
   .psh{flex-wrap:wrap;gap:8px;padding:12px}
   .task-tip{display:none}
   .tact{opacity:1}
-  .abt,.bts,.btg{min-height:40px;min-width:40px}
+  .bts,.btg{min-height:40px;min-width:40px}
+  .abt{min-height:32px;min-width:32px}
+  .abt-sub{min-height:28px;min-width:28px;width:28px}
   .di{width:100%;max-width:140px}
-  .ni{width:64px}
+  .ni{width:100%;max-width:64px}
+  .ttable-wrap .ttable{min-width:860px}
   .gsplit{flex-direction:column;max-height:none}
   .gnames{width:100%;max-height:min(220px,35vh);border-right:none;border-bottom:1.5px solid #E2DDD4}
   .gchart{min-height:240px}
@@ -1435,7 +1448,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
         <ActionFilters horizonDays={horizonDays} setHorizonDays={setHorizonDays} statusFilters={statusFilters} setStatusFilters={setStatusFilters} assigneeFilter={assigneeFilter} setAssigneeFilter={setAssigneeFilter} assignees={assignees} departmentFilter={departmentFilter} setDepartmentFilter={setDepartmentFilter} departments={departments} roleFilter={roleFilter} setRoleFilter={setRoleFilter} roleOptions={roleOptions} allowAllHorizon/>
       </div>
       <div className="tasks-toolbar">
-        <p className="tasks-toolbar-tip">Drag ⋮⋮ to reorder (moves subtasks with parent) · Use <strong>Add sub</strong> beside a task name to nest a subtask · {filtersActive?"Clear filters to enable drag reorder":"Expand phases to edit tasks"}</p>
+        <p className="tasks-toolbar-tip">Drag ⋮⋮ to reorder (moves subtasks with parent) · Use <strong>⊞</strong> beside a task name to add a subtask · {filtersActive?"Clear filters to enable drag reorder":"Expand phases to edit tasks"}</p>
         <div className="tasks-toolbar-actions">
           <button type="button" className={`btg${showCommentsConsolidated?" btg-on":""}`} onClick={()=>setShowCommentsConsolidated(v=>!v)} title="Show comment list for filtered tasks">{showCommentsConsolidated?"Comments on":"Show comments"}</button>
           <button type="button" className="btg" onClick={expandAll}>Expand all</button>
@@ -1515,9 +1528,16 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
             </div>
             {isOpen&&<div className="ttable-wrap"><table className="ttable">
               <thead><tr>
-                <th style={{width:22}} aria-label="Reorder"/>
-                <th style={{width:26}}>#</th><th>Task / subtask</th><th>Start</th><th>Dur</th><th>End</th>
-                <th>Assignee</th><th>Status</th><th>Comments</th><th style={{width:40}} aria-label="Delete"/>
+                <th className="tcol-drag" aria-label="Reorder"/>
+                <th className="tcol-num">#</th>
+                <th className="tcol-task">Task / subtask</th>
+                <th className="tcol-start">Start</th>
+                <th className="tcol-dur">Dur</th>
+                <th className="tcol-end">End</th>
+                <th className="tcol-who">Assignee</th>
+                <th className="tcol-status">Status</th>
+                <th className="tcol-comments">Comments</th>
+                <th className="tcol-del" aria-label="Delete"/>
               </tr></thead>
               <tbody>
                 {treeRows.map(({task:t,depth,hasChildren},rowIdx)=>{
@@ -1529,89 +1549,87 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                   const canDrag=!filtersActive;
                   const isDragOver=dragOverId===t.id&&dragTask?.phId===ph.id;
                   return(
-                    <React.Fragment key={t.id}>
-                      <tr className={`trow${depth>0?" trow-sub":""}${isDragOver?" trow-drag-over":""}`}
-                        onDragOver={e=>{if(!canDrag||!dragTask||dragTask.phId!==ph.id)return;e.preventDefault();e.dataTransfer.dropEffect="move";setDragOverId(t.id);}}
-                        onDragLeave={()=>{if(dragOverId===t.id)setDragOverId(null);}}
-                        onDrop={e=>{
-                          e.preventDefault();
-                          setDragOverId(null);
-                          if(!canDrag||!dragTask||dragTask.phId!==ph.id)return;
-                          dropReorder(ph,dragTask.tId,t.id);
-                          setDragTask(null);
-                        }}
-                      >
-                        <td style={{textAlign:"center",verticalAlign:"middle"}}>
-                          <span className={`tdrag${canDrag?"":" tdrag-off"}`} draggable={canDrag} title={canDrag?"Drag to reorder (subtree moves together)":"Clear filters to reorder"}
-                            onDragStart={e=>{if(!canDrag){e.preventDefault();return;}setDragTask({phId:ph.id,tId:t.id});e.dataTransfer.effectAllowed="move";}}
-                            onDragEnd={()=>{setDragTask(null);setDragOverId(null);}}
-                          >⋮⋮</span>
-                        </td>
-                        <td style={{textAlign:"center",color:C.tx3,fontSize:11}}>{seqIdx}</td>
-                        <td style={{minWidth:200}}>
-                          <div className="ttree-cell">
-                            <span className="ttree-indent" style={{width:Math.max(0,depth)*16}} aria-hidden/>
-                            {depth>0?<span className="ttree-branch" aria-hidden>└</span>:null}
-                            <div style={{flex:1,minWidth:0}}>
-                              <div className="ttree-name-row">
-                                <div className="ec" contentEditable suppressContentEditableWarning
-                                  onBlur={e=>dispatch({type:"updTask",projId:proj.id,phId:ph.id,tId:t.id,f:"name",v:e.target.textContent.trim()})}
-                                  onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();e.target.blur();}}}
-                                >{t.name}</div>
-                                <button type="button" className="abt abt-sub" title="Add subtask under this activity" onClick={()=>{
-                                  dispatch({type:"addTask",projId:proj.id,phId:ph.id,parentId:t.id,name:"New subtask"});
-                                  toast("Subtask added","ok");
-                                }}><span aria-hidden>⊞</span><span className="abt-sub-lbl">Add sub</span></button>
-                              </div>
-                              {hasChildren?<span className="ttree-parent-tag">has subtasks</span>:null}
+                    <tr key={t.id} className={`trow${depth>0?" trow-sub":""}${isDragOver?" trow-drag-over":""}`}
+                      onDragOver={e=>{if(!canDrag||!dragTask||dragTask.phId!==ph.id)return;e.preventDefault();e.dataTransfer.dropEffect="move";setDragOverId(t.id);}}
+                      onDragLeave={()=>{if(dragOverId===t.id)setDragOverId(null);}}
+                      onDrop={e=>{
+                        e.preventDefault();
+                        setDragOverId(null);
+                        if(!canDrag||!dragTask||dragTask.phId!==ph.id)return;
+                        dropReorder(ph,dragTask.tId,t.id);
+                        setDragTask(null);
+                      }}
+                    >
+                      <td className="tcol-drag">
+                        <span className={`tdrag${canDrag?"":" tdrag-off"}`} draggable={canDrag} title={canDrag?"Drag to reorder (subtree moves together)":"Clear filters to reorder"}
+                          onDragStart={e=>{if(!canDrag){e.preventDefault();return;}setDragTask({phId:ph.id,tId:t.id});e.dataTransfer.effectAllowed="move";}}
+                          onDragEnd={()=>{setDragTask(null);setDragOverId(null);}}
+                        >⋮⋮</span>
+                      </td>
+                      <td className="tcol-num">{seqIdx}</td>
+                      <td className="tcol-task">
+                        <div className="ttree-cell">
+                          <span className="ttree-indent" style={{width:Math.max(0,depth)*14}} aria-hidden/>
+                          {depth>0?<span className="ttree-branch" aria-hidden>└</span>:null}
+                          <div className="ttree-main">
+                            <div className="ttree-name-row">
+                              <div className="ec" contentEditable suppressContentEditableWarning
+                                onBlur={e=>dispatch({type:"updTask",projId:proj.id,phId:ph.id,tId:t.id,f:"name",v:e.target.textContent.trim()})}
+                                onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();e.target.blur();}}}
+                              >{t.name}</div>
+                              <button type="button" className="abt abt-sub" aria-label="Add subtask" title="Add subtask under this activity" onClick={()=>{
+                                dispatch({type:"addTask",projId:proj.id,phId:ph.id,parentId:t.id,name:"New subtask"});
+                                toast("Subtask added","ok");
+                              }}>⊞</button>
                             </div>
+                            {hasChildren?<span className="ttree-parent-tag">has subtasks</span>:null}
                           </div>
-                        </td>
-                        <td><input type="date" className="di" value={t.ms||d.s||""} onChange={e=>dispatch({type:"setMS",projId:proj.id,phId:ph.id,tId:t.id,v:e.target.value||null})}/></td>
-                        <td><input type="number" className="ni" defaultValue={t.dur} min={1} max={999} onChange={e=>dispatch({type:"updTask",projId:proj.id,phId:ph.id,tId:t.id,f:"dur",v:parseInt(e.target.value)||1})}/></td>
-                        <td style={{color:C.tx2,fontSize:12,whiteSpace:"nowrap"}}>{fmt(d.e)}</td>
-                        <td>
-                          <AssigneeMultiSelect compact value={t.who||""} options={assigneeRoster} onChange={v=>dispatch({type:"updTask",projId:proj.id,phId:ph.id,tId:t.id,f:"who",v})}/>
-                        </td>
-                        <td>
-                          <div className={`status-wrap status-wrap-${st}`}>
-                            <select className="status-sel" style={{color:SCOL[st]||C.gray}}
-                              value={taskStatusSelectValue(t)}
-                              onChange={e=>{
-                                const v=e.target.value;
-                                const prev=taskStatusSelectValue(t);
-                                dispatch({type:"setTaskStatus",projId:proj.id,phId:ph.id,tId:t.id,v});
-                                notifyStatus(ph,t,prev,v);
-                              }}>
-                              {TASK_STATUS_OPTIONS.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}
-                            </select>
+                        </div>
+                      </td>
+                      <td className="tcol-start"><input type="date" className="di" value={t.ms||d.s||""} onChange={e=>dispatch({type:"setMS",projId:proj.id,phId:ph.id,tId:t.id,v:e.target.value||null})}/></td>
+                      <td className="tcol-dur"><input type="number" className="ni" value={t.dur??""} min={1} max={999} onChange={e=>dispatch({type:"updTask",projId:proj.id,phId:ph.id,tId:t.id,f:"dur",v:parseInt(e.target.value)||1})}/></td>
+                      <td className="tcol-end" style={{color:C.tx2,fontSize:12,whiteSpace:"nowrap"}}>{fmt(d.e)}</td>
+                      <td className="tcol-who">
+                        <AssigneeMultiSelect compact value={t.who||""} options={assigneeRoster} onChange={v=>dispatch({type:"updTask",projId:proj.id,phId:ph.id,tId:t.id,f:"who",v})}/>
+                      </td>
+                      <td className="tcol-status">
+                        <div className={`status-wrap status-wrap-${st}`}>
+                          <select className="status-sel" style={{color:SCOL[st]||C.gray}}
+                            value={taskStatusSelectValue(t)}
+                            onChange={e=>{
+                              const v=e.target.value;
+                              const prev=taskStatusSelectValue(t);
+                              dispatch({type:"setTaskStatus",projId:proj.id,phId:ph.id,tId:t.id,v});
+                              notifyStatus(ph,t,prev,v);
+                            }}>
+                            {TASK_STATUS_OPTIONS.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}
+                          </select>
+                        </div>
+                        {st==="overdue"&&<span className="badge bov" style={{marginLeft:4}}>+{od}d</span>}
+                      </td>
+                      <td className="tcol-comments">
+                        {!showCommentsConsolidated&&latestComment?(
+                          <div className="tcol-cmt-preview" title={latestComment.text}>
+                            <span className="tcol-cmt-author">{latestComment.author||"Anon"} · {latestComment.ts||"—"}</span>
+                            <span className="tcol-cmt-text">{truncateText(latestComment.text, 80)}</span>
                           </div>
-                          {st==="overdue"&&<span className="badge bov" style={{marginLeft:4}}>+{od}d</span>}
-                        </td>
-                        <td className="tcol-comments">
-                          {!showCommentsConsolidated&&latestComment?(
-                            <div className="tcol-cmt-preview" title={latestComment.text}>
-                              <span className="tcol-cmt-author">{latestComment.author||"Anon"} · {latestComment.ts||"—"}</span>
-                              <span className="tcol-cmt-text">{truncateText(latestComment.text, 80)}</span>
-                            </div>
-                          ):null}
-                          {cc>0?<span className="tcol-count" title={`${cc} comment${cc!==1?"s":""}`}>{cc}</span>:null}
-                          <button type="button" className="bts tcm-open-btn" title="View comment history and post an update" onClick={(e)=>{
-                            e.stopPropagation();
-                            openCommentModal(ph,t);
-                          }}>{cc?`Comments (${cc})`:"Add comment"}</button>
-                        </td>
-                        <td><div className="tact">
-                          <button type="button" className="abt del" title="Delete (includes subtasks)" onClick={()=>{
-                            const nKids=annotateTreeMeta(ph.tasks).find(r=>r.task.id===t.id)?.hasChildren;
-                            const msg=nKids
-                              ?`Delete "${t.name}" and all its subtasks?`
-                              :`Delete "${t.name}"?`;
-                            if(confirm(msg))dispatch({type:"delTask",projId:proj.id,phId:ph.id,tId:t.id});
-                          }}>🗑</button>
-                        </div></td>
-                      </tr>
-                    </React.Fragment>
+                        ):null}
+                        {cc>0?<span className="tcol-count" title={`${cc} comment${cc!==1?"s":""}`}>{cc}</span>:null}
+                        <button type="button" className="bts tcm-open-btn" title="View comment history and post an update" onClick={(e)=>{
+                          e.stopPropagation();
+                          openCommentModal(ph,t);
+                        }}>{cc?`Comments (${cc})`:"Add comment"}</button>
+                      </td>
+                      <td className="tcol-del"><div className="tact">
+                        <button type="button" className="abt del" title="Delete (includes subtasks)" onClick={()=>{
+                          const nKids=annotateTreeMeta(ph.tasks).find(r=>r.task.id===t.id)?.hasChildren;
+                          const msg=nKids
+                            ?`Delete "${t.name}" and all its subtasks?`
+                            :`Delete "${t.name}"?`;
+                          if(confirm(msg))dispatch({type:"delTask",projId:proj.id,phId:ph.id,tId:t.id});
+                        }}>🗑</button>
+                      </div></td>
+                    </tr>
                   );
                 })}
               </tbody>
