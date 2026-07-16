@@ -2,8 +2,8 @@
 .ask-headline{margin:0;font-size:17px;font-weight:700;color:#1A304A;line-height:1.35}
 .ask-kpi-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px}
 .ask-kpi{background:#fff;border:1px solid #E2DDD4;border-radius:10px;padding:10px 12px}
-.ask-kpi-v{font-size:18px;font-weight:700;color:#1A304A;line-height:1.1}
-.ask-kpi-l{font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:#96918A;margin-top:4px}
+.ask-kpi-v{font-size:15px;font-weight:700;color:#1A304A;line-height:1.2;word-break:break-word}
+.ask-kpi-l{font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:#96918A;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ask-charts{display:flex;flex-direction:column;gap:12px}
 .ask-chart-card{margin:0;padding:12px 14px;background:#fff;border:1px solid #E2DDD4;border-radius:12px}
 .ask-chart-title{font-size:13px;font-weight:700;color:#1A304A;margin:0 0 4px}

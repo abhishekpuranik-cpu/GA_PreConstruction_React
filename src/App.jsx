@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useReducer, useMemo } from 'react';
 import { MongoSyncAdapter } from "./mongoSync.jsx";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { cDates, dbDays } from "./preconDates.js";
+import { cDates, dbDays, dateSpanDays, isHiddenByCollapsedAncestor } from "./preconDates.js";
 import { downloadPreconExcel, collectAssignees, iterAllTasks } from "./preconExport.js";
 import { importExcelIntoState, parseJsonState } from "./preconImport.js";
 import {
@@ -520,13 +520,19 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .ams-more{font-size:10px;color:#96918A}
 .ams-caret{color:#96918A;font-size:10px;flex-shrink:0}
 .ams-menu{position:absolute;top:calc(100% + 4px);left:0;z-index:50;min-width:min(260px,90vw);max-height:min(280px,50vh);overflow:auto;background:#fff;border:1px solid #E2DDD4;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:8px}
+.ams-menu-portal{position:fixed;max-height:min(280px,50vh)}
 .ams-menu-hint{font-size:10px;color:#96918A;padding:4px 8px 8px}
 .ams-opt{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:12px}
 .ams-opt:hover{background:#F8F6F1}
 .ams-opt.on{background:#EEF4FC}
 .ams-opt input{accent-color:#1A304A;min-width:16px;min-height:16px}
 .ams-empty{font-size:11px;color:#96918A;padding:8px}
+.ams-add{display:flex;gap:6px;margin-top:6px;padding:0 2px}
+.ams-add-inp{flex:1;min-width:0;padding:7px 8px;border:1px solid #E2DDD4;border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif}
+.ams-add-btn{flex-shrink:0;padding:7px 10px;border:1px solid #1A304A;border-radius:6px;background:#1A304A;color:#fff;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif}
+.ams-add-btn:disabled{opacity:.45;cursor:not-allowed}
 .ams-clear{display:block;width:100%;margin-top:6px;padding:8px;border:none;background:#F3F0EA;color:#55504A;font-size:11px;border-radius:6px;cursor:pointer}
+.ttable .tcol-who{overflow:visible}
 .mw-empty{text-align:center;padding:40px 24px}
 .mw-empty-icon{width:56px;height:56px;border-radius:50%;background:#EAF5EE;color:#1A6A3C;font-size:28px;line-height:56px;margin:0 auto 14px;font-weight:700}
 .mw-empty h2{font-size:22px;color:#1A304A;margin:0 0 8px}
@@ -698,10 +704,14 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .ttree-cell{display:flex;align-items:center;gap:4px;min-width:0;max-width:100%}
 .ttree-indent{flex-shrink:0;height:1px}
 .ttree-branch{flex-shrink:0;width:12px;color:#C4BEB6;font-size:11px;line-height:1;user-select:none}
+.ttree-toggle{flex:0 0 auto;width:22px;height:22px;border-radius:6px;border:1px solid #E2DDD4;background:#fff;color:#55504A;font-size:11px;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
+.ttree-toggle:hover{border-color:#C89A3A;background:#FBF7EE;color:#1A304A}
+.ttree-toggle-spacer{flex:0 0 auto;width:22px;height:22px}
 .ttree-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
 .ttree-name-row{display:flex;align-items:center;gap:6px;min-width:0;flex-wrap:nowrap}
 .ttree-name-row .ec{flex:1 1 auto;min-width:0;max-width:100%}
 .ttree-parent-tag{font-size:9px;font-weight:700;color:#9A6E20;background:#FBF7EE;border:1px solid #E8D4A0;border-radius:999px;padding:1px 6px;white-space:nowrap;align-self:flex-start}
+.di-ro,.ni-ro{opacity:.85;background:#F5F3EE;color:#55504A;cursor:default}
 .abt-sub{color:#1A5A30;font-weight:700;flex:0 0 auto;width:26px;min-width:26px;height:26px;padding:0;font-size:14px;line-height:1}
 .abt-sub:hover{background:#EAF5EE;border-color:#A7D4B5;color:#145226}
 .ec{border-radius:8px;padding:5px 8px;outline:none;font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:text;line-height:1.35;color:#1A1815;border:1.5px solid transparent;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -1388,6 +1398,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
   const dm=cDates(proj);
   const[commentTarget,setCommentTarget]=useState(null);
   const[expandedPh,setExpandedPh]=useState({});
+  const[expandedTasks,setExpandedTasks]=useState({}); // false = collapsed; missing/true = expanded
   const[showCommentsConsolidated,setShowCommentsConsolidated]=useState(true);
   const[showOnlyWithComments,setShowOnlyWithComments]=useState(true);
   const[dragTask,setDragTask]=useState(null);
@@ -1405,14 +1416,34 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
   const filters={statusFilters,assigneeFilter,departmentFilter,departments,roleFilter,horizonDays,todayStr};
   const filtersActive=!!(statusFilters.length||assigneeFilter||departmentFilter||roleFilter||horizonDays!=null);
   const expandAll=()=>{
-    const next={};
-    proj.phases.forEach(ph=>{next[phaseExpandKey(proj.id,ph.id)]=true;});
-    setExpandedPh(next);
+    const nextPh={};
+    const nextTasks={};
+    proj.phases.forEach(ph=>{
+      nextPh[phaseExpandKey(proj.id,ph.id)]=true;
+      annotateTreeMeta(ph.tasks).forEach(({task:t,hasChildren})=>{
+        if(hasChildren) nextTasks[t.id]=true;
+      });
+    });
+    setExpandedPh(nextPh);
+    setExpandedTasks(nextTasks);
   };
   const collapseAll=()=>{
-    const next={};
-    proj.phases.forEach(ph=>{next[phaseExpandKey(proj.id,ph.id)]=false;});
-    setExpandedPh(next);
+    const nextPh={};
+    const nextTasks={};
+    proj.phases.forEach(ph=>{
+      nextPh[phaseExpandKey(proj.id,ph.id)]=false;
+      annotateTreeMeta(ph.tasks).forEach(({task:t,hasChildren})=>{
+        if(hasChildren) nextTasks[t.id]=false;
+      });
+    });
+    setExpandedPh(nextPh);
+    setExpandedTasks(nextTasks);
+  };
+  const toggleTaskExpand=(tId)=>{
+    setExpandedTasks(prev=>{
+      const open=prev[tId]!==false;
+      return {...prev,[tId]:!open};
+    });
   };
   const dropReorder=(ph,fromId,toId)=>{
     if(!fromId||!toId||fromId===toId)return;
@@ -1448,7 +1479,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
         <ActionFilters horizonDays={horizonDays} setHorizonDays={setHorizonDays} statusFilters={statusFilters} setStatusFilters={setStatusFilters} assigneeFilter={assigneeFilter} setAssigneeFilter={setAssigneeFilter} assignees={assignees} departmentFilter={departmentFilter} setDepartmentFilter={setDepartmentFilter} departments={departments} roleFilter={roleFilter} setRoleFilter={setRoleFilter} roleOptions={roleOptions} allowAllHorizon/>
       </div>
       <div className="tasks-toolbar">
-        <p className="tasks-toolbar-tip">Drag ⋮⋮ to reorder (moves subtasks with parent) · Use <strong>⊞</strong> beside a task name to add a subtask · {filtersActive?"Clear filters to enable drag reorder":"Expand phases to edit tasks"}</p>
+        <p className="tasks-toolbar-tip">Drag ⋮⋮ to reorder · ▸/▾ expands subtasks · ⊞ adds a subtask · Parent dates follow first→last subtask · {filtersActive?"Clear filters to enable drag reorder":"Expand phases to edit tasks"}</p>
         <div className="tasks-toolbar-actions">
           <button type="button" className={`btg${showCommentsConsolidated?" btg-on":""}`} onClick={()=>setShowCommentsConsolidated(v=>!v)} title="Show comment list for filtered tasks">{showCommentsConsolidated?"Comments on":"Show comments"}</button>
           <button type="button" className="btg" onClick={expandAll}>Expand all</button>
@@ -1468,7 +1499,10 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
       </div>
       <div className="phases-stack">
       {proj.phases.map((ph,pi)=>{
-        const treeRows=annotateTreeMeta(ph.tasks).filter(({task:t})=>taskPassesFilters(t,dm,ph.name,filters));
+        const byId=indexTasksById(ph.tasks);
+        const treeRows=annotateTreeMeta(ph.tasks)
+          .filter(({task:t})=>taskPassesFilters(t,dm,ph.name,filters))
+          .filter(({task:t})=>!isHiddenByCollapsedAncestor(t,byId,expandedTasks));
         const visible=treeRows.map((r)=>r.task);
         if(departmentFilter&&visible.length===0)return null;
         const comp=visible.filter(t=>taskStatus(t,dm)==="completed").length;
@@ -1543,6 +1577,9 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                 {treeRows.map(({task:t,depth,hasChildren},rowIdx)=>{
                   const seqIdx=rowIdx+1;
                   const d=dm[t.id]||{s:"",e:""};const st=taskStatus(t,dm);const od=st==="overdue"?dbDays(d.e,todayStr):0;
+                  const rolledUp=!!(hasChildren&&d.rolledUp);
+                  const taskOpen=expandedTasks[t.id]!==false;
+                  const rolledDur=rolledUp?dateSpanDays(d.s,d.e):(t.dur??"");
                   const taskComments=collectTaskComments(proj,ph,t);
                   const cc=taskComments.length;
                   const latestComment=getLatestComment(taskComments);
@@ -1570,7 +1607,13 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                       <td className="tcol-task">
                         <div className="ttree-cell">
                           <span className="ttree-indent" style={{width:Math.max(0,depth)*14}} aria-hidden/>
-                          {depth>0?<span className="ttree-branch" aria-hidden>└</span>:null}
+                          {hasChildren?(
+                            <button type="button" className="ttree-toggle" aria-expanded={taskOpen} title={taskOpen?"Collapse subtasks":"Expand subtasks"}
+                              onClick={(e)=>{e.stopPropagation();toggleTaskExpand(t.id);}}
+                            >{taskOpen?"▾":"▸"}</button>
+                          ):(
+                            <span className="ttree-toggle-spacer" aria-hidden>{depth>0?"└":""}</span>
+                          )}
                           <div className="ttree-main">
                             <div className="ttree-name-row">
                               <div className="ec" contentEditable suppressContentEditableWarning
@@ -1579,16 +1622,25 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                               >{t.name}</div>
                               <button type="button" className="abt abt-sub" aria-label="Add subtask" title="Add subtask under this activity" onClick={()=>{
                                 dispatch({type:"addTask",projId:proj.id,phId:ph.id,parentId:t.id,name:"New subtask"});
+                                setExpandedTasks(prev=>({...prev,[t.id]:true}));
                                 toast("Subtask added","ok");
                               }}>⊞</button>
                             </div>
-                            {hasChildren?<span className="ttree-parent-tag">has subtasks</span>:null}
+                            {hasChildren?<span className="ttree-parent-tag">has subtasks · dates from first→last</span>:null}
                           </div>
                         </div>
                       </td>
-                      <td className="tcol-start"><input type="date" className="di" value={t.ms||d.s||""} onChange={e=>dispatch({type:"setMS",projId:proj.id,phId:ph.id,tId:t.id,v:e.target.value||null})}/></td>
-                      <td className="tcol-dur"><input type="number" className="ni" value={t.dur??""} min={1} max={999} onChange={e=>dispatch({type:"updTask",projId:proj.id,phId:ph.id,tId:t.id,f:"dur",v:parseInt(e.target.value)||1})}/></td>
-                      <td className="tcol-end" style={{color:C.tx2,fontSize:12,whiteSpace:"nowrap"}}>{fmt(d.e)}</td>
+                      <td className="tcol-start">{rolledUp?(
+                        <input type="date" className="di di-ro" value={d.s||""} readOnly title="Start = first subtask start" tabIndex={-1}/>
+                      ):(
+                        <input type="date" className="di" value={t.ms||d.s||""} onChange={e=>dispatch({type:"setMS",projId:proj.id,phId:ph.id,tId:t.id,v:e.target.value||null})}/>
+                      )}</td>
+                      <td className="tcol-dur">{rolledUp?(
+                        <input type="number" className="ni ni-ro" value={rolledDur} readOnly title="Duration spans first subtask start → last subtask end" tabIndex={-1}/>
+                      ):(
+                        <input type="number" className="ni" value={t.dur??""} min={1} max={999} onChange={e=>dispatch({type:"updTask",projId:proj.id,phId:ph.id,tId:t.id,f:"dur",v:parseInt(e.target.value)||1})}/>
+                      )}</td>
+                      <td className="tcol-end" style={{color:C.tx2,fontSize:12,whiteSpace:"nowrap"}} title={rolledUp?"End = last subtask end":undefined}>{fmt(d.e)}</td>
                       <td className="tcol-who">
                         <AssigneeMultiSelect compact value={t.who||""} options={assigneeRoster} onChange={v=>dispatch({type:"updTask",projId:proj.id,phId:ph.id,tId:t.id,f:"who",v})}/>
                       </td>

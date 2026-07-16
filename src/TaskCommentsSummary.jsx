@@ -45,7 +45,7 @@ export function TaskCommentsSummary({
             <div className="tcc-entry-head">
               <span className="tcc-entry-seq">{displayIndex === 0 ? 'Latest' : `#${sorted.length - displayIndex}`}</span>
               <span className="tcc-entry-author">{cm.author || 'Anon'}</span>
-              <time className="tcc-entry-time">{cm.ts || '—'}</time>
+              <time className="tcc-entry-time">{cm.ts || (cm.createdAt ? formatShortDate(cm.createdAt) : '—')}</time>
               {cm.flag ? <span className="tcc-entry-badge">Issue</span> : null}
             </div>
             <p className="tcc-entry-text">{cm.text}</p>

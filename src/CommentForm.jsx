@@ -215,13 +215,9 @@ export function CommentForm({
       }
     }
     const savedText = commentText.trim();
-    const todayIso = new Date().toISOString().slice(0, 10);
-    const savedNextAction = markComplete
-      ? (actionText.trim() || 'Activity completed')
-      : actionText.trim();
-    const savedNextActionDate = markComplete
-      ? (nextActionDate.trim() || todayIso)
-      : nextActionDate.trim();
+    // When marking complete, next action fields are not required and not stored.
+    const savedNextAction = markComplete ? '' : actionText.trim();
+    const savedNextActionDate = markComplete ? '' : nextActionDate.trim();
     const stagedCopy = staged.map((s) => ({ file: s.file, label: s.label.trim() }));
     const notifyRecipients = allRecipientsPreview;
     const shouldNotifyLater = hasNotifyTargets(notifyRecipients, { emailEnabled, whatsappEnabled });
@@ -379,64 +375,76 @@ export function CommentForm({
           <p className="cform-mic-hint">Listening — speak clearly. Tap ⏹ to stop.</p>
         ) : null}
       </div>
-      <div className="cform-field">
-        <div className="cform-lbl-row">
-          <span className="cform-lbl">Next action{markComplete ? '' : ' *'}</span>
-          <SpeechDictationButton
-            fieldId="nextAction"
-            activeField={speech.activeField}
-            listening={speech.listening}
-            supported={speech.supported}
-            disabled={isBusy}
-            onToggle={speech.toggle}
-          />
-        </div>
-        <input
-          type="text"
-          className="cform-inp"
-          value={
-            speech.listening && speech.activeField === 'nextAction' && speech.interim
-              ? joinTranscript(nextAction, speech.interim)
-              : nextAction
-          }
-          disabled={isBusy}
-          required={!markComplete}
-          placeholder={markComplete ? 'Optional when marking complete' : 'What needs to happen next? (or tap Voice)'}
-          autoComplete="off"
-          onChange={(e) => {
-            if (speech.listening && speech.activeField === 'nextAction') speech.stop();
-            setNextAction(e.target.value);
-          }}
-        />
-        {speech.listening && speech.activeField === 'nextAction' ? (
-          <p className="cform-mic-hint">Listening — speak the next action. Tap ⏹ to stop.</p>
-        ) : null}
-      </div>
-      <label className="cform-field">
-        <span className="cform-lbl">Next action date{markComplete ? '' : ' *'}</span>
-        <input
-          type="date"
-          className="cform-inp cform-inp-date"
-          value={nextActionDate}
-          disabled={isBusy}
-          required={!markComplete}
-          onChange={(e) => setNextActionDate(e.target.value)}
-        />
-      </label>
       {allowMarkComplete ? (
         <label className="cform-complete">
           <input
             type="checkbox"
             checked={markComplete}
             disabled={isBusy}
-            onChange={(e) => setMarkComplete(e.target.checked)}
+            onChange={(e) => {
+              const on = e.target.checked;
+              setMarkComplete(on);
+              if (on && speech.listening && speech.activeField === 'nextAction') speech.stop();
+            }}
           />
           <span>
             <strong>Mark this activity as complete</strong>
-            <span className="cform-complete-hint">Sets task status to Completed when you save</span>
+            <span className="cform-complete-hint">Comment only — next action not required</span>
           </span>
         </label>
       ) : null}
+      {!markComplete ? (
+        <>
+          <div className="cform-field">
+            <div className="cform-lbl-row">
+              <span className="cform-lbl">Next action *</span>
+              <SpeechDictationButton
+                fieldId="nextAction"
+                activeField={speech.activeField}
+                listening={speech.listening}
+                supported={speech.supported}
+                disabled={isBusy}
+                onToggle={speech.toggle}
+              />
+            </div>
+            <input
+              type="text"
+              className="cform-inp"
+              value={
+                speech.listening && speech.activeField === 'nextAction' && speech.interim
+                  ? joinTranscript(nextAction, speech.interim)
+                  : nextAction
+              }
+              disabled={isBusy}
+              required
+              placeholder="What needs to happen next? (or tap Voice)"
+              autoComplete="off"
+              onChange={(e) => {
+                if (speech.listening && speech.activeField === 'nextAction') speech.stop();
+                setNextAction(e.target.value);
+              }}
+            />
+            {speech.listening && speech.activeField === 'nextAction' ? (
+              <p className="cform-mic-hint">Listening — speak the next action. Tap ⏹ to stop.</p>
+            ) : null}
+          </div>
+          <label className="cform-field">
+            <span className="cform-lbl">Next action date *</span>
+            <input
+              type="date"
+              className="cform-inp cform-inp-date"
+              value={nextActionDate}
+              disabled={isBusy}
+              required
+              onChange={(e) => setNextActionDate(e.target.value)}
+            />
+          </label>
+        </>
+      ) : (
+        <p className="cform-complete-done" style={{ marginTop: 0 }}>
+          Next action is skipped because this activity is being marked complete.
+        </p>
+      )}
       <AttachmentPicker items={staged} onChange={setStaged} disabled={isBusy} />
       <div className="cform-foot">
         <button type="button" className="btp" disabled={isBusy || !canSubmit} onClick={handleSubmit}>

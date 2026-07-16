@@ -78,9 +78,9 @@ export function TaskCommentModal({
           <div className="tcm-hero-inner">
             <div className="tcm-hero-top">
               <div className="tcm-kicker">
-                <span>{proj.name}</span>
+                <span className="tcm-kicker-proj">{proj.name}</span>
                 <span className="tcm-kicker-dot">·</span>
-                <span>{ph.name}</span>
+                <span className="tcm-kicker-phase">{ph.name}</span>
               </div>
               <button type="button" className="tcm-close" onClick={onClose} aria-label="Close">
                 ✕
@@ -91,7 +91,13 @@ export function TaskCommentModal({
             </h2>
             <div className="tcm-chips">
               <span className={`badge ${statusBadgeClass(st)}`}>{statusLabel(st)}</span>
-              {liveTask.who ? <span className="tcm-chip">👤 {liveTask.who}</span> : null}
+              {liveTask.who ? (
+                <span className="tcm-chip tcm-chip-assignee" title="Task assignee">
+                  Assignee: {liveTask.who}
+                </span>
+              ) : (
+                <span className="tcm-chip tcm-chip-assignee tcm-chip-muted">Assignee: —</span>
+              )}
               {d.e ? <span className="tcm-chip">Due {formatShortDate(d.e)}</span> : null}
               <span className="tcm-chip tcm-chip-gold">
                 {commentCount} comment{commentCount !== 1 ? 's' : ''}
@@ -168,7 +174,7 @@ export function TaskCommentModal({
 
         <footer className="tcm-foot">
           <p className="tcm-foot-note">
-            Updates save to Mongo automatically · Email &amp; WhatsApp notify dept heads and assignees when configured
+            Click <strong>Save</strong> in the top bar after your update so the team sees it on Reload · Email &amp; WhatsApp notify dept heads and assignees when configured
           </p>
           <div className="tcm-foot-actions">
             {onOpenProject ? (

@@ -1,13 +1,19 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { formatAssignees, parseAssignees } from './preconAssignees.js';
 
 /**
  * Multi-select assignee picker (chips + dropdown checklist).
+ * Menu is portaled + fixed so table overflow does not clip it.
  * @param {string} value — stored task.who ("Name1; Name2")
  */
 export function AssigneeMultiSelect({ value, options, onChange, disabled, compact }) {
   const [open, setOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0, width: 220 });
+  const [custom, setCustom] = useState('');
   const ref = useRef(null);
+  const menuRef = useRef(null);
+  const triggerRef = useRef(null);
   const selected = parseAssignees(value);
   const displayOptions = useMemo(() => {
     const set = new Set(options || []);
@@ -15,13 +21,44 @@ export function AssigneeMultiSelect({ value, options, onChange, disabled, compac
     return [...set].sort((a, b) => a.localeCompare(b));
   }, [options, selected]);
 
+  const updateMenuPos = () => {
+    const el = triggerRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const width = Math.max(r.width, compact ? 200 : 240);
+    let left = r.left;
+    const maxLeft = window.innerWidth - width - 8;
+    if (left > maxLeft) left = Math.max(8, maxLeft);
+    const below = r.bottom + 4;
+    const menuH = Math.min(280, window.innerHeight * 0.5);
+    const top = below + menuH > window.innerHeight - 8
+      ? Math.max(8, r.top - menuH - 4)
+      : below;
+    setMenuPos({ top, left, width });
+  };
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    updateMenuPos();
+  }, [open, compact]);
+
   useEffect(() => {
+    if (!open) return;
     const onDoc = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+      const t = e.target;
+      if (ref.current?.contains(t) || menuRef.current?.contains(t)) return;
+      setOpen(false);
     };
+    const onReposition = () => updateMenuPos();
     document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
-  }, []);
+    window.addEventListener('scroll', onReposition, true);
+    window.addEventListener('resize', onReposition);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      window.removeEventListener('scroll', onReposition, true);
+      window.removeEventListener('resize', onReposition);
+    };
+  }, [open]);
 
   const toggle = (name) => {
     const set = new Set(selected);
@@ -30,9 +67,76 @@ export function AssigneeMultiSelect({ value, options, onChange, disabled, compac
     onChange(formatAssignees([...set]));
   };
 
+  const addCustom = () => {
+    const name = String(custom || '').trim();
+    if (!name) return;
+    const set = new Set(selected);
+    set.add(name);
+    onChange(formatAssignees([...set]));
+    setCustom('');
+  };
+
+  const menu = open
+    ? createPortal(
+        <div
+          ref={menuRef}
+          className="ams-menu ams-menu-portal"
+          role="listbox"
+          style={{
+            position: 'fixed',
+            top: menuPos.top,
+            left: menuPos.left,
+            width: menuPos.width,
+            zIndex: 1200,
+          }}
+        >
+          <div className="ams-menu-hint">Select one or more people</div>
+          {displayOptions.length ? (
+            displayOptions.map((name) => {
+              const on = selected.includes(name);
+              return (
+                <label key={name} className={`ams-opt${on ? ' on' : ''}`}>
+                  <input type="checkbox" checked={on} onChange={() => toggle(name)} />
+                  <span>{name}</span>
+                </label>
+              );
+            })
+          ) : (
+            <div className="ams-empty">No names yet — type one below</div>
+          )}
+          <div className="ams-add">
+            <input
+              type="text"
+              className="ams-add-inp"
+              value={custom}
+              placeholder="Add name…"
+              autoComplete="off"
+              onChange={(e) => setCustom(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  addCustom();
+                }
+              }}
+            />
+            <button type="button" className="ams-add-btn" onClick={addCustom} disabled={!String(custom || '').trim()}>
+              Add
+            </button>
+          </div>
+          {selected.length ? (
+            <button type="button" className="ams-clear" onClick={() => onChange('')}>
+              Clear all
+            </button>
+          ) : null}
+        </div>,
+        document.body
+      )
+    : null;
+
   return (
     <div className={`ams${compact ? ' ams-compact' : ''}`} ref={ref}>
       <button
+        ref={triggerRef}
         type="button"
         className="ams-trigger"
         disabled={disabled}
@@ -58,29 +162,7 @@ export function AssigneeMultiSelect({ value, options, onChange, disabled, compac
           ▾
         </span>
       </button>
-      {open ? (
-        <div className="ams-menu" role="listbox">
-          <div className="ams-menu-hint">Select one or more people</div>
-          {displayOptions.length ? (
-            displayOptions.map((name) => {
-              const on = selected.includes(name);
-              return (
-                <label key={name} className={`ams-opt${on ? ' on' : ''}`}>
-                  <input type="checkbox" checked={on} onChange={() => toggle(name)} />
-                  <span>{name}</span>
-                </label>
-              );
-            })
-          ) : (
-            <div className="ams-empty">No assignees on your projects yet</div>
-          )}
-          {selected.length ? (
-            <button type="button" className="ams-clear" onClick={() => onChange('')}>
-              Clear all
-            </button>
-          ) : null}
-        </div>
-      ) : null}
+      {menu}
     </div>
   );
 }

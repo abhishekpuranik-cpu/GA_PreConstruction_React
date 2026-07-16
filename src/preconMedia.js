@@ -92,6 +92,17 @@ function formatWhatsAppPollError(wa) {
   return '';
 }
 
+export function formatUserNotifyError(combined, waErr) {
+  const text = String(combined || waErr || '').trim();
+  if (/domain is not verified/i.test(text)) {
+    return 'Email not sent — verify goldenabodes.com in Resend (add DNS records at HostingRaja).';
+  }
+  const emailPart = /Email:\s*([^·]+)/.exec(text);
+  if (emailPart) return `Email not sent: ${emailPart[1].trim()}`;
+  if (waErr && !/WhatsApp disabled/i.test(text)) return `Notifications failed: ${waErr}`;
+  return text || 'Notifications failed — check email setup on Render';
+}
+
 export function notifyResultFromPoll(poll, emailRes) {
   const recipients = emailRes?.recipients || poll?.result?.recipients || [];
   const res = poll?.result || {};
@@ -134,7 +145,7 @@ export function notifyResultFromPoll(poll, emailRes) {
       notifyRecipients: recipients,
       notifyPending: false,
     },
-    toastErr: `Notifications failed: ${err}`,
+    toastErr: `Notifications failed: ${formatUserNotifyError(err, waErr)}`,
   };
 }
 

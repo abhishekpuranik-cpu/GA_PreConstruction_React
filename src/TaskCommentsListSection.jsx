@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { sortCommentsNewestFirst } from './preconComments.js';
+import { collectTaskComments, sortCommentsNewestFirst } from './preconComments.js';
 import { formatShortDate } from './preconMyWork.js';
 
 function truncate(text, max = 120) {
@@ -21,7 +21,7 @@ function CommentInlineList({ comments }) {
           className={`clv-cmt-line${cm.flag ? ' clv-cmt-line-flag' : ''}`}
         >
           <span className="clv-cmt-meta">
-            {cm.ts || '—'} · <strong>{cm.author || 'Anon'}</strong>
+            {(cm.ts || (cm.createdAt ? formatShortDate(cm.createdAt) : '—'))} · <strong>{cm.author || 'Anon'}</strong>
             {cm.flag ? <span className="clv-cmt-flag">Issue</span> : null}
           </span>
           <span className="clv-cmt-text">{cm.text}</span>
@@ -63,7 +63,8 @@ export function TaskCommentsListSection({
       ph.tasks.forEach((t) => {
         if (!taskPassesFilters(t, dm, ph.name, filters)) return;
         filteredTasks += 1;
-        const cc = (t.comments || []).length;
+        const allComments = collectTaskComments(proj, ph, t);
+        const cc = allComments.length;
         if (cc > 0) {
           withComments += 1;
           totalComments += cc;
@@ -72,6 +73,7 @@ export function TaskCommentsListSection({
         rows.push({
           ph,
           task: t,
+          allComments,
           seqIdx: ph.tasks.findIndex((x) => x.id === t.id) + 1,
           commentCount: cc,
           endDate: (dm[t.id] || {}).e || '',
@@ -127,7 +129,7 @@ export function TaskCommentsListSection({
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ ph, task, seqIdx, commentCount, endDate, status }) => (
+              {rows.map(({ ph, task, allComments, seqIdx, commentCount, endDate, status }) => (
                 <tr key={task.id} className="clv-row">
                   <td className="clv-phase" title={ph.name}>
                     {truncate(ph.name, 28)}
@@ -140,7 +142,7 @@ export function TaskCommentsListSection({
                   <td className="clv-st">{statusLabel(status)}</td>
                   <td className="clv-who">{task.who || '—'}</td>
                   <td className="clv-comments">
-                    <CommentInlineList comments={task.comments} />
+                    <CommentInlineList comments={allComments} />
                   </td>
                   <td className="clv-act">
                     <button

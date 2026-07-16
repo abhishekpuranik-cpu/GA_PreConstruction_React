@@ -31,6 +31,7 @@ function ProgressRing({ pct, accent, size = 92 }) {
 
 const TABS = [
   { id: 'tasks', label: 'Tasks & schedule' },
+  { id: 'allocate', label: 'Bulk allocate' },
   { id: 'gantt', label: 'Gantt' },
   { id: 'regs', label: 'Regulatory' },
 ];

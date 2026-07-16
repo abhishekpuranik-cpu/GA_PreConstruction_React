@@ -69,6 +69,8 @@ export async function fetchLoginUser() {
           authenticated: true,
           name,
           email: String(data.user.email || '').trim(),
+          roleIds: Array.isArray(data.user.roleIds) ? data.user.roleIds : [],
+          permissions: Array.isArray(data.user.permissions) ? data.user.permissions : [],
           allowedProjects: Array.isArray(data.user.allowedProjects) ? data.user.allowedProjects : [],
           teamNames,
         };
@@ -82,6 +84,8 @@ export async function fetchLoginUser() {
     authenticated: false,
     name: fallbackLoginName(),
     email: '',
+    roleIds: [],
+    permissions: [],
     allowedProjects: [],
     teamNames: [],
   };

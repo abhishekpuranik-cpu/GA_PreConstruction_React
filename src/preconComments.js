@@ -1,6 +1,7 @@
 /** @returns {string|null} Error message or null if valid */
-export function validateCommentPayload({ text, nextAction, nextActionDate }) {
+export function validateCommentPayload({ text, nextAction, nextActionDate, markComplete = false }) {
   if (!String(text || '').trim()) return 'Enter a comment';
+  if (markComplete) return null;
   if (!String(nextAction || '').trim()) return 'Next action is required';
   if (!String(nextActionDate || '').trim()) return 'Next action date is required';
   return null;
@@ -19,6 +20,11 @@ export function commentSortKey(c) {
   const dmy = raw.match(/(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})/);
   if (dmy) {
     t = new Date(`${dmy[1]} ${dmy[2]} ${dmy[3]}`).getTime();
+    if (!Number.isNaN(t)) return t;
+  }
+  const slash = raw.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
+  if (slash) {
+    t = new Date(`${slash[1]}/${slash[2]}/${slash[3]}`).getTime();
     if (!Number.isNaN(t)) return t;
   }
   if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
@@ -193,7 +199,7 @@ export function collectTaskComments(proj, ph, task, opts = {}) {
 /** Oldest first; preserves stable order for equal/unknown timestamps. */
 export function sortCommentsChronologically(comments) {
   return normalizeTaskComments(comments)
-    .map((comment, index) => ({ comment, index }))
+    .map((comment, index) => ({ comment: ensureCommentCreatedAt(comment), index }))
     .sort((a, b) => {
       const ka = commentSortKey(a.comment);
       const kb = commentSortKey(b.comment);

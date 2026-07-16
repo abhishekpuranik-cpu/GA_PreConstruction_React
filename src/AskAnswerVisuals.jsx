@@ -44,7 +44,7 @@ function BarChart({ chart, horizontal = false }) {
               </text>
               <rect x={padL} y={y + 4} width={Math.max(2, w)} height={16} rx={3} fill={d.color} />
               <text x={padL + Math.max(2, w) + 6} y={y + 15} className="ask-chart-val">
-                {d.value}
+                {d.value >= 1000 ? Math.round(d.value).toLocaleString('en-IN') : d.value}
                 {chart.unit ? ` ${chart.unit}` : ''}
               </text>
             </g>
@@ -190,6 +190,26 @@ function MarkdownBlock({ text }) {
   );
 }
 
+function formatKpiValue(k, v) {
+  if (v == null) return '—';
+  if (typeof v === 'object') {
+    try {
+      return JSON.stringify(v);
+    } catch {
+      return String(v);
+    }
+  }
+  if (typeof v === 'number') {
+    const key = String(k || '').toLowerCase();
+    if (/pct|percent|rate|spi|cpi/.test(key)) return String(v);
+    if (/due|received|pending|outstanding|collected|demanded|billed|paid|accrued|topline|amount|cost|fee|gdv/.test(key) && Math.abs(v) >= 1000) {
+      return `₹${Math.round(v).toLocaleString('en-IN')}`;
+    }
+    return Math.abs(v) >= 1000 ? Math.round(v).toLocaleString('en-IN') : String(v);
+  }
+  return String(v);
+}
+
 /**
  * Structured Ask AI answer: headline, section narratives, charts, full markdown.
  */
@@ -202,15 +222,34 @@ export function AskAnswerVisuals({ answer }) {
       ? Object.entries(answer.highlights).slice(0, 8)
       : [];
 
+  const directFirst = [...sections].sort((a, b) => {
+    const as = /direct/i.test(a.title || '') ? 0 : 1;
+    const bs = /direct/i.test(b.title || '') ? 0 : 1;
+    return as - bs;
+  });
+
   return (
     <div className="ask-answer-visuals">
       {answer.headline ? <h3 className="ask-headline">{answer.headline}</h3> : null}
+
+      {directFirst.length
+        ? directFirst.map((s, i) => (
+            <section key={`${s.title || i}`} className={`ask-sec ask-sec-${s.kind || 'general'}`}>
+              <div className="ask-sec-kind">{s.kind || 'insight'}</div>
+              {s.title ? <h4>{s.title}</h4> : null}
+              {s.narrative ? <p className="ask-sec-narrative">{s.narrative}</p> : null}
+              {s.body ? <MarkdownBlock text={s.body} /> : null}
+            </section>
+          ))
+        : answer.markdown
+          ? <MarkdownBlock text={answer.markdown} />
+          : null}
 
       {highlights.length ? (
         <div className="ask-kpi-strip">
           {highlights.map(([k, v]) => (
             <div key={k} className="ask-kpi">
-              <div className="ask-kpi-v">{typeof v === 'object' ? JSON.stringify(v) : String(v)}</div>
+              <div className="ask-kpi-v">{formatKpiValue(k, v)}</div>
               <div className="ask-kpi-l">{k}</div>
             </div>
           ))}
@@ -224,19 +263,6 @@ export function AskAnswerVisuals({ answer }) {
           ))}
         </div>
       ) : null}
-
-      {sections.length
-        ? sections.map((s, i) => (
-            <section key={`${s.title || i}`} className={`ask-sec ask-sec-${s.kind || 'general'}`}>
-              <div className="ask-sec-kind">{s.kind || 'insight'}</div>
-              {s.title ? <h4>{s.title}</h4> : null}
-              {s.narrative ? <p className="ask-sec-narrative">{s.narrative}</p> : null}
-              {s.body ? <MarkdownBlock text={s.body} /> : null}
-            </section>
-          ))
-        : answer.markdown
-          ? <MarkdownBlock text={answer.markdown} />
-          : null}
 
       {sections.length && answer.markdown ? (
         <details className="ask-full-md">

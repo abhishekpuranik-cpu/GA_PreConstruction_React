@@ -157,6 +157,7 @@ export function mergeLifecycleIntoProject(proj) {
   stripConstructionPhases(proj);
   if (!Array.isArray(proj.phases)) proj.phases = [];
 
+  const removed = new Set((proj._removedTaskIds || []).map((x) => String(x)));
   const idMap = {};
   let added = 0;
   let phasesTouched = 0;
@@ -174,6 +175,9 @@ export function mergeLifecycleIntoProject(proj) {
     phasesTouched += 1;
 
     (templatePhase.tasks || []).forEach((tpl) => {
+      const canonicalId = `${proj.id}_${tpl.id}`;
+      if (removed.has(canonicalId)) return;
+
       const existing = findTaskInProject(proj, tpl.name);
       if (existing) {
         idMap[tpl.id] = existing.task.id;

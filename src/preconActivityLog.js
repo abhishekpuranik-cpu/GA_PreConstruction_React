@@ -169,6 +169,39 @@ export function recordActivityFromAction(state, action) {
       });
       break;
     }
+    case 'bulkAssignByRole':
+      logEntry = entry({
+        action: 'task.bulkAssign',
+        projectId: action.projId || c.projectId,
+        projectName: c.projectName,
+        summary: `Bulk assigned ${action.updatedCount || 0} task(s) for role "${action.role}" to ${action.who || '—'}`,
+        detail: {
+          groupBy: 'role',
+          role: action.role,
+          who: action.who,
+          onlyUnassigned: !!action.onlyUnassigned,
+          updatedCount: action.updatedCount || 0,
+        },
+      });
+      break;
+    case 'bulkAssignByDepartment': {
+      const dept = (state.departments || []).find((d) => d.id === action.deptId);
+      logEntry = entry({
+        action: 'task.bulkAssign',
+        projectId: action.projId || c.projectId,
+        projectName: c.projectName,
+        summary: `Bulk assigned ${action.updatedCount || 0} task(s) in ${dept?.name || action.deptId} to ${action.who || '—'}`,
+        detail: {
+          groupBy: action.useDeptHead ? 'deptHead' : 'department',
+          deptId: action.deptId,
+          deptName: dept?.name,
+          who: action.who,
+          onlyUnassigned: !!action.onlyUnassigned,
+          updatedCount: action.updatedCount || 0,
+        },
+      });
+      break;
+    }
     case 'setMS':
       logEntry = entry({
         action: 'task.date',
@@ -191,6 +224,17 @@ export function recordActivityFromAction(state, action) {
         ...c,
         summary: `Marked complete: "${c.taskName}"`,
         detail: { field: 'status', value: 'completed' },
+      });
+      break;
+    case 'bulkCompletePhase':
+      logEntry = entry({
+        action: 'task.bulkComplete',
+        projectId: action.projId || c.projectId,
+        projectName: c.projectName,
+        phaseId: action.phId || c.phaseId,
+        phaseName: action.phaseName || c.phaseName,
+        summary: `Completed ${action.updatedCount || 0} task(s) in ${action.phaseName || c.phaseName || 'phase'}`,
+        detail: { updatedCount: action.updatedCount || 0, taskIds: action.taskIds || [] },
       });
       break;
     case 'addComment':

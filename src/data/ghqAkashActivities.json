@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "projectId": "ghq",
   "planSanction": "2025-11-11",
   "tasks": [
@@ -149,7 +149,7 @@
     },
     {
       "id": "ghq_akash_013",
-      "name": "2. Barrication of Plot \u2014 I. Back side compond wall repairing work",
+      "name": "2. Barrication of Plot — I. Back side compond wall repairing work",
       "phase": "Site Preparation",
       "phaseTag": "Pre-construction",
       "dur": 15,
@@ -161,7 +161,7 @@
     },
     {
       "id": "ghq_akash_014",
-      "name": "2. Barrication of Plot \u2014 II. Left & Right side compond wall repairing work",
+      "name": "2. Barrication of Plot — II. Left & Right side compond wall repairing work",
       "phase": "Site Preparation",
       "phaseTag": "Pre-construction",
       "dur": 15,
@@ -173,7 +173,7 @@
     },
     {
       "id": "ghq_akash_015",
-      "name": "2. Barrication of Plot \u2014 III. All Compound wall in MS Fabrication 18 feet in height with 5 feet green net fixing",
+      "name": "2. Barrication of Plot — III. All Compound wall in MS Fabrication 18 feet in height with 5 feet green net fixing",
       "phase": "Site Preparation",
       "phaseTag": "Pre-construction",
       "dur": 15,
@@ -185,7 +185,7 @@
     },
     {
       "id": "ghq_akash_016",
-      "name": "2. Barrication of Plot \u2014 IV. Enviroment NOC for 23 feet compound barrication",
+      "name": "2. Barrication of Plot — IV. Enviroment NOC for 23 feet compound barrication",
       "phase": "Site Preparation",
       "phaseTag": "Pre-construction",
       "dur": 7,
@@ -221,7 +221,7 @@
     },
     {
       "id": "ghq_akash_020",
-      "name": "5. Enviromental clearance \u2014 I. Existing Tree Cutting",
+      "name": "5. Enviromental clearance — I. Existing Tree Cutting",
       "phase": "Site Preparation",
       "phaseTag": "Pre-construction",
       "dur": 30,
@@ -233,7 +233,7 @@
     },
     {
       "id": "ghq_akash_021",
-      "name": "5. Enviromental clearance \u2014 II. Existing Tree Plantation",
+      "name": "5. Enviromental clearance — II. Existing Tree Plantation",
       "phase": "Site Preparation",
       "phaseTag": "Pre-construction",
       "dur": 7,
@@ -245,7 +245,7 @@
     },
     {
       "id": "ghq_akash_022",
-      "name": "5. Enviromental clearance \u2014 III. New Tree Plantation which include drip irrigation stdtem,Daily 3 Month & 6 Month report to MIDC",
+      "name": "5. Enviromental clearance — III. New Tree Plantation which include drip irrigation stdtem,Daily 3 Month & 6 Month report to MIDC",
       "phase": "Site Preparation",
       "phaseTag": "Pre-construction",
       "dur": 7,
@@ -257,7 +257,7 @@
     },
     {
       "id": "ghq_akash_023",
-      "name": "5. Enviromental clearance \u2014 IV. MIDC Water Supply Connection",
+      "name": "5. Enviromental clearance — IV. MIDC Water Supply Connection",
       "phase": "Site Preparation",
       "phaseTag": "Pre-construction",
       "dur": 7,
@@ -281,8 +281,8 @@
     },
     {
       "id": "ghq_akash_026",
-      "name": "7. Demolition of existing structure \u2014 I. Terrace Floor",
-      "phase": "Site Preparation",
+      "name": "7. Demolition of existing structure — I. Terrace Floor",
+      "phase": "Demolition",
       "phaseTag": "Pre-construction",
       "dur": 60,
       "ms": "2026-03-04",
@@ -293,8 +293,8 @@
     },
     {
       "id": "ghq_akash_027",
-      "name": "7. Demolition of existing structure \u2014 II. 5th Floor",
-      "phase": "Site Preparation",
+      "name": "7. Demolition of existing structure — II. 5th Floor",
+      "phase": "Demolition",
       "phaseTag": "Pre-construction",
       "dur": 7,
       "ms": "2026-05-03",
@@ -305,8 +305,8 @@
     },
     {
       "id": "ghq_akash_028",
-      "name": "7. Demolition of existing structure \u2014 III. 4th Floor",
-      "phase": "Site Preparation",
+      "name": "7. Demolition of existing structure — III. 4th Floor",
+      "phase": "Demolition",
       "phaseTag": "Pre-construction",
       "dur": 7,
       "ms": "2026-05-10",
@@ -317,8 +317,8 @@
     },
     {
       "id": "ghq_akash_029",
-      "name": "7. Demolition of existing structure \u2014 IV. 3rd Floor",
-      "phase": "Site Preparation",
+      "name": "7. Demolition of existing structure — IV. 3rd Floor",
+      "phase": "Demolition",
       "phaseTag": "Pre-construction",
       "dur": 7,
       "ms": "2026-05-17",
@@ -329,8 +329,8 @@
     },
     {
       "id": "ghq_akash_030",
-      "name": "7. Demolition of existing structure \u2014 V . 2nd Floor",
-      "phase": "Site Preparation",
+      "name": "7. Demolition of existing structure — V . 2nd Floor",
+      "phase": "Demolition",
       "phaseTag": "Pre-construction",
       "dur": 7,
       "ms": "2026-05-24",
@@ -341,8 +341,8 @@
     },
     {
       "id": "ghq_akash_031",
-      "name": "7. Demolition of existing structure \u2014 VI. 1st Floor",
-      "phase": "Site Preparation",
+      "name": "7. Demolition of existing structure — VI. 1st Floor",
+      "phase": "Demolition",
       "phaseTag": "Pre-construction",
       "dur": 7,
       "ms": "2026-05-31",
@@ -353,8 +353,8 @@
     },
     {
       "id": "ghq_akash_032",
-      "name": "7. Demolition of existing structure \u2014 VII. Ground Floor",
-      "phase": "Site Preparation",
+      "name": "7. Demolition of existing structure — VII. Ground Floor",
+      "phase": "Demolition",
       "phaseTag": "Pre-construction",
       "dur": 7,
       "ms": "2026-06-07",
@@ -365,8 +365,8 @@
     },
     {
       "id": "ghq_akash_033",
-      "name": "7. Demolition of existing structure \u2014 VII. Basement Floor",
-      "phase": "Site Preparation",
+      "name": "7. Demolition of existing structure — VII. Basement Floor",
+      "phase": "Demolition",
       "phaseTag": "Pre-construction",
       "dur": 7,
       "ms": "2026-06-14",
@@ -378,7 +378,7 @@
     {
       "id": "ghq_akash_034",
       "name": "8. Removal of existing obstacle,vegetation,Hazardous material & debris need to remove to insure that site is safe & accessible",
-      "phase": "Site Preparation",
+      "phase": "Demolition",
       "phaseTag": "Pre-construction",
       "dur": 7,
       "ms": "2026-06-21",
@@ -390,7 +390,7 @@
     {
       "id": "ghq_akash_035",
       "name": "9. Electric DP/Transformer Shifting",
-      "phase": "Site Preparation",
+      "phase": "Construction Pre-requisite",
       "phaseTag": "Pre-construction",
       "dur": 7,
       "ms": "2026-06-28",
@@ -401,8 +401,8 @@
     },
     {
       "id": "ghq_akash_037",
-      "name": "10. SURVILLENCE WORK \u2014 I. CCTV Installation",
-      "phase": "Site Preparation",
+      "name": "10. SURVILLENCE WORK — I. CCTV Installation",
+      "phase": "Construction Pre-requisite",
       "phaseTag": "Pre-construction",
       "dur": 2,
       "ms": "2026-07-05",
@@ -413,8 +413,8 @@
     },
     {
       "id": "ghq_akash_038",
-      "name": "10. SURVILLENCE WORK \u2014 II. WI-FI provision for CCTV Cameras",
-      "phase": "Site Preparation",
+      "name": "10. SURVILLENCE WORK — II. WI-FI provision for CCTV Cameras",
+      "phase": "Construction Pre-requisite",
       "phaseTag": "Pre-construction",
       "dur": 2,
       "ms": "2026-07-07",
@@ -426,7 +426,7 @@
     {
       "id": "ghq_akash_039",
       "name": "11. Main Gate MS repairing work",
-      "phase": "Site Preparation",
+      "phase": "Construction Pre-requisite",
       "phaseTag": "Pre-construction",
       "dur": 3,
       "ms": "2026-07-09",
@@ -438,7 +438,7 @@
     {
       "id": "ghq_akash_040",
       "name": "12. Main Gate IN/OUT Location",
-      "phase": "Site Preparation",
+      "phase": "Construction Pre-requisite",
       "phaseTag": "Pre-construction",
       "dur": 3,
       "ms": "2026-07-12",
@@ -1170,7 +1170,7 @@
     {
       "id": "ghq_akash_101",
       "name": "4. Access making work",
-      "phase": "Construction Execution \u2014 Excavation safety",
+      "phase": "Construction Execution — Excavation safety",
       "phaseTag": "During construction",
       "dur": 7,
       "ms": "2026-07-05",
@@ -1194,7 +1194,7 @@
     {
       "id": "ghq_akash_103",
       "name": "6. Safety induction of workers",
-      "phase": "Construction Execution \u2014 Excavation safety",
+      "phase": "Construction Execution — Excavation safety",
       "phaseTag": "During construction",
       "dur": 1,
       "ms": "2026-07-05",
@@ -1206,7 +1206,7 @@
     {
       "id": "ghq_akash_104",
       "name": "7. Providing PPE Kit to workers like helmet,jacket,safety shoes",
-      "phase": "Construction Execution \u2014 Excavation safety",
+      "phase": "Construction Execution — Excavation safety",
       "phaseTag": "During construction",
       "dur": 1,
       "ms": "2026-07-05",
@@ -1218,7 +1218,7 @@
     {
       "id": "ghq_akash_105",
       "name": "8. Work permit should be issue before starting work",
-      "phase": "Construction Execution \u2014 Excavation safety",
+      "phase": "Construction Execution — Excavation safety",
       "phaseTag": "During construction",
       "dur": 1,
       "ms": "2026-07-05",
@@ -1242,7 +1242,7 @@
     {
       "id": "ghq_akash_107",
       "name": "10. Ramp making for deep excavation work",
-      "phase": "Construction Execution \u2014 Excavation safety",
+      "phase": "Construction Execution — Excavation safety",
       "phaseTag": "During construction",
       "dur": 7,
       "ms": "2026-07-05",
@@ -1254,7 +1254,7 @@
     {
       "id": "ghq_akash_108",
       "name": "11. Use of catch net for deep excavation work",
-      "phase": "Construction Execution \u2014 Excavation safety",
+      "phase": "Construction Execution — Excavation safety",
       "phaseTag": "During construction",
       "dur": 7,
       "ms": "2026-07-05",
@@ -1266,7 +1266,7 @@
     {
       "id": "ghq_akash_109",
       "name": "12. Use of rubber mats while rock blasting",
-      "phase": "Construction Execution \u2014 Excavation safety",
+      "phase": "Construction Execution — Excavation safety",
       "phaseTag": "During construction",
       "dur": 7,
       "ms": "2026-07-12",
@@ -1278,7 +1278,7 @@
     {
       "id": "ghq_akash_110",
       "name": "13. Flag man instruction should be followed by hiwa driver while taking excavated material out from  site",
-      "phase": "Construction Execution \u2014 Excavation safety",
+      "phase": "Construction Execution — Excavation safety",
       "phaseTag": "During construction",
       "dur": 7,
       "ms": "2026-07-19",
@@ -1290,7 +1290,7 @@
     {
       "id": "ghq_akash_111",
       "name": "1. External Plaster Work",
-      "phase": "Construction Execution \u2014 External",
+      "phase": "Construction Execution — External",
       "phaseTag": "During construction",
       "dur": 7,
       "ms": "2027-06-27",
@@ -1302,7 +1302,7 @@
     {
       "id": "ghq_akash_112",
       "name": "2. External Plumbing Work",
-      "phase": "Construction Execution \u2014 External",
+      "phase": "Construction Execution — External",
       "phaseTag": "During construction",
       "dur": 7,
       "ms": "2027-07-04",
@@ -1314,7 +1314,7 @@
     {
       "id": "ghq_akash_113",
       "name": "Rain water harvesting system",
-      "phase": "Construction Execution \u2014 External",
+      "phase": "Construction Execution — External",
       "phaseTag": "During construction",
       "dur": 7,
       "ms": "2027-07-11",
@@ -1326,7 +1326,7 @@
     {
       "id": "ghq_akash_114",
       "name": "3. STP Completion Work inclding RCC & MEP",
-      "phase": "Construction Execution \u2014 External",
+      "phase": "Construction Execution — External",
       "phaseTag": "During construction",
       "dur": 7,
       "ms": "2027-07-18",
@@ -1338,7 +1338,7 @@
     {
       "id": "ghq_akash_115",
       "name": "4. DG Set-up Work",
-      "phase": "Construction Execution \u2014 External",
+      "phase": "Construction Execution — External",
       "phaseTag": "During construction",
       "dur": 7,
       "ms": "2027-07-25",
@@ -1350,7 +1350,7 @@
     {
       "id": "ghq_akash_116",
       "name": "5. Amenities Work",
-      "phase": "Construction Execution \u2014 External",
+      "phase": "Construction Execution — External",
       "phaseTag": "During construction",
       "dur": 7,
       "ms": "2027-08-01",
@@ -1362,7 +1362,7 @@
     {
       "id": "ghq_akash_117",
       "name": "6. Street Lighting Work",
-      "phase": "Construction Execution \u2014 External",
+      "phase": "Construction Execution — External",
       "phaseTag": "During construction",
       "dur": 7,
       "ms": "2027-08-08",
@@ -1374,7 +1374,7 @@
     {
       "id": "ghq_akash_118",
       "name": "7. Security Cabin Work",
-      "phase": "Construction Execution \u2014 External",
+      "phase": "Construction Execution — External",
       "phaseTag": "During construction",
       "dur": 7,
       "ms": "2027-08-15",
@@ -1386,7 +1386,7 @@
     {
       "id": "ghq_akash_119",
       "name": "8. Provision Of Lawns (Open Space),Trees",
-      "phase": "Construction Execution \u2014 External",
+      "phase": "Construction Execution — External",
       "phaseTag": "During construction",
       "dur": 7,
       "ms": "2027-08-22",
@@ -1398,7 +1398,7 @@
     {
       "id": "ghq_akash_120",
       "name": "9. Parking Area Trimix Concreting Work",
-      "phase": "Construction Execution \u2014 External",
+      "phase": "Construction Execution — External",
       "phaseTag": "During construction",
       "dur": 7,
       "ms": "2027-08-29",
@@ -1410,7 +1410,7 @@
     {
       "id": "ghq_akash_121",
       "name": "10. External Good Making Work of building",
-      "phase": "Construction Execution \u2014 External",
+      "phase": "Construction Execution — External",
       "phaseTag": "During construction",
       "dur": 7,
       "ms": "2027-09-05",
@@ -1422,7 +1422,7 @@
     {
       "id": "ghq_akash_122",
       "name": "11. Texture Provision to all External Walls",
-      "phase": "Construction Execution \u2014 External",
+      "phase": "Construction Execution — External",
       "phaseTag": "During construction",
       "dur": 7,
       "ms": "2027-09-12",
@@ -1434,7 +1434,7 @@
     {
       "id": "ghq_akash_123",
       "name": "12. Primer Application for External Walls",
-      "phase": "Construction Execution \u2014 External",
+      "phase": "Construction Execution — External",
       "phaseTag": "During construction",
       "dur": 7,
       "ms": "2027-09-19",
@@ -1446,7 +1446,7 @@
     {
       "id": "ghq_akash_124",
       "name": "13. Painting Application for External Walls as per specification",
-      "phase": "Construction Execution \u2014 External",
+      "phase": "Construction Execution — External",
       "phaseTag": "During construction",
       "dur": 7,
       "ms": "2027-09-26",
@@ -1457,8 +1457,8 @@
     },
     {
       "id": "ghq_akash_125",
-      "name": "14. Fa\u00e7ade work including Glass Fixing,ACP Panels etc",
-      "phase": "Construction Execution \u2014 External",
+      "name": "14. Façade work including Glass Fixing,ACP Panels etc",
+      "phase": "Construction Execution — External",
       "phaseTag": "During construction",
       "dur": 7,
       "ms": "2027-10-03",
@@ -1470,7 +1470,7 @@
     {
       "id": "ghq_akash_126",
       "name": "15. IBMS Provision like CCTV surviullence,Intercom System",
-      "phase": "Construction Execution \u2014 External",
+      "phase": "Construction Execution — External",
       "phaseTag": "During construction",
       "dur": 7,
       "ms": "2027-10-10",

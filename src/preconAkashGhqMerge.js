@@ -7,7 +7,7 @@ import akashData from './data/ghqAkashActivities.json';
 import { mergeLifecycleIntoProject } from './preconLifecycle.js';
 import { applyGhqPreWorkToPhases } from './preconGhqPreWorkMigrate.js';
 
-export const AKASH_GHQ_MERGE_VERSION = 2;
+export const AKASH_GHQ_MERGE_VERSION = 3;
 
 const PCOL = ['#1B5E9E', '#6B3FA0', '#B45309', '#1A6A3C', '#B32E1E', '#2A6E7A', '#7A3A2A', '#8A5A2A'];
 
@@ -92,7 +92,7 @@ function ensurePhase(proj, phaseName, colIndex) {
       id: `ph_akash_${slug}_${proj.id}`,
       name: phaseName,
       col: PCOL[colIndex % PCOL.length],
-      open: /site preparation|construction pre-requisite/i.test(phaseName),
+      open: /site preparation|demolition|construction pre-requisite/i.test(phaseName),
       tasks: [],
     };
     proj.phases.push(ph);
@@ -144,9 +144,40 @@ function patchAkashOntoExisting(existing, row) {
 
 function phaseColIndex(phaseName) {
   if (/site preparation/i.test(phaseName)) return 0;
-  if (/pre-requisite/i.test(phaseName)) return 1;
-  if (/external/i.test(phaseName)) return 2;
-  return 3;
+  if (/demolition/i.test(phaseName)) return 1;
+  if (/pre-requisite/i.test(phaseName)) return 2;
+  if (/external/i.test(phaseName)) return 3;
+  return 4;
+}
+
+/** Move catalog tasks that landed in the wrong phase (e.g. Sheet1 v2 → v3). */
+function reassignAkashTaskPhases(proj) {
+  const catalogById = new Map((akashData.tasks || []).map((row) => [row.id, row]));
+  let moved = 0;
+
+  (proj.phases || []).forEach((fromPh) => {
+    const keep = [];
+    (fromPh.tasks || []).forEach((task) => {
+      const row = catalogById.get(task.id);
+      if (!row) {
+        keep.push(task);
+        return;
+      }
+      const targetName = row.phase || 'Site Preparation';
+      if (norm(fromPh.name) === norm(targetName)) {
+        keep.push(task);
+        return;
+      }
+      const targetPh = ensurePhase(proj, targetName, phaseColIndex(targetName));
+      if (!(targetPh.tasks || []).some((t) => t.id === task.id)) {
+        targetPh.tasks.push(task);
+        moved += 1;
+      }
+    });
+    fromPh.tasks = keep;
+  });
+
+  return moved;
 }
 
 /**
@@ -178,19 +209,24 @@ export function mergeAkashActivitiesIntoState(state) {
     repaired = true;
   }
   if (prevVersion >= AKASH_GHQ_MERGE_VERSION && !repaired) {
-    return { state: s, added: 0, removed: 0, skipped: 0, repaired: false };
+    return { state: s, added: 0, removed: 0, skipped: 0, moved: 0, repaired: false };
   }
 
   const proj = s.projects.find((p) => p.id === akashData.projectId || p.id === 'ghq');
   if (!proj) {
     s.akashGhqActivitiesVersion = AKASH_GHQ_MERGE_VERSION;
-    return { state: s, added: 0, removed: 0, skipped: 0, repaired };
+    return { state: s, added: 0, removed: 0, skipped: 0, moved: 0, repaired };
   }
 
   const incoming = akashData.tasks || [];
   let removed = 0;
   let added = 0;
   let skipped = 0;
+  let moved = 0;
+
+  if (prevVersion > 0 && prevVersion < AKASH_GHQ_MERGE_VERSION) {
+    moved = reassignAkashTaskPhases(proj);
+  }
 
   (proj.phases || []).forEach((ph) => {
     ph.tasks = (ph.tasks || []).filter((t) => {
@@ -202,7 +238,10 @@ export function mergeAkashActivitiesIntoState(state) {
     });
   });
 
+  const tombstoned = new Set((proj._removedTaskIds || []).map((x) => String(x)));
   incoming.forEach((row) => {
+    if (tombstoned.has(String(row.id))) return;
+
     const phaseName = row.phase || 'Site Preparation';
     const ph = ensurePhase(proj, phaseName, phaseColIndex(phaseName));
 
@@ -216,10 +255,19 @@ export function mergeAkashActivitiesIntoState(state) {
       return;
     }
 
-    const existingElsewhere = (proj.phases || []).some((p) =>
+    const existingElsewhere = (proj.phases || []).find((p) =>
       (p.tasks || []).some((t) => t.id === row.id || strictDuplicate(t.name, row.name))
     );
     if (existingElsewhere) {
+      const hit = existingElsewhere.tasks.find(
+        (t) => t.id === row.id || strictDuplicate(t.name, row.name)
+      );
+      if (hit && norm(existingElsewhere.name) !== norm(phaseName)) {
+        existingElsewhere.tasks = existingElsewhere.tasks.filter((t) => t.id !== hit.id);
+        ph.tasks.push(hit);
+        patchAkashOntoExisting(hit, row);
+        moved += 1;
+      }
       skipped += 1;
       return;
     }
@@ -229,5 +277,5 @@ export function mergeAkashActivitiesIntoState(state) {
   });
 
   s.akashGhqActivitiesVersion = AKASH_GHQ_MERGE_VERSION;
-  return { state: s, added, removed, skipped, repaired };
+  return { state: s, added, removed, skipped, moved, repaired };
 }

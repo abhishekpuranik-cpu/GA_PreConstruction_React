@@ -96,7 +96,11 @@ export function NotifyRecipientPicker({
       )}
       {!emailEnabled && !whatsappEnabled ? (
         <p className="nrp-warn" style={{ marginTop: 8 }}>
-          Configure SMTP and/or Twilio WhatsApp on the server for automatic notifications.
+          Configure email on the server (Resend or GAS relay) for automatic notifications.
+        </p>
+      ) : !emailEnabled && whatsappEnabled ? (
+        <p className="nrp-warn" style={{ marginTop: 8 }}>
+          Email not configured — only WhatsApp will send. Set EMAIL_PROVIDER on Render for reliable email alerts.
         </p>
       ) : null}
     </div>
