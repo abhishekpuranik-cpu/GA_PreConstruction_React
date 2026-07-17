@@ -24,6 +24,37 @@ export function applyTaskTombstonesToProject(proj) {
   return proj;
 }
 
+function whoStampMs(task) {
+  const t = Date.parse(task?.whoUpdatedAt || '');
+  return Number.isFinite(t) ? t : 0;
+}
+
+/** Prefer newer whoUpdatedAt; otherwise keep a non-empty assignee over accidental blanks. */
+function pickMergedWho(existing, incoming) {
+  const exT = whoStampMs(existing);
+  const inT = whoStampMs(incoming);
+  if (exT || inT) {
+    if (inT >= exT) {
+      return {
+        who: incoming.who != null ? incoming.who : existing.who || '',
+        whoUpdatedAt: incoming.whoUpdatedAt || existing.whoUpdatedAt,
+      };
+    }
+    return {
+      who: existing.who != null ? existing.who : incoming.who || '',
+      whoUpdatedAt: existing.whoUpdatedAt || incoming.whoUpdatedAt,
+    };
+  }
+  const inWho = String(incoming?.who || '').trim();
+  const exWho = String(existing?.who || '').trim();
+  if (inWho) return { who: incoming.who, whoUpdatedAt: incoming.whoUpdatedAt };
+  if (exWho) return { who: existing.who, whoUpdatedAt: existing.whoUpdatedAt };
+  return {
+    who: Object.prototype.hasOwnProperty.call(incoming || {}, 'who') ? incoming.who : existing?.who || '',
+    whoUpdatedAt: incoming?.whoUpdatedAt || existing?.whoUpdatedAt,
+  };
+}
+
 function mergeTaskRow(existing, incoming) {
   if (!existing) return incoming;
   if (!incoming) return existing;
@@ -31,9 +62,12 @@ function mergeTaskRow(existing, incoming) {
   const inComments = Array.isArray(incoming.comments) ? incoming.comments.length : 0;
   const exAtt = Array.isArray(existing.attachments) ? existing.attachments.length : 0;
   const inAtt = Array.isArray(incoming.attachments) ? incoming.attachments.length : 0;
+  const whoPick = pickMergedWho(existing, incoming);
   return {
     ...existing,
     ...incoming,
+    who: whoPick.who,
+    whoUpdatedAt: whoPick.whoUpdatedAt,
     comments: inComments >= exComments ? incoming.comments : existing.comments,
     attachments: inAtt >= exAtt ? incoming.attachments : existing.attachments,
     msManual: incoming.msManual ?? existing.msManual,

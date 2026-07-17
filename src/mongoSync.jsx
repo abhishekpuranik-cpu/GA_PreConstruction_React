@@ -114,7 +114,12 @@ export function MongoSyncAdapter({
 
   useEffect(() => {
     if (!syncReady || !canUseMongoState()) return undefined;
-    scheduleSaveRef.current = createMongoDebouncedSaver(APP_ID, versionRef, 2400);
+    scheduleSaveRef.current = createMongoDebouncedSaver(APP_ID, versionRef, 2400, {
+      mergeOnConflict: (serverData, localData) =>
+        mergePreconstructionClientState(serverData, localData, {
+          allowProjectRemoval: canDeleteRef.current,
+        }),
+    });
     return undefined;
   }, [syncReady]);
 

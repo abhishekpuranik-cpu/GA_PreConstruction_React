@@ -1933,17 +1933,35 @@ function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWo
 
 // ── REDUCER ──────────────────────────────────────────────
 const STRUCTURAL_ACTIONS=new Set(["addTask","delTask","addPhase","delPhase","addProject","delProject","reorderTask","reorderPhase"]);
-/** Persist to Mongo soon after comments / structural changes; task field edits use top-bar Save or debounced sync. */
+/** Persist to Mongo soon after comments, status, assignees, and structural changes. */
 const MONGO_FLUSH_ACTIONS=new Set([
   ...STRUCTURAL_ACTIONS,
   "addComment","updComment","markDone","setTaskStatus",
+  "updTask","bulkAssignByRole","bulkAssignByDepartment","setMS","setDepartmentHead","setKO","updProject",
 ]);
 
 function reducer(state,action){
   const S=JSON.parse(JSON.stringify(state));
   const fp=(pid)=>S.projects.find(p=>p.id===pid);
   const fph=(pid,phid)=>fp(pid)?.phases.find(ph=>ph.id===phid);
-  const ft=(pid,phid,tid)=>fph(pid,phid)?.tasks.find(t=>t.id===tid);
+  /** Prefer phase hint, then search whole project so assignee/status edits never silently no-op. */
+  const ft=(pid,phid,tid)=>{
+    const want=String(tid||"");
+    if(!want)return null;
+    const hinted=fph(pid,phid)?.tasks?.find(t=>String(t.id)===want);
+    if(hinted)return hinted;
+    const p=fp(pid);
+    if(!p)return null;
+    for(const ph of p.phases||[]){
+      const hit=(ph.tasks||[]).find(t=>String(t.id)===want);
+      if(hit)return hit;
+    }
+    return null;
+  };
+  const stampWho=(t,who)=>{
+    t.who=who;
+    t.whoUpdatedAt=new Date().toISOString();
+  };
   let activityAction=action;
   switch(action.type){
     case"setKO":{
@@ -1956,6 +1974,7 @@ function reducer(state,action){
       if(!t)break;
       if(action.f==="roles")t.roles=parseRolesInput(action.v);
       else if(action.f==="dur")t.dur=parseInt(action.v,10)||1;
+      else if(action.f==="who")stampWho(t,action.v);
       else t[action.f]=action.v;
       break;
     }
@@ -1971,7 +1990,7 @@ function reducer(state,action){
           if(!taskHasRole(t,role))return;
           if(action.onlyUnassigned&&String(t.who||"").trim())return;
           if(!action.overwrite&&t.who===who)return;
-          t.who=who;
+          stampWho(t,who);
           updated+=1;
         });
       });
@@ -1989,7 +2008,7 @@ function reducer(state,action){
         (ph.tasks||[]).forEach((t)=>{
           if(action.onlyUnassigned&&String(t.who||"").trim())return;
           if(!action.overwrite&&t.who===who)return;
-          t.who=who;
+          stampWho(t,who);
           updated+=1;
         });
       });
