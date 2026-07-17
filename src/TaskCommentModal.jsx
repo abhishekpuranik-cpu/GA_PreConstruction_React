@@ -21,6 +21,7 @@ export function TaskCommentModal({
   authorName,
   authorEmail,
   departments,
+  assigneeOptions,
   onOpenProject,
 }) {
   const [composeMode, setComposeMode] = useState('new');
@@ -161,6 +162,7 @@ export function TaskCommentModal({
                 authorName={authorName}
                 authorEmail={authorEmail}
                 departments={departments}
+                assigneeOptions={assigneeOptions}
                 allowEditLatest={composeMode === 'edit'}
                 blankForm={composeMode === 'new'}
                 hideHistory

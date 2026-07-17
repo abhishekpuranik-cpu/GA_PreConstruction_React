@@ -23,6 +23,7 @@ export function TaskCommentPanel({
   authorName,
   authorEmail,
   departments,
+  assigneeOptions = [],
   allowEditLatest = true,
   hideHistory = false,
   blankForm = false,
@@ -61,6 +62,7 @@ export function TaskCommentPanel({
           projectId={proj.id}
           taskId={task.id}
           taskWho={task.who || ''}
+          assigneeOptions={assigneeOptions}
           departments={departments}
           authorName={authorName}
           authorEmail={authorEmail}
@@ -93,6 +95,16 @@ export function TaskCommentPanel({
             }
           }}
           onSaved={(comment) => {
+            if (comment.taskWho !== task.who) {
+              dispatch({
+                type: 'updTask',
+                projId: proj.id,
+                phId: ph.id,
+                tId: task.id,
+                f: 'who',
+                v: comment.taskWho,
+              });
+            }
             if (editable && !blankForm) {
               dispatch({
                 type: 'updComment',

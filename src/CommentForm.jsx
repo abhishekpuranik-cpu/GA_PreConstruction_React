@@ -6,6 +6,7 @@ import { uploadAttachments } from './preconMedia.js';
 import { loadExtraRecipients, mergeRecipients, saveExtraRecipients } from './preconAutoNotify.js';
 import { loadNotifyContext, notifyPreconUpdate, hasNotifyTargets, runPreconNotification } from './preconNotify.js';
 import { joinTranscript, useSpeechDictation } from './useSpeechDictation.js';
+import { AssigneeMultiSelect } from './AssigneeMultiSelect.jsx';
 
 /**
  * Comment + attachments; saves text immediately, uploads files and sends notify in background.
@@ -14,6 +15,7 @@ export function CommentForm({
   projectId,
   taskId,
   taskWho = '',
+  assigneeOptions = [],
   departments = [],
   authorName,
   authorEmail,
@@ -34,6 +36,7 @@ export function CommentForm({
   /** Called after comment save when the user checked mark-complete. */
   onMarkComplete,
 }) {
+  const [assignee, setAssignee] = useState(taskWho);
   const [text, setText] = useState(initial.text || '');
   const [nextAction, setNextAction] = useState(initial.nextAction || '');
   const [nextActionDate, setNextActionDate] = useState(initial.nextActionDate || '');
@@ -46,6 +49,10 @@ export function CommentForm({
   const [busy, setBusy] = useState(false);
   const [markComplete, setMarkComplete] = useState(false);
   const isBusy = busy || externalBusy;
+
+  useEffect(() => {
+    setAssignee(taskWho || '');
+  }, [taskWho]);
 
   const onSpeechFinal = useCallback((fieldId, chunk) => {
     if (fieldId === 'comment') {
@@ -70,7 +77,7 @@ export function CommentForm({
   }, [speech.error, toast, speech.clearError]);
   useEffect(() => {
     let alive = true;
-    loadNotifyContext(projectId, phaseName, taskWho)
+    loadNotifyContext(projectId, phaseName, assignee)
       .then((data) => {
         if (!alive) return;
         setEmailEnabled(!!data.emailEnabled);
@@ -84,7 +91,7 @@ export function CommentForm({
     return () => {
       alive = false;
     };
-  }, [projectId, phaseName, taskWho]);
+  }, [projectId, phaseName, assignee]);
   useEffect(() => {
     setExtraRecipients(loadExtraRecipients(projectId));
   }, [projectId]);
@@ -135,7 +142,7 @@ export function CommentForm({
           kind: 'comment',
           projectId,
           phaseName,
-          taskWho,
+          taskWho: assignee,
           projectName,
           taskName,
           author: authorName,
@@ -246,6 +253,7 @@ export function CommentForm({
         notifyPending: shouldNotifyLater,
         emailSent: false,
         emailError: '',
+        taskWho: assignee,
       };
       const commentIndex = await Promise.resolve(onSaved(comment));
       if (shouldMarkComplete) {
@@ -292,20 +300,21 @@ export function CommentForm({
         String(nextAction || '').trim() &&
         String(nextActionDate || '').trim()
       );
-  const assigneeLabel = String(taskWho || '').trim();
   return (
     <div className={`cform cform-rich${compact ? ' cform-compact' : ''}`}>
-      {(projectName || phaseName || assigneeLabel) ? (
+      {(projectName || phaseName) ? (
         <div className="cform-context" aria-label="Task context">
           {projectName ? <div className="cform-context-proj">{projectName}</div> : null}
           {phaseName ? <div className="cform-context-phase">{phaseName}</div> : null}
-          {assigneeLabel ? (
-            <div className="cform-context-assignee">
-              Assignee: <strong>{assigneeLabel}</strong>
-            </div>
-          ) : (
-            <div className="cform-context-assignee cform-context-assignee-empty">Assignee: —</div>
-          )}
+          <div className="cform-context-assignee cform-assignee-picker">
+            <span>Assignee</span>
+            <AssigneeMultiSelect
+              value={assignee}
+              options={assigneeOptions}
+              disabled={isBusy}
+              onChange={setAssignee}
+            />
+          </div>
         </div>
       ) : null}
       <p className="cform-meta">

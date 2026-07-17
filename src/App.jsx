@@ -823,6 +823,9 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .cform-context-phase{font-size:15px;font-weight:600;color:#55504A;margin-top:5px;line-height:1.3}
 .cform-context-assignee{font-size:13px;font-weight:600;color:#1B5E9E;margin-top:8px;line-height:1.35}
 .cform-context-assignee-empty{color:#96918A;font-weight:500}
+.cform-assignee-picker{display:flex;flex-direction:column;gap:5px}
+.cform-assignee-picker .ams{display:block;width:100%}
+.cform-assignee-picker .ams-trigger{min-height:40px;font-size:12px}
 .cform-complete{display:flex;align-items:flex-start;gap:10px;margin:4px 0 2px;padding:10px 12px;background:#EAF5EE;border:1px solid #C5E0CF;border-radius:8px;cursor:pointer;font-size:12px;color:#1A304A;line-height:1.35}
 .cform-complete input{margin-top:2px;width:16px;height:16px;accent-color:#1A6A3C;flex-shrink:0}
 .cform-complete strong{display:block;font-size:13px}
@@ -1716,6 +1719,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
         authorName={authorName}
         authorEmail={loginUser?.email}
         departments={departments}
+        assigneeOptions={assigneeRoster}
       />
     </div>
   );
