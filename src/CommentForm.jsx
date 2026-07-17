@@ -10,12 +10,14 @@ import { AssigneeMultiSelect } from './AssigneeMultiSelect.jsx';
 
 /**
  * Comment + attachments; saves text immediately, uploads files and sends notify in background.
+ * Assignee uses the same multi-select as the project Tasks page and saves live via onAssigneeChange.
  */
 export function CommentForm({
   projectId,
   taskId,
   taskWho = '',
   assigneeOptions = [],
+  onAssigneeChange,
   departments = [],
   authorName,
   authorEmail,
@@ -36,7 +38,6 @@ export function CommentForm({
   /** Called after comment save when the user checked mark-complete. */
   onMarkComplete,
 }) {
-  const [assignee, setAssignee] = useState(taskWho);
   const [text, setText] = useState(initial.text || '');
   const [nextAction, setNextAction] = useState(initial.nextAction || '');
   const [nextActionDate, setNextActionDate] = useState(initial.nextActionDate || '');
@@ -49,10 +50,7 @@ export function CommentForm({
   const [busy, setBusy] = useState(false);
   const [markComplete, setMarkComplete] = useState(false);
   const isBusy = busy || externalBusy;
-
-  useEffect(() => {
-    setAssignee(taskWho || '');
-  }, [taskWho]);
+  const assignee = taskWho || '';
 
   const onSpeechFinal = useCallback((fieldId, chunk) => {
     if (fieldId === 'comment') {
@@ -77,7 +75,7 @@ export function CommentForm({
   }, [speech.error, toast, speech.clearError]);
   useEffect(() => {
     let alive = true;
-    loadNotifyContext(projectId, phaseName, assignee)
+    loadNotifyContext(projectId, phaseName, taskWho)
       .then((data) => {
         if (!alive) return;
         setEmailEnabled(!!data.emailEnabled);
@@ -91,7 +89,7 @@ export function CommentForm({
     return () => {
       alive = false;
     };
-  }, [projectId, phaseName, assignee]);
+  }, [projectId, phaseName, taskWho]);
   useEffect(() => {
     setExtraRecipients(loadExtraRecipients(projectId));
   }, [projectId]);
@@ -255,7 +253,7 @@ export function CommentForm({
         emailError: '',
         taskWho: assignee,
       };
-      const commentIndex = await Promise.resolve(onSaved(comment));
+      const commentIndex = await Promise.resolve(onSaved?.(comment));
       if (shouldMarkComplete) {
         try {
           onMarkComplete(comment);
@@ -306,17 +304,22 @@ export function CommentForm({
         <div className="cform-context" aria-label="Task context">
           {projectName ? <div className="cform-context-proj">{projectName}</div> : null}
           {phaseName ? <div className="cform-context-phase">{phaseName}</div> : null}
-          <div className="cform-context-assignee cform-assignee-picker">
-            <span>Assignee</span>
-            <AssigneeMultiSelect
-              value={assignee}
-              options={assigneeOptions}
-              disabled={isBusy}
-              onChange={setAssignee}
-            />
-          </div>
         </div>
       ) : null}
+      <label className="cform-field cform-assignee-field">
+        <span className="cform-lbl">Assignee</span>
+        <div className="cform-assignee-picker">
+          <AssigneeMultiSelect
+            value={assignee}
+            options={assigneeOptions}
+            disabled={isBusy || typeof onAssigneeChange !== 'function'}
+            onChange={(v) => {
+              if (typeof onAssigneeChange === 'function') onAssigneeChange(v);
+            }}
+          />
+        </div>
+        <span className="cform-assignee-hint">Search project team or Security Admin users · saves to the task immediately</span>
+      </label>
       <p className="cform-meta">
         Posting as <strong style={{ color: '#1A304A' }}>{authorName || '…'}</strong>
         {authorEmail ? <span style={{ color: '#96918A' }}> · {authorEmail}</span> : null}

@@ -13,6 +13,7 @@ function composeModeLabel(editable, blankForm) {
 
 /**
  * Shared comment history + post/edit form (project tasks and My Work).
+ * Assignee picker matches the project Tasks page and saves immediately via updTask.
  */
 export function TaskCommentPanel({
   proj,
@@ -47,6 +48,19 @@ export function TaskCommentPanel({
   const storedStatus = taskStatusSelectValue(task);
   const alreadyComplete = storedStatus === 'completed';
 
+  const saveAssignee = (who) => {
+    const next = who == null ? '' : String(who);
+    if (next === String(task.who || '')) return;
+    dispatch({
+      type: 'updTask',
+      projId: proj.id,
+      phId: ph.id,
+      tId: task.id,
+      f: 'who',
+      v: next,
+    });
+  };
+
   return (
     <>
       {!hideHistory ? (
@@ -63,6 +77,7 @@ export function TaskCommentPanel({
           taskId={task.id}
           taskWho={task.who || ''}
           assigneeOptions={assigneeOptions}
+          onAssigneeChange={saveAssignee}
           departments={departments}
           authorName={authorName}
           authorEmail={authorEmail}
@@ -95,16 +110,6 @@ export function TaskCommentPanel({
             }
           }}
           onSaved={(comment) => {
-            if (comment.taskWho !== task.who) {
-              dispatch({
-                type: 'updTask',
-                projId: proj.id,
-                phId: ph.id,
-                tId: task.id,
-                f: 'who',
-                v: comment.taskWho,
-              });
-            }
             if (editable && !blankForm) {
               dispatch({
                 type: 'updComment',

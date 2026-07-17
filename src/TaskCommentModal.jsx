@@ -6,9 +6,11 @@ import { getEditableComment } from './preconMyWork.js';
 import { cDates } from './preconDates.js';
 import { statusBadgeClass, statusLabel, taskStatus } from './preconTaskStatus.js';
 import { formatShortDate } from './preconMyWork.js';
+import { AssigneeMultiSelect } from './AssigneeMultiSelect.jsx';
 
 /**
  * Full comment workspace modal — timeline + compose (project Tasks tab).
+ * Assignee picker matches the project Tasks page and saves immediately.
  */
 export function TaskCommentModal({
   open,
@@ -21,7 +23,7 @@ export function TaskCommentModal({
   authorName,
   authorEmail,
   departments,
-  assigneeOptions,
+  assigneeOptions = [],
   onOpenProject,
 }) {
   const [composeMode, setComposeMode] = useState('new');
@@ -65,6 +67,19 @@ export function TaskCommentModal({
   const st = taskStatus(liveTask, dm);
   const commentCount = displayComments.length;
 
+  const saveAssignee = (who) => {
+    const next = who == null ? '' : String(who);
+    if (next === String(liveTask.who || '')) return;
+    dispatch({
+      type: 'updTask',
+      projId: proj.id,
+      phId: ph.id,
+      tId: liveTask.id,
+      f: 'who',
+      v: next,
+    });
+  };
+
   return (
     <div className="tcm-backdrop" onClick={onClose} role="presentation">
       <div
@@ -92,13 +107,14 @@ export function TaskCommentModal({
             </h2>
             <div className="tcm-chips">
               <span className={`badge ${statusBadgeClass(st)}`}>{statusLabel(st)}</span>
-              {liveTask.who ? (
-                <span className="tcm-chip tcm-chip-assignee" title="Task assignee">
-                  Assignee: {liveTask.who}
-                </span>
-              ) : (
-                <span className="tcm-chip tcm-chip-assignee tcm-chip-muted">Assignee: —</span>
-              )}
+              <div className="tcm-assignee" title="Same assignee picker as the project Tasks page">
+                <span className="tcm-assignee-lbl">Assignee</span>
+                <AssigneeMultiSelect
+                  value={liveTask.who || ''}
+                  options={assigneeOptions}
+                  onChange={saveAssignee}
+                />
+              </div>
               {d.e ? <span className="tcm-chip">Due {formatShortDate(d.e)}</span> : null}
               <span className="tcm-chip tcm-chip-gold">
                 {commentCount} comment{commentCount !== 1 ? 's' : ''}

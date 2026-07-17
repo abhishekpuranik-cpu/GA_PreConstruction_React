@@ -308,6 +308,7 @@ export function MyWorkView({ projects, loginUser, departments, dispatch, toast, 
           authorName={effectivePerson || 'User'}
           authorEmail={loginUser?.email}
           departments={departments}
+          assigneeOptions={roster}
           onOpenProject={onOpenProject}
         />
       ) : null}

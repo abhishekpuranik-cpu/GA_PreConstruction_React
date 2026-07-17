@@ -829,6 +829,8 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .cform-assignee-picker{display:flex;flex-direction:column;gap:5px}
 .cform-assignee-picker .ams{display:block;width:100%}
 .cform-assignee-picker .ams-trigger{min-height:40px;font-size:12px}
+.cform-assignee-field{display:flex;flex-direction:column;gap:6px;margin:0 0 12px}
+.cform-assignee-hint{font-size:10px;color:#96918A;line-height:1.35}
 .cform-complete{display:flex;align-items:flex-start;gap:10px;margin:4px 0 2px;padding:10px 12px;background:#EAF5EE;border:1px solid #C5E0CF;border-radius:8px;cursor:pointer;font-size:12px;color:#1A304A;line-height:1.35}
 .cform-complete input{margin-top:2px;width:16px;height:16px;accent-color:#1A6A3C;flex-shrink:0}
 .cform-complete strong{display:block;font-size:13px}
@@ -978,6 +980,11 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .tcm-chip{font-size:11px;font-weight:500;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.12);color:rgba(255,255,255,.92);border:1px solid rgba(255,255,255,.15)}
 .tcm-chip-gold{background:rgba(200,154,58,.25);border-color:rgba(232,212,160,.45);color:#F5E6C8}
 .tcm-chip-assignee{font-size:12px;font-weight:600;background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.28)}
+.tcm-assignee{display:flex;align-items:center;gap:8px;flex:1 1 220px;min-width:180px;max-width:360px;padding:4px 8px;border-radius:8px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28)}
+.tcm-assignee-lbl{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:rgba(255,255,255,.75);flex-shrink:0}
+.tcm-assignee .ams{flex:1;min-width:0;display:block}
+.tcm-assignee .ams-trigger{min-height:34px;background:rgba(255,255,255,.92);border-color:rgba(255,255,255,.5);font-size:12px}
+.tcm-assignee .ams-placeholder{color:#7A756E}
 .tcm-chip-muted{opacity:.75;font-weight:500}
 .tcm-body{display:grid;grid-template-columns:1fr 1fr;flex:1;min-height:0;overflow:hidden}
 .tcm-pane{display:flex;flex-direction:column;min-height:0;min-width:0;border-right:1px solid #E2DDD4}
