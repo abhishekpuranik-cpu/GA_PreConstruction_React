@@ -21,6 +21,7 @@ import { taskHasRole, taskInDepartment } from "./bulkAssign.js";
 import { PortfolioRagMatrix } from "./PortfolioRagMatrix.jsx";
 import { ensureCommentCreatedAt, formatCommentLine, getLatestComment, normalizeTaskComments, sortCommentsChronologically, collectTaskComments } from "./preconComments.js";
 import { useLoginUser } from "./useLoginUser.js";
+import { fetchPreconTeamRoster } from "./preconSession.js";
 import { canDeletePreconProjects } from "./preconPermissions.js";
 import { MyWorkView } from "./MyWorkView.jsx";
 import { DashboardCalendarView } from "./DashboardCalendarView.jsx";
@@ -522,6 +523,8 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .ams-menu{position:absolute;top:calc(100% + 4px);left:0;z-index:50;min-width:min(260px,90vw);max-height:min(280px,50vh);overflow:auto;background:#fff;border:1px solid #E2DDD4;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:8px}
 .ams-menu-portal{position:fixed;max-height:min(280px,50vh)}
 .ams-menu-hint{font-size:10px;color:#96918A;padding:4px 8px 8px}
+.ams-filter{padding:0 2px 8px}
+.ams-filter-inp{width:100%;box-sizing:border-box;padding:7px 8px;border:1px solid #E2DDD4;border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif}
 .ams-opt{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:12px}
 .ams-opt:hover{background:#F8F6F1}
 .ams-opt.on{background:#EEF4FC}
@@ -2255,6 +2258,7 @@ export default function App(){
   const mongoReloadRef=useRef(null);
   const deleteFlushPendingRef=useRef(false);
   const loginUser=useLoginUser();
+  const[projectRoster,setProjectRoster]=useState({names:[],projectTagged:[],securityUsers:[]});
   useEffect(()=>{
     setPreconActivityActor(loginUser?.ready?loginUser.name:null);
   },[loginUser?.ready,loginUser?.name]);
@@ -2262,8 +2266,26 @@ export default function App(){
   const{navHint,toast}=useNavStatus();
   const visibleProjects=useMemo(()=>filterProjectsForUser(state.projects,loginUser),[state.projects,loginUser]);
   const curProj=state.projects.find(p=>p.id===curView);
+  useEffect(()=>{
+    let alive=true;
+    (async()=>{
+      if(!loginUser?.ready||!loginUser?.authenticated){
+        if(alive)setProjectRoster({names:[],projectTagged:[],securityUsers:[]});
+        return;
+      }
+      const roster=await fetchPreconTeamRoster(curProj?{id:curProj.id,name:curProj.name}:null);
+      if(alive)setProjectRoster(roster);
+    })();
+    return()=>{alive=false;};
+  },[loginUser?.ready,loginUser?.authenticated,curProj?.id,curProj?.name]);
+  const rosterLoginUser=useMemo(()=>({
+    ...loginUser,
+    teamNames:projectRoster.names?.length?projectRoster.names:(loginUser?.teamNames||[]),
+    projectTaggedNames:projectRoster.projectTagged?.length?projectRoster.projectTagged:(loginUser?.projectTaggedNames||[]),
+    securityUserNames:projectRoster.securityUsers?.length?projectRoster.securityUsers:(loginUser?.securityUserNames||loginUser?.teamNames||[]),
+  }),[loginUser,projectRoster]);
   const rosterProjects=useMemo(()=>projectsForAssigneeRoster(state.projects,loginUser,curProj),[state.projects,loginUser,curProj]);
-  const assigneeRoster=useMemo(()=>buildAssigneeRoster(rosterProjects,state.departments,loginUser),[rosterProjects,state.departments,loginUser]);
+  const assigneeRoster=useMemo(()=>buildAssigneeRoster(rosterProjects,state.departments,rosterLoginUser),[rosterProjects,state.departments,rosterLoginUser]);
   const viewSelectValue=curView==="mywork"||curView==="dashboard"||state.projects.some(p=>p.id===curView)?curView:"dashboard";
 
   // inject styles

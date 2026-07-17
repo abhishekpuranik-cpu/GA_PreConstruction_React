@@ -102,17 +102,20 @@ export function filterProjectsForUser(projects, loginUser) {
   return filtered;
 }
 
-/** Dropdown options: task assignees on allowed projects, Admin team, dept heads, login user. */
+/** Dropdown options: project-tagged Security users, all Security Admin IDs, dept heads, existing assignees. */
 export function buildAssigneeRoster(projects, departments, loginUser) {
-  const set = new Set(collectAssignees(projects));
-  (loginUser?.teamNames || []).forEach((n) => {
+  const set = new Set();
+  const add = (n) => {
     const t = String(n || '').trim();
     if (t) set.add(t);
-  });
-  (departments || []).forEach((d) => {
-    const h = String(d.head || '').trim();
-    if (h) set.add(h);
-  });
-  if (loginUser?.name) set.add(loginUser.name.trim());
+  };
+  // Prefer people tagged to the open/allowed projects in Admin Security.
+  (loginUser?.projectTaggedNames || []).forEach(add);
+  // Then every active Security Admin identity (name/id).
+  (loginUser?.securityUserNames || loginUser?.teamNames || []).forEach(add);
+  (loginUser?.teamNames || []).forEach(add);
+  collectAssignees(projects).forEach(add);
+  (departments || []).forEach((d) => add(d.head));
+  if (loginUser?.name) add(loginUser.name);
   return [...set].sort((a, b) => a.localeCompare(b));
 }

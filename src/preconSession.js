@@ -38,21 +38,30 @@ export function fallbackLoginName() {
  * Loads /api/auth/session (same-origin when embedded on platform).
  * Persists ga_user_name for legacy apps.
  */
-/** Active PreConstruction users who share Admin-assigned projects (or all if unrestricted). */
-export async function fetchPreconTeamRoster() {
+/** Active Security Admin / PreConstruction assignee names (optionally scoped to a project). */
+export async function fetchPreconTeamRoster(project = null) {
   try {
-    const res = await fetch('/api/auth/preconstruction-team-roster', {
+    const qs = new URLSearchParams();
+    if (project?.id) qs.set('projectId', String(project.id));
+    if (project?.name) qs.set('projectName', String(project.name));
+    const url = qs.toString()
+      ? `/api/auth/preconstruction-team-roster?${qs}`
+      : '/api/auth/preconstruction-team-roster';
+    const res = await fetch(url, {
       credentials: 'include',
       cache: 'no-store',
     });
     if (res.ok) {
       const data = await res.json();
-      if (Array.isArray(data?.names)) return data.names.filter(Boolean);
+      const names = Array.isArray(data?.names) ? data.names.filter(Boolean) : [];
+      const projectTagged = Array.isArray(data?.projectTagged) ? data.projectTagged.filter(Boolean) : [];
+      const securityUsers = Array.isArray(data?.securityUsers) ? data.securityUsers.filter(Boolean) : names;
+      return { names, projectTagged, securityUsers };
     }
   } catch {
     /* standalone / offline */
   }
-  return [];
+  return { names: [], projectTagged: [], securityUsers: [] };
 }
 
 export async function fetchLoginUser() {
@@ -63,7 +72,7 @@ export async function fetchLoginUser() {
       if (data?.authenticated && data.user) {
         const name = displayNameFromUser(data.user) || fallbackLoginName();
         safeLsSet(GA_USER_NAME_KEY, name);
-        const teamNames = await fetchPreconTeamRoster();
+        const roster = await fetchPreconTeamRoster();
         return {
           ready: true,
           authenticated: true,
@@ -72,7 +81,9 @@ export async function fetchLoginUser() {
           roleIds: Array.isArray(data.user.roleIds) ? data.user.roleIds : [],
           permissions: Array.isArray(data.user.permissions) ? data.user.permissions : [],
           allowedProjects: Array.isArray(data.user.allowedProjects) ? data.user.allowedProjects : [],
-          teamNames,
+          teamNames: roster.names,
+          projectTaggedNames: roster.projectTagged,
+          securityUserNames: roster.securityUsers,
         };
       }
     }
@@ -88,5 +99,7 @@ export async function fetchLoginUser() {
     permissions: [],
     allowedProjects: [],
     teamNames: [],
+    projectTaggedNames: [],
+    securityUserNames: [],
   };
 }

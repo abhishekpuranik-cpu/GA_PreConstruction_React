@@ -5,32 +5,38 @@ import { formatAssignees, parseAssignees } from './preconAssignees.js';
 /**
  * Multi-select assignee picker (chips + dropdown checklist).
  * Menu is portaled + fixed so table overflow does not clip it.
+ * Options should include project-tagged people and Security Admin users.
  * @param {string} value — stored task.who ("Name1; Name2")
  */
 export function AssigneeMultiSelect({ value, options, onChange, disabled, compact }) {
   const [open, setOpen] = useState(false);
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0, width: 220 });
   const [custom, setCustom] = useState('');
+  const [filter, setFilter] = useState('');
   const ref = useRef(null);
   const menuRef = useRef(null);
   const triggerRef = useRef(null);
+  const filterRef = useRef(null);
   const selected = parseAssignees(value);
   const displayOptions = useMemo(() => {
     const set = new Set(options || []);
     selected.forEach((n) => set.add(n));
-    return [...set].sort((a, b) => a.localeCompare(b));
-  }, [options, selected]);
+    const all = [...set].sort((a, b) => a.localeCompare(b));
+    const q = String(filter || '').trim().toLowerCase();
+    if (!q) return all;
+    return all.filter((n) => String(n).toLowerCase().includes(q));
+  }, [options, selected, filter]);
 
   const updateMenuPos = () => {
     const el = triggerRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
-    const width = Math.max(r.width, compact ? 200 : 240);
+    const width = Math.max(r.width, compact ? 220 : 260);
     let left = r.left;
     const maxLeft = window.innerWidth - width - 8;
     if (left > maxLeft) left = Math.max(8, maxLeft);
     const below = r.bottom + 4;
-    const menuH = Math.min(280, window.innerHeight * 0.5);
+    const menuH = Math.min(320, window.innerHeight * 0.55);
     const top = below + menuH > window.innerHeight - 8
       ? Math.max(8, r.top - menuH - 4)
       : below;
@@ -40,6 +46,8 @@ export function AssigneeMultiSelect({ value, options, onChange, disabled, compac
   useLayoutEffect(() => {
     if (!open) return;
     updateMenuPos();
+    const t = setTimeout(() => filterRef.current?.focus?.(), 0);
+    return () => clearTimeout(t);
   }, [open, compact]);
 
   useEffect(() => {
@@ -48,6 +56,7 @@ export function AssigneeMultiSelect({ value, options, onChange, disabled, compac
       const t = e.target;
       if (ref.current?.contains(t) || menuRef.current?.contains(t)) return;
       setOpen(false);
+      setFilter('');
     };
     const onReposition = () => updateMenuPos();
     document.addEventListener('mousedown', onDoc);
@@ -60,6 +69,13 @@ export function AssigneeMultiSelect({ value, options, onChange, disabled, compac
     };
   }, [open]);
 
+  const resolveName = (raw) => {
+    const name = String(raw || '').trim();
+    if (!name) return '';
+    const exact = (options || []).find((n) => String(n).toLowerCase() === name.toLowerCase());
+    return exact || name;
+  };
+
   const toggle = (name) => {
     const set = new Set(selected);
     if (set.has(name)) set.delete(name);
@@ -68,12 +84,13 @@ export function AssigneeMultiSelect({ value, options, onChange, disabled, compac
   };
 
   const addCustom = () => {
-    const name = String(custom || '').trim();
+    const name = resolveName(custom);
     if (!name) return;
     const set = new Set(selected);
     set.add(name);
     onChange(formatAssignees([...set]));
     setCustom('');
+    setFilter('');
   };
 
   const menu = open
@@ -90,7 +107,18 @@ export function AssigneeMultiSelect({ value, options, onChange, disabled, compac
             zIndex: 1200,
           }}
         >
-          <div className="ams-menu-hint">Select one or more people</div>
+          <div className="ams-menu-hint">Project team or Security Admin users</div>
+          <div className="ams-filter">
+            <input
+              ref={filterRef}
+              type="search"
+              className="ams-filter-inp"
+              value={filter}
+              placeholder="Search people…"
+              autoComplete="off"
+              onChange={(e) => setFilter(e.target.value)}
+            />
+          </div>
           {displayOptions.length ? (
             displayOptions.map((name) => {
               const on = selected.includes(name);
@@ -102,14 +130,14 @@ export function AssigneeMultiSelect({ value, options, onChange, disabled, compac
               );
             })
           ) : (
-            <div className="ams-empty">No names yet — type one below</div>
+            <div className="ams-empty">{filter ? 'No match — add below if needed' : 'No names yet — type one below'}</div>
           )}
           <div className="ams-add">
             <input
               type="text"
               className="ams-add-inp"
               value={custom}
-              placeholder="Add name…"
+              placeholder="Add Security Admin name…"
               autoComplete="off"
               onChange={(e) => setCustom(e.target.value)}
               onKeyDown={(e) => {
@@ -140,7 +168,10 @@ export function AssigneeMultiSelect({ value, options, onChange, disabled, compac
         type="button"
         className="ams-trigger"
         disabled={disabled}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          setOpen((o) => !o);
+          if (open) setFilter('');
+        }}
         aria-expanded={open}
         title="Select assignees"
       >
