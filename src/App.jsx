@@ -530,10 +530,6 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .ams-opt.on{background:#EEF4FC}
 .ams-opt input{accent-color:#1A304A;min-width:16px;min-height:16px}
 .ams-empty{font-size:11px;color:#96918A;padding:8px}
-.ams-add{display:flex;gap:6px;margin-top:6px;padding:0 2px}
-.ams-add-inp{flex:1;min-width:0;padding:7px 8px;border:1px solid #E2DDD4;border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif}
-.ams-add-btn{flex-shrink:0;padding:7px 10px;border:1px solid #1A304A;border-radius:6px;background:#1A304A;color:#fff;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif}
-.ams-add-btn:disabled{opacity:.45;cursor:not-allowed}
 .ams-clear{display:block;width:100%;margin-top:6px;padding:8px;border:none;background:#F3F0EA;color:#55504A;font-size:11px;border-radius:6px;cursor:pointer}
 .ttable .tcol-who{overflow:visible}
 .mw-empty{text-align:center;padding:40px 24px}
@@ -980,11 +976,6 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .tcm-chip{font-size:11px;font-weight:500;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.12);color:rgba(255,255,255,.92);border:1px solid rgba(255,255,255,.15)}
 .tcm-chip-gold{background:rgba(200,154,58,.25);border-color:rgba(232,212,160,.45);color:#F5E6C8}
 .tcm-chip-assignee{font-size:12px;font-weight:600;background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.28)}
-.tcm-assignee{display:flex;align-items:center;gap:8px;flex:1 1 220px;min-width:180px;max-width:360px;padding:4px 8px;border-radius:8px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28)}
-.tcm-assignee-lbl{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:rgba(255,255,255,.75);flex-shrink:0}
-.tcm-assignee .ams{flex:1;min-width:0;display:block}
-.tcm-assignee .ams-trigger{min-height:34px;background:rgba(255,255,255,.92);border-color:rgba(255,255,255,.5);font-size:12px}
-.tcm-assignee .ams-placeholder{color:#7A756E}
 .tcm-chip-muted{opacity:.75;font-weight:500}
 .tcm-body{display:grid;grid-template-columns:1fr 1fr;flex:1;min-height:0;overflow:hidden}
 .tcm-pane{display:flex;flex-direction:column;min-height:0;min-width:0;border-right:1px solid #E2DDD4}

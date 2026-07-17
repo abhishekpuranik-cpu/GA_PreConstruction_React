@@ -11,7 +11,6 @@ import { formatAssignees, parseAssignees } from './preconAssignees.js';
 export function AssigneeMultiSelect({ value, options, onChange, disabled, compact }) {
   const [open, setOpen] = useState(false);
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0, width: 220 });
-  const [custom, setCustom] = useState('');
   const [filter, setFilter] = useState('');
   const ref = useRef(null);
   const menuRef = useRef(null);
@@ -69,28 +68,11 @@ export function AssigneeMultiSelect({ value, options, onChange, disabled, compac
     };
   }, [open]);
 
-  const resolveName = (raw) => {
-    const name = String(raw || '').trim();
-    if (!name) return '';
-    const exact = (options || []).find((n) => String(n).toLowerCase() === name.toLowerCase());
-    return exact || name;
-  };
-
   const toggle = (name) => {
     const set = new Set(selected);
     if (set.has(name)) set.delete(name);
     else set.add(name);
     onChange(formatAssignees([...set]));
-  };
-
-  const addCustom = () => {
-    const name = resolveName(custom);
-    if (!name) return;
-    const set = new Set(selected);
-    set.add(name);
-    onChange(formatAssignees([...set]));
-    setCustom('');
-    setFilter('');
   };
 
   const menu = open
@@ -130,27 +112,8 @@ export function AssigneeMultiSelect({ value, options, onChange, disabled, compac
               );
             })
           ) : (
-            <div className="ams-empty">{filter ? 'No match — add below if needed' : 'No names yet — type one below'}</div>
+            <div className="ams-empty">{filter ? 'No matching assignee' : 'No assignees available'}</div>
           )}
-          <div className="ams-add">
-            <input
-              type="text"
-              className="ams-add-inp"
-              value={custom}
-              placeholder="Add Security Admin name…"
-              autoComplete="off"
-              onChange={(e) => setCustom(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  addCustom();
-                }
-              }}
-            />
-            <button type="button" className="ams-add-btn" onClick={addCustom} disabled={!String(custom || '').trim()}>
-              Add
-            </button>
-          </div>
           {selected.length ? (
             <button type="button" className="ams-clear" onClick={() => onChange('')}>
               Clear all
