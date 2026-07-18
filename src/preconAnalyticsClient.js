@@ -1,8 +1,69 @@
 import { answerAnalyticsLocally } from './preconAnalyticsLocal.js';
 import { buildAnalyticsContext } from './preconAnalyticsContext.js';
+import { tryAnswerProjectStatusQuestion } from './preconAskBrief.js';
 
 /**
- * Ask analytics: try server LLM, always fall back to local grounded engine.
+ * Merge LLM narrative onto a fact-locked local answer.
+ * Numbers, sections, charts, and highlights always stay local when lockFacts is set.
+ */
+function mergeNarrateOnly(local, llm) {
+  if (!local?.lockFacts) {
+    return {
+      ok: true,
+      source: llm.source || 'llm',
+      intent: llm.intent || local.intent,
+      headline: llm.headline || local.headline,
+      markdown: llm.markdown || local.markdown,
+      sections: Array.isArray(llm.sections) && llm.sections.length ? llm.sections : local.sections,
+      charts: Array.isArray(llm.charts) && llm.charts.length ? llm.charts : local.charts,
+      highlights: llm.highlights && Object.keys(llm.highlights).length ? llm.highlights : local.highlights,
+      proposedActions:
+        Array.isArray(llm.proposedActions) && llm.proposedActions.length
+          ? llm.proposedActions
+          : local.proposedActions,
+      model: llm.model || '',
+      llmAvailable: true,
+      localFallback: local,
+      lockFacts: false,
+    };
+  }
+
+  const narrative = String(llm.narrative || llm.markdown || '').trim();
+  const sections = [...(local.sections || [])];
+  if (narrative) {
+    sections.unshift({
+      kind: 'informative',
+      title: 'Narrative (LLM — grounded on the facts below)',
+      narrative: narrative.slice(0, 4000),
+    });
+  }
+
+  const mdParts = [];
+  if (narrative) {
+    mdParts.push('### Narrative', '', narrative, '', '---', '');
+  }
+  mdParts.push(local.markdown || '');
+
+  return {
+    ...local,
+    ok: true,
+    source: 'local+llm',
+    model: llm.model || '',
+    llmAvailable: true,
+    sections,
+    markdown: mdParts.join('\n'),
+    // Never take LLM numbers/charts/actions over the brief
+    charts: local.charts,
+    highlights: local.highlights,
+    proposedActions: local.proposedActions,
+    headline: local.headline,
+    lockFacts: true,
+    localFallback: local,
+  };
+}
+
+/**
+ * Ask analytics: fact-locked project briefs first; LLM may narrate but cannot invent numbers.
  */
 export async function askPreconAnalytics({
   question,
@@ -16,8 +77,13 @@ export async function askPreconAnalytics({
     return { ok: false, error: 'Enter a question', source: 'none' };
   }
 
+  const briefLocal = tryAnswerProjectStatusQuestion(q, projects, { projectId });
   const context = buildAnalyticsContext(projects, { projectId, person });
-  const local = answerAnalyticsLocally(q, context);
+  if (briefLocal?.evidence) {
+    context.projectBrief = briefLocal.evidence;
+  }
+  const local = briefLocal || answerAnalyticsLocally(q, context);
+  const preferNarrateOnly = !!local.lockFacts;
 
   try {
     const res = await fetch('/api/preconstruction/analytics-ask', {
@@ -28,7 +94,16 @@ export async function askPreconAnalytics({
       body: JSON.stringify({
         question: q,
         context,
+        localAnswer: {
+          intent: local.intent,
+          headline: local.headline,
+          highlights: local.highlights,
+          lockFacts: !!local.lockFacts,
+          evidence: local.evidence || local.projectBrief || null,
+          markdown: local.markdown,
+        },
         preferLlm: true,
+        preferNarrateOnly,
       }),
     });
 
@@ -55,22 +130,7 @@ export async function askPreconAnalytics({
       };
     }
 
-    return {
-      ok: true,
-      source: data.source || 'llm',
-      intent: data.intent || local.intent,
-      headline: data.headline || local.headline,
-      markdown: data.markdown || local.markdown,
-      sections: Array.isArray(data.sections) && data.sections.length ? data.sections : local.sections,
-      charts: Array.isArray(data.charts) && data.charts.length ? data.charts : local.charts,
-      highlights: data.highlights || local.highlights,
-      proposedActions: Array.isArray(data.proposedActions) && data.proposedActions.length
-        ? data.proposedActions
-        : local.proposedActions,
-      model: data.model || '',
-      llmAvailable: true,
-      localFallback: local,
-    };
+    return mergeNarrateOnly(local, data);
   } catch (e) {
     if (e?.name === 'AbortError') throw e;
     return {

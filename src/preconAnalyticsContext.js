@@ -218,10 +218,10 @@ export function buildAnalyticsContext(projects, opts = {}) {
 
 /** Tiny prompt examples for the UI. */
 export const ANALYTICS_PROMPT_EXAMPLES = [
+  'What is happening with this project — state, missed timelines, challenges, and next steps for the week, fortnight, and month?',
+  'Summarize challenges mentioned in comments and what we missed on timelines.',
+  'What are the next steps for this week, the fortnight, and the month?',
   'What are the current bottlenecks across all projects?',
   'Which project is most at risk this week and why?',
-  'Predict which tasks will slip in the next 14 days.',
   'Prescribe the top 5 actions leadership should take today.',
-  'Who is overloaded and what should we rebalance?',
-  'Summarize compliance breaches and how to clear them.',
 ];

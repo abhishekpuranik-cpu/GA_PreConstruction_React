@@ -96,8 +96,9 @@ export function AnalyticsAskView({
         <p className="ask-eyebrow">Prompt analytics</p>
         <h1 className="ask-title disp">Ask PreConstruction</h1>
         <p className="ask-sub">
-          Ask anything — bottlenecks, forecasts, workload, compliance, what to do next.
-          Answers are grounded in live project data. Suggested changes always need your confirmation.
+          Ask “what is happening with [project]” for a fact-locked brief: live state, missed timelines,
+          challenges quoted from comments, and due work for the week / fortnight / month.
+          Numbers come from the data model first; the LLM may only narrate those facts. Confirm any suggested actions.
         </p>
       </header>
 
@@ -131,7 +132,7 @@ export function AnalyticsAskView({
           rows={3}
           value={displayQ}
           disabled={busy}
-          placeholder="e.g. What are the current bottlenecks, and what should leadership do this week?"
+          placeholder="e.g. What is happening with this project — missed timelines, comment challenges, next week/fortnight/month?"
           onChange={(e) => {
             if (speech.listening && speech.activeField === 'ask') speech.stop();
             setQuestion(e.target.value);
