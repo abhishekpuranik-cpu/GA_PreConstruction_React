@@ -30,7 +30,7 @@ import { ProjectPageShell } from "./ProjectPageShell.jsx";
 import { TaskCommentsListSection } from "./TaskCommentsListSection.jsx";
 import { StatusFilterChips } from "./StatusFilterChips.jsx";
 import { AssigneeMultiSelect } from "./AssigneeMultiSelect.jsx";
-import { filterProjectsForUser, buildAssigneeRoster, assigneeMatches, projectsForAssigneeRoster, taskMatchesAssigneeFilter, UNASSIGNED_FILTER } from "./preconAssignees.js";
+import { filterProjectsForUser, buildAssigneeRoster, projectsForAssigneeRoster, taskMatchesAssigneeFilter, UNASSIGNED_FILTER } from "./preconAssignees.js";
 import { filterAndSortProjects } from "./projectSearch.js";
 import { ProjectNavPicker } from "./ProjectNavPicker.jsx";
 import { notifyTaskStatusChange } from "./preconNotify.js";
