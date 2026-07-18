@@ -63,6 +63,9 @@ import {
   todayIso,
   TASK_STATUS_OPTIONS,
   taskMatchesStatusFilters,
+  currentDueIso,
+  dueDateHeat,
+  dueHeatColor,
 } from "./preconTaskStatus.js";
 
 // ── TOKENS ────────────────────────────────────────────────
@@ -977,6 +980,13 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .tcm-chip-gold{background:rgba(200,154,58,.25);border-color:rgba(232,212,160,.45);color:#F5E6C8}
 .tcm-chip-assignee{font-size:12px;font-weight:600;background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.28)}
 .tcm-chip-muted{opacity:.75;font-weight:500}
+.tcm-assignee-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.14)}
+.tcm-assignee-lbl{font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:rgba(255,255,255,.7);flex-shrink:0}
+.tcm-assignee-row .ams{min-width:min(280px,100%);flex:1}
+.tcm-assignee-row .ams-trigger{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.28);color:#fff;min-height:36px}
+.tcm-assignee-row .ams-trigger:hover{background:rgba(255,255,255,.18)}
+.tcm-assignee-row .ams-chip{background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.3);color:#fff}
+.tcm-assignee-hint{font-size:10px;color:rgba(255,255,255,.65);line-height:1.35;width:100%}
 .tcm-body{display:grid;grid-template-columns:1fr 1fr;flex:1;min-height:0;overflow:hidden}
 .tcm-pane{display:flex;flex-direction:column;min-height:0;min-width:0;border-right:1px solid #E2DDD4}
 .tcm-pane-compose{border-right:none;background:#FBF9F5}
@@ -1580,7 +1590,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
               <tbody>
                 {treeRows.map(({task:t,depth,hasChildren},rowIdx)=>{
                   const seqIdx=rowIdx+1;
-                  const d=dm[t.id]||{s:"",e:""};const st=taskStatus(t,dm);const od=st==="overdue"?dbDays(d.e,todayStr):0;
+                  const d=dm[t.id]||{s:"",e:""};const st=taskStatus(t,dm);const dueIso=currentDueIso(t,dm);const heat=dueDateHeat(dueIso,{status:st,todayStr});const od=st==="overdue"&&dueIso?dbDays(dueIso,todayStr):0;
                   const rolledUp=!!(hasChildren&&d.rolledUp);
                   const taskOpen=expandedTasks[t.id]!==false;
                   const rolledDur=rolledUp?dateSpanDays(d.s,d.e):(t.dur??"");
@@ -1650,7 +1660,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                       </td>
                       <td className="tcol-status">
                         <div className={`status-wrap status-wrap-${st}`}>
-                          <select className="status-sel" style={{color:SCOL[st]||C.gray}}
+                          <select className="status-sel" style={{color:dueHeatColor(heat==="none"?st:heat)||SCOL[st]||C.gray}}
                             value={taskStatusSelectValue(t)}
                             onChange={e=>{
                               const v=e.target.value;
@@ -1661,7 +1671,9 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                             {TASK_STATUS_OPTIONS.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}
                           </select>
                         </div>
-                        {st==="overdue"&&<span className="badge bov" style={{marginLeft:4}}>+{od}d</span>}
+                        {st==="overdue"&&<span className="badge bov" style={{marginLeft:4}} title="Due missed">+{od}d</span>}
+                        {heat==="nearing"&&<span className="badge bpa" style={{marginLeft:4}} title="Nearing due date">Due soon</span>}
+                        {heat==="ontrack"&&st!=="completed"&&st!=="paused"&&<span className="badge bcomp" style={{marginLeft:4}} title="Well within due date">On track</span>}
                       </td>
                       <td className="tcol-comments">
                         {!showCommentsConsolidated&&latestComment?(

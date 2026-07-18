@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { collectAssignees } from './preconExport.js';
 import { TaskCommentModal } from './TaskCommentModal.jsx';
 import { StatusFilterChips } from './StatusFilterChips.jsx';
-import { statusLabel, statusBadgeClass } from './preconTaskStatus.js';
+import { statusLabel, statusBadgeClass, workItemDueHeat, dueHeatColor, DUE_HEAT_COLORS } from './preconTaskStatus.js';
 import { ActivityCalendarShell } from './ActivityCalendarShell.jsx';
 import { parseYmd, todayYmd } from './activityCalendarUtils.js';
 import {
@@ -26,21 +26,14 @@ import {
   projectFilterLabel,
   toggleProjectFilter,
 } from './preconProjectFilter.js';
+import { buildAssigneeRoster, projectsForAssigneeRoster } from './preconAssignees.js';
 import './activityCalendar.css';
 
-const SCOL = {
-  completed: '#1A6A3C',
-  inprogress: '#1B5E9E',
-  overdue: '#B32E1E',
-  notstarted: '#9A9590',
-  paused: '#AE6418',
-};
-
 const LEGEND = [
-  { label: 'Overdue', color: SCOL.overdue },
-  { label: 'In progress', color: SCOL.inprogress },
-  { label: 'Not started', color: SCOL.notstarted },
-  { label: 'Completed', color: SCOL.completed },
+  { label: 'Due missed', color: DUE_HEAT_COLORS.missed },
+  { label: 'Nearing due', color: DUE_HEAT_COLORS.nearing },
+  { label: 'On track', color: DUE_HEAT_COLORS.ontrack },
+  { label: 'Completed', color: DUE_HEAT_COLORS.completed },
 ];
 
 export function DashboardCalendarView({
@@ -66,6 +59,10 @@ export function DashboardCalendarView({
 
   const assignees = useMemo(() => collectAssignees(projects), [projects]);
   const authorName = loginUser?.ready ? loginUser.name || 'User' : 'User';
+  const assigneeRoster = useMemo(() => {
+    const rosterProjects = projectsForAssigneeRoster(sourceProjects || projects, loginUser, null);
+    return buildAssigneeRoster(rosterProjects, departments, loginUser);
+  }, [sourceProjects, projects, departments, loginUser]);
 
   const displayProjects = useMemo(
     () => filterAndSortProjects(projects, projSearch),
@@ -251,7 +248,7 @@ export function DashboardCalendarView({
           tasks={levelFiltered}
           getTaskYmd={getTaskYmd}
           getTaskId={getTaskId}          getTaskTitle={taskTitle}
-          getTaskColor={(item) => SCOL[item.st] || '#1A304A'}
+          getTaskColor={(item) => dueHeatColor(workItemDueHeat(item))}
           onViewChange={setView}
           onCursorChange={setCursorDate}
           onToday={() => {
@@ -278,10 +275,14 @@ export function DashboardCalendarView({
             <p className="mw-sub" style={{ margin: 0, color: '#55504A' }}>No tasks on this date. Pick another day or adjust filters.</p>
           ) : (
             <ul className="mw-cal-day-list">
-              {selectedDayItems.map((item) => (
+              {selectedDayItems.map((item) => {
+                const heat = workItemDueHeat(item);
+                return (
                 <li key={`${item.proj.id}-${item.task.id}`}>
                   <button type="button" className="mw-cal-day-list-btn" onClick={() => setActiveItem(item)}>
-                    <span className={`badge ${statusBadgeClass(item.st)}`}>{statusLabel(item.st)}</span>
+                    <span className={`badge ${statusBadgeClass(heat === 'none' ? item.st : heat)}`}>
+                      {statusLabel(heat === 'none' ? item.st : heat)}
+                    </span>
                     <strong>{item.task.name}</strong>
                     <span className="mw-sub" style={{ color: '#55504A' }}>
                       {item.proj.name}
@@ -292,7 +293,8 @@ export function DashboardCalendarView({
                     </span>
                   </button>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           )}
         </section>
@@ -310,6 +312,7 @@ export function DashboardCalendarView({
           authorName={authorName}
           authorEmail={loginUser?.email}
           departments={departments}
+          assigneeOptions={assigneeRoster}
           onOpenProject={onOpenProject}
         />
       ) : null}    </div>

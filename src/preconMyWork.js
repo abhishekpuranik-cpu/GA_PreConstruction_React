@@ -17,25 +17,24 @@ function parseCommentTs(c) {
   return commentSortKey(c);
 }
 
-/** Earliest of next-action date and planned task end (for open tasks). */
+/**
+ * Current work date for calendars / overdue lists.
+ * When a next-action date is set, it supersedes the planned end so moved work
+ * no longer appears on the old (past) schedule day.
+ */
 export function effectiveChronologyDate(task, dm, st) {
   const next = getLatestNextActionEntry(task.comments);
-  const na = next?.nextActionDate;
-  const end = st !== 'completed' ? dm[task.id]?.e : null;
-  const candidates = [];
-  if (na) candidates.push(String(na).trim());
-  if (end) candidates.push(String(end).trim());
-  const valid = candidates.filter((d) => d && !Number.isNaN(new Date(d).getTime()));
-  if (!valid.length) return { sortDate: null, nextDate: na || null, dueDate: end || null };
-  valid.sort();
-  const sortDate = valid[0];
-  const source =
-    sortDate === na && sortDate === end
-      ? 'both'
-      : sortDate === na
-        ? 'next_action'
-        : 'planned_end';
-  return { sortDate, sortSource: source, nextDate: na || null, dueDate: end || null };
+  const na = next?.nextActionDate ? String(next.nextActionDate).trim() : null;
+  const end = st !== 'completed' && dm[task.id]?.e ? String(dm[task.id].e).trim() : null;
+  const naOk = na && !Number.isNaN(new Date(na).getTime()) ? na : null;
+  const endOk = end && !Number.isNaN(new Date(end).getTime()) ? end : null;
+  if (naOk) {
+    return { sortDate: naOk, sortSource: 'next_action', nextDate: naOk, dueDate: endOk };
+  }
+  if (endOk) {
+    return { sortDate: endOk, sortSource: 'planned_end', nextDate: null, dueDate: endOk };
+  }
+  return { sortDate: null, sortSource: null, nextDate: null, dueDate: endOk };
 }
 
 /** Latest comment with next action date. */
@@ -280,13 +279,15 @@ export function buildMyWorkItems(projects, opts = {}) {
   return { items: sortWorkItems(items), todayStr };
 }
 
-/** All calendar dates for an item — next action and activity due (planned end). */
+/**
+ * Single current calendar date — next action when set, else planned end.
+ * Avoids leaving the same task on past schedule days after next-action moves forward.
+ */
 export function getItemCalendarDates(item) {
-  const dates = [];
-  if (item.nextDate) dates.push(String(item.nextDate).trim());
-  if (item.dueDate) dates.push(String(item.dueDate).trim());
-  if (!dates.length && item.sortDate) dates.push(String(item.sortDate).trim());
-  return [...new Set(dates.filter(Boolean))];
+  const next = String(item.nextDate || '').trim();
+  if (next) return [next];
+  const due = String(item.dueDate || item.sortDate || '').trim();
+  return due ? [due] : [];
 }
 
 export function itemMatchesCalendarDay(item, ymd) {
@@ -294,10 +295,10 @@ export function itemMatchesCalendarDay(item, ymd) {
 }
 
 export function calendarDateLabel(item, ymd) {
-  const parts = [];
-  if (item.nextDate === ymd) parts.push('Next action');
-  if (item.dueDate === ymd) parts.push('Due');
-  return parts.join(' · ') || 'Scheduled';
+  if (item.nextDate && item.nextDate === ymd) return 'Next action';
+  if (item.dueDate === ymd) return 'Due';
+  if (item.sortDate === ymd) return 'Scheduled';
+  return 'Scheduled';
 }
 
 export function groupMyWorkItems(items, todayStr) {

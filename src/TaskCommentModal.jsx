@@ -4,12 +4,13 @@ import { TaskCommentsSummary } from './TaskCommentsSummary.jsx';
 import { collectTaskComments } from './preconComments.js';
 import { getEditableComment } from './preconMyWork.js';
 import { cDates } from './preconDates.js';
-import { statusBadgeClass, statusLabel, taskStatus } from './preconTaskStatus.js';
+import { statusBadgeClass, statusLabel, taskStatus, dueDateHeat, currentDueIso } from './preconTaskStatus.js';
 import { formatShortDate } from './preconMyWork.js';
+import { AssigneeMultiSelect } from './AssigneeMultiSelect.jsx';
 
 /**
  * Full comment workspace modal — timeline + compose (project Tasks tab).
- * Assignee is edited once in the compose form using the project-page picker.
+ * Assignee uses the same multi-select as the project Tasks table and writes to task.who.
  */
 export function TaskCommentModal({
   open,
@@ -64,7 +65,21 @@ export function TaskCommentModal({
   const dm = cDates(proj);
   const d = dm[liveTask.id] || { s: '', e: '' };
   const st = taskStatus(liveTask, dm);
+  const heat = dueDateHeat(currentDueIso(liveTask, dm), { status: st });
   const commentCount = displayComments.length;
+
+  const saveAssignee = (who) => {
+    const next = who == null ? '' : String(who);
+    if (next === String(liveTask.who || '')) return;
+    dispatch({
+      type: 'updTask',
+      projId: proj.id,
+      phId: ph.id,
+      tId: liveTask.id,
+      f: 'who',
+      v: next,
+    });
+  };
 
   return (
     <div className="tcm-backdrop" onClick={onClose} role="presentation">
@@ -92,16 +107,23 @@ export function TaskCommentModal({
               {liveTask.name}
             </h2>
             <div className="tcm-chips">
-              <span className={`badge ${statusBadgeClass(st)}`}>{statusLabel(st)}</span>
-              {liveTask.who ? (
-                <span className="tcm-chip tcm-chip-assignee" title="Current task assignee">
-                  Assignee: {liveTask.who}
-                </span>
-              ) : null}
-              {d.e ? <span className="tcm-chip">Due {formatShortDate(d.e)}</span> : null}
+              <span className={`badge ${statusBadgeClass(heat === 'none' ? st : heat)}`}>
+                {statusLabel(heat === 'none' ? st : heat)}
+              </span>
+              {d.e ? <span className="tcm-chip">Schedule end {formatShortDate(d.e)}</span> : null}
               <span className="tcm-chip tcm-chip-gold">
                 {commentCount} comment{commentCount !== 1 ? 's' : ''}
               </span>
+            </div>
+            <div className="tcm-assignee-row">
+              <span className="tcm-assignee-lbl">Assignee</span>
+              <AssigneeMultiSelect
+                compact
+                value={liveTask.who || ''}
+                options={assigneeOptions}
+                onChange={saveAssignee}
+              />
+              <span className="tcm-assignee-hint">Same picker as project Tasks · updates the task immediately</span>
             </div>
           </div>
         </header>
@@ -161,7 +183,6 @@ export function TaskCommentModal({
                 authorName={authorName}
                 authorEmail={authorEmail}
                 departments={departments}
-                assigneeOptions={assigneeOptions}
                 allowEditLatest={composeMode === 'edit'}
                 blankForm={composeMode === 'new'}
                 hideHistory

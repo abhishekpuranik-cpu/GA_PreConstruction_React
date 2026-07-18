@@ -6,18 +6,15 @@ import { uploadAttachments } from './preconMedia.js';
 import { loadExtraRecipients, mergeRecipients, saveExtraRecipients } from './preconAutoNotify.js';
 import { loadNotifyContext, notifyPreconUpdate, hasNotifyTargets, runPreconNotification } from './preconNotify.js';
 import { joinTranscript, useSpeechDictation } from './useSpeechDictation.js';
-import { AssigneeMultiSelect } from './AssigneeMultiSelect.jsx';
 
 /**
  * Comment + attachments; saves text immediately, uploads files and sends notify in background.
- * Assignee uses the same multi-select as the project Tasks page and saves live via onAssigneeChange.
+ * Task assignee is edited on the project Tasks row / comment modal header (not in this form).
  */
 export function CommentForm({
   projectId,
   taskId,
   taskWho = '',
-  assigneeOptions = [],
-  onAssigneeChange,
   departments = [],
   authorName,
   authorEmail,
@@ -306,20 +303,6 @@ export function CommentForm({
           {phaseName ? <div className="cform-context-phase">{phaseName}</div> : null}
         </div>
       ) : null}
-      <label className="cform-field cform-assignee-field">
-        <span className="cform-lbl">Assignee</span>
-        <div className="cform-assignee-picker">
-          <AssigneeMultiSelect
-            value={assignee}
-            options={assigneeOptions}
-            disabled={isBusy || typeof onAssigneeChange !== 'function'}
-            onChange={(v) => {
-              if (typeof onAssigneeChange === 'function') onAssigneeChange(v);
-            }}
-          />
-        </div>
-        <span className="cform-assignee-hint">Search project team or Security Admin users · saves to the task immediately</span>
-      </label>
       <p className="cform-meta">
         Posting as <strong style={{ color: '#1A304A' }}>{authorName || '…'}</strong>
         {authorEmail ? <span style={{ color: '#96918A' }}> · {authorEmail}</span> : null}
