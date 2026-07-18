@@ -30,7 +30,7 @@ import { ProjectPageShell } from "./ProjectPageShell.jsx";
 import { TaskCommentsListSection } from "./TaskCommentsListSection.jsx";
 import { StatusFilterChips } from "./StatusFilterChips.jsx";
 import { AssigneeMultiSelect } from "./AssigneeMultiSelect.jsx";
-import { filterProjectsForUser, buildAssigneeRoster, assigneeMatches, projectsForAssigneeRoster } from "./preconAssignees.js";
+import { filterProjectsForUser, buildAssigneeRoster, assigneeMatches, projectsForAssigneeRoster, taskMatchesAssigneeFilter, UNASSIGNED_FILTER } from "./preconAssignees.js";
 import { filterAndSortProjects } from "./projectSearch.js";
 import { ProjectNavPicker } from "./ProjectNavPicker.jsx";
 import { notifyTaskStatusChange } from "./preconNotify.js";
@@ -1184,6 +1184,7 @@ function ActionFilters({
       <label>Assignee</label>
       <select value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value)}>
         <option value="">All</option>
+        <option value={UNASSIGNED_FILTER}>No Assignee</option>
         {assignees.map((a) => (
           <option key={a} value={a}>
             {a}
@@ -1221,7 +1222,7 @@ function ActionFilters({
 }
 
 function taskPassesFilters(t, dm, phaseName, { statusFilters, assigneeFilter, departmentFilter, departments, roleFilter, horizonDays, todayStr }) {
-  if (assigneeFilter && !assigneeMatches(t.who, assigneeFilter)) return false;
+  if (!taskMatchesAssigneeFilter(t.who, assigneeFilter)) return false;
   if (!taskMatchesDepartment(t, phaseName, departmentFilter, departments)) return false;
   if (!taskMatchesRoleFilter(t, roleFilter)) return false;
   const st = taskStatus(t, dm);

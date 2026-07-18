@@ -1,7 +1,7 @@
 import { cDates, dbDays } from './preconDates.js';
 import { taskMatchesStatusFilters, taskStatus, todayIso } from './preconTaskStatus.js';
 import { getDepartmentForPhase, taskMatchesRoleFilter } from './preconDepartments.js';
-import { assigneeMatches, nameMatches } from './preconAssignees.js';
+import { assigneeMatches, nameMatches, taskMatchesAssigneeFilter } from './preconAssignees.js';
 import { commentSortKey, collectTaskComments, normalizeTaskComments, normTaskKey } from './preconComments.js';
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -178,7 +178,7 @@ export function buildPortfolioWorkItems(projects, opts = {}) {
       for (const task of ph.tasks || []) {
         const st = taskStatus(task, dm);
         if (!taskMatchesStatusFilters(st, statusFilters)) continue;
-        if (assigneeFilter && !assigneeMatches(task.who, assigneeFilter)) continue;
+        if (!taskMatchesAssigneeFilter(task.who, assigneeFilter)) continue;
         if (!taskMatchesRoleFilter(task, roleFilter)) continue;
         pushWorkItem(items, { proj, ph, task, st, dm, departments, todayStr });
       }

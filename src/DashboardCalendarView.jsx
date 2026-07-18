@@ -26,7 +26,7 @@ import {
   projectFilterLabel,
   toggleProjectFilter,
 } from './preconProjectFilter.js';
-import { buildAssigneeRoster, projectsForAssigneeRoster } from './preconAssignees.js';
+import { buildAssigneeRoster, projectsForAssigneeRoster, UNASSIGNED_FILTER } from './preconAssignees.js';
 import './activityCalendar.css';
 
 const LEGEND = [
@@ -190,6 +190,7 @@ export function DashboardCalendarView({
               onChange={(e) => setAssigneeFilter(e.target.value)}
             >
               <option value="">All assignees</option>
+              <option value={UNASSIGNED_FILTER}>No Assignee</option>
               {assignees.map((a) => (
                 <option key={a} value={a}>{a}</option>
               ))}

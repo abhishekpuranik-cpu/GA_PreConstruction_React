@@ -1,6 +1,9 @@
 import { iterAllTasks } from './preconExport.js';
 import { canonicalAssigneeName } from './preconAssigneeNames.js';
 
+/** Sentinel value for assignee filters meaning “no one tagged on the task”. */
+export const UNASSIGNED_FILTER = '__unassigned__';
+
 /** Split stored assignee text into individual names (supports ";", ",", "&", "and"). */
 export function expandAssigneeTokens(who) {
   return String(who || '')
@@ -18,6 +21,10 @@ export function formatAssignees(names) {
   return [...new Set((names || []).map((s) => String(s).trim()).filter(Boolean))].join('; ');
 }
 
+export function isUnassigned(taskWho) {
+  return parseAssignees(taskWho).length === 0;
+}
+
 /** Match if person appears in assignee list (or legacy single string). */
 export function assigneeMatches(taskWho, person) {
   const p = String(person || '').trim().toLowerCase();
@@ -25,6 +32,17 @@ export function assigneeMatches(taskWho, person) {
   const list = parseAssignees(taskWho);
   if (!list.length) return false;
   return list.some((w) => nameMatches(w, p));
+}
+
+/**
+ * Filter helper for assignee dropdowns.
+ * Empty filter = all; UNASSIGNED_FILTER = no assignees; else name match.
+ */
+export function taskMatchesAssigneeFilter(taskWho, filter) {
+  const f = String(filter || '').trim();
+  if (!f) return true;
+  if (f === UNASSIGNED_FILTER) return isUnassigned(taskWho);
+  return assigneeMatches(taskWho, f);
 }
 
 export function nameMatches(a, b) {
