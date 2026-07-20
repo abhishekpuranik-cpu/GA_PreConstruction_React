@@ -141,6 +141,16 @@ export function MongoSyncAdapter({
     const res = await mongoPutState(APP_ID, { data: snap, expectedVersion: versionRef.current.v });
     if (res.ok) {
       versionRef.current.v = res.version ?? versionRef.current.v;
+      // Server returns union-merged workspace — apply so incomplete local catalogs
+      // pick up restored projects without a manual Reload.
+      if (res.data && typeof res.data === 'object' && !Array.isArray(res.data)) {
+        const remoteCount = Array.isArray(res.data.projects) ? res.data.projects.length : 0;
+        const localCount = Array.isArray(snap?.projects) ? snap.projects.length : 0;
+        if (remoteCount > localCount || !sameState(res.data, snap)) {
+          userEditedRef.current = false;
+          applyRemoteState(res.data, res.version, { force: true });
+        }
+      }
       setCloudStatus('synced');
       return true;
     }
@@ -162,8 +172,10 @@ export function MongoSyncAdapter({
           });
           if (retry.ok) {
             versionRef.current.v = retry.version ?? versionRef.current.v;
-            if (!sameState(merged, snap)) {
-              dispatch({ type: 'loadState', state: merged });
+            const applyState = retry.data && typeof retry.data === 'object' ? retry.data : merged;
+            if (!sameState(applyState, snap)) {
+              userEditedRef.current = false;
+              applyRemoteState(applyState, retry.version, { force: true });
             }
             setCloudStatus('synced');
             return true;
@@ -269,11 +281,21 @@ export function MongoSyncAdapter({
         const remote = Number(j?.version || 0);
         if (remote > versionRef.current.v && remote > notifiedRemoteVersion.current) {
           notifiedRemoteVersion.current = remote;
+          // Auto-pull when server has more projects / newer catalog (no Reload click).
+          const latest = await mongoGetState(APP_ID);
+          if (!latest.ok || !latest.data) return;
+          const remoteCount = Array.isArray(latest.data.projects) ? latest.data.projects.length : 0;
+          const localCount = Array.isArray(stateRef.current?.projects) ? stateRef.current.projects.length : 0;
+          if (remoteCount > localCount) {
+            userEditedRef.current = false;
+            applyRemoteState(latest.data, latest.version, { force: true });
+            toast?.(`Loaded ${remoteCount} projects from server`, 'ok');
+          }
         }
       } catch {
         /* ignore */
       }
-    }, 20000);
+    }, 8000);
     return () => clearInterval(t);
   }, [syncReady, toast]);
 
