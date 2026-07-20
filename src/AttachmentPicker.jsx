@@ -7,6 +7,13 @@ function nextKey() {
   return `stg_${_key}`;
 }
 
+function kindIcon(kind) {
+  if (kind === 'image') return '🖼';
+  if (kind === 'video') return '🎬';
+  if (kind === 'drawing') return '📐';
+  return '📄';
+}
+
 /**
  * Staged files with display labels before upload.
  * @param {{ items: {key,file,label}[], onChange: (items) => void, disabled?: boolean, compact?: boolean }} props
@@ -34,7 +41,7 @@ export function AttachmentPicker({ items, onChange, disabled, compact }) {
   return (
     <div className={`att-pick${compact ? ' att-pick-compact' : ''}`}>
       <div className="att-pick-head">
-        <span className="att-pick-title">Photos, videos & documents</span>
+        <span className="att-pick-title">Photos, videos, documents & AutoCAD</span>
         <button
           type="button"
           className="att-pick-add"
@@ -56,13 +63,15 @@ export function AttachmentPicker({ items, onChange, disabled, compact }) {
           }}
         />
       </div>
-      <p className="att-pick-hint">Name each file (e.g. &quot;Site photo — north elevation&quot;). Max ~25 MB per file.</p>
+      <p className="att-pick-hint">
+        Name each file (e.g. &quot;Site photo — north elevation&quot;). AutoCAD: .dwg, .dxf, .dwf. Max ~25 MB per file.
+      </p>
       {items?.length ? (
         <ul className="att-pick-list">
           {items.map((it) => (
             <li key={it.key} className="att-pick-item">
               <span className={`att-kind att-kind-${attachmentKindFromFile(it.file)}`} aria-hidden>
-                {attachmentKindFromFile(it.file) === 'image' ? '🖼' : attachmentKindFromFile(it.file) === 'video' ? '🎬' : '📄'}
+                {kindIcon(attachmentKindFromFile(it.file))}
               </span>
               <div className="att-pick-fields">
                 <input
@@ -98,7 +107,7 @@ export function AttachmentLinks({ attachments }) {
         <li key={a.id || a.url}>
           <a href={a.url || `#`} target="_blank" rel="noopener noreferrer" className="att-link">
             <span className={`att-kind att-kind-${a.kind || 'document'}`} aria-hidden>
-              {a.kind === 'image' ? '🖼' : a.kind === 'video' ? '🎬' : '📄'}
+              {kindIcon(a.kind || 'document')}
             </span>
             <span>{a.label || a.fileName || 'File'}</span>
           </a>

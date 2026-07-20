@@ -1,12 +1,19 @@
 const ACCEPT =
-  'image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  'image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.dwg,.dxf,.dwf,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/vnd.dwg,image/vnd.dxf,application/acad,application/dxf,model/vnd.dwf';
 
 export const ATTACHMENT_ACCEPT = ACCEPT;
 
+const CAD_EXT_RE = /\.(dwg|dxf|dwf)$/i;
+
+export function isCadFileName(name) {
+  return CAD_EXT_RE.test(String(name || ''));
+}
+
 export function attachmentKindFromFile(file) {
   const t = String(file?.type || '').toLowerCase();
-  if (t.startsWith('image/')) return 'image';
+  if (t.startsWith('image/') && !/vnd\.(dwg|dxf)/i.test(t)) return 'image';
   if (t.startsWith('video/')) return 'video';
+  if (isCadFileName(file?.name) || /acad|dwg|dxf|dwf/i.test(t)) return 'drawing';
   return 'document';
 }
 
