@@ -20,6 +20,10 @@ function enableMongoOnCloud() {
   }
 }
 
+function projectCount(data) {
+  return Array.isArray(data?.projects) ? data.projects.length : 0;
+}
+
 /**
  * Loads / saves PreConstruction reducer state to Golden Abodes Platform MongoDB
  * (same app_states collection as GET/PUT /api/apps/preconstruction/state).
@@ -43,6 +47,7 @@ export function MongoSyncAdapter({
   const initialStateJsonRef = useRef(null);
   const canDeleteRef = useRef(canDeleteProjects);
   const initialLoadDoneRef = useRef(false);
+  const applyRemoteStateRef = useRef(null);
 
   useEffect(() => {
     canDeleteRef.current = canDeleteProjects;
@@ -50,6 +55,18 @@ export function MongoSyncAdapter({
 
   useLayoutEffect(() => {
     stateRef.current = state;
+    // Do not mark "user edited" until after the first Mongo load — otherwise seed/local
+    // catalog blocks applying the full server portfolio.
+    if (!initialLoadDoneRef.current) {
+      try {
+        if (initialStateJsonRef.current === null) {
+          initialStateJsonRef.current = JSON.stringify(state);
+        }
+      } catch {
+        /* ignore */
+      }
+      return;
+    }
     try {
       const json = JSON.stringify(state);
       if (initialStateJsonRef.current === null) initialStateJsonRef.current = json;
@@ -70,15 +87,38 @@ export function MongoSyncAdapter({
   const applyRemoteState = (remote, version, { force = false } = {}) => {
     if (!remote || typeof remote !== 'object' || Array.isArray(remote)) return false;
     if (!force && userEditedRef.current) return false;
-    dispatch({ type: 'loadState', state: remote });
+    // Clear poisoned local tombstones that would hide server projects on next save.
+    const cleaned = {
+      ...remote,
+      _removedProjectIds: Array.isArray(remote._removedProjectIds) ? remote._removedProjectIds : [],
+    };
+    dispatch({ type: 'loadState', state: cleaned });
     try {
-      initialStateJsonRef.current = JSON.stringify(remote);
+      initialStateJsonRef.current = JSON.stringify(cleaned);
     } catch {
       /* ignore */
     }
+    userEditedRef.current = false;
     versionRef.current.v = version || 0;
-    setCloudStatus(force ? 'synced' : userEditedRef.current ? 'dirty' : 'synced');
+    setCloudStatus('synced');
     return true;
+  };
+  applyRemoteStateRef.current = applyRemoteState;
+
+  const pullServerCatalog = async ({ force = false, reason = '' } = {}) => {
+    const res = await mongoGetState(APP_ID);
+    if (!res.ok || !res.data) return false;
+    const remoteCount = projectCount(res.data);
+    const localCount = projectCount(stateRef.current);
+    if (force || remoteCount > localCount) {
+      applyRemoteState(res.data, res.version, { force: true });
+      if (remoteCount > localCount && reason) {
+        toast?.(`Loaded ${remoteCount} projects from server`, 'ok');
+      }
+      return true;
+    }
+    versionRef.current.v = Math.max(versionRef.current.v, res.version || 0);
+    return false;
   };
 
   useEffect(() => {
@@ -86,6 +126,7 @@ export function MongoSyncAdapter({
     (async () => {
       if (!canUseMongoState()) {
         setCloudStatus('local');
+        initialLoadDoneRef.current = true;
         setSyncReady(true);
         return;
       }
@@ -93,7 +134,8 @@ export function MongoSyncAdapter({
         const res = await mongoGetState(APP_ID);
         if (ac.signal.aborted) return;
         if (res.ok && res.data && typeof res.data === 'object' && !Array.isArray(res.data)) {
-          applyRemoteState(res.data, res.version);
+          // Always take server portfolio on boot.
+          applyRemoteState(res.data, res.version, { force: true });
         } else if (res.status === 404) {
           versionRef.current.v = 0;
           setCloudStatus('new');
@@ -137,17 +179,22 @@ export function MongoSyncAdapter({
       return false;
     }
     const snap = stateRef.current;
+    // Never persist a poisoned mass-tombstone list from the browser.
+    const localCount = projectCount(snap);
+    const safeSnap = {
+      ...snap,
+      _removedProjectIds:
+        Array.isArray(snap?._removedProjectIds) && snap._removedProjectIds.length > Math.max(2, localCount)
+          ? []
+          : snap?._removedProjectIds || [],
+    };
     setCloudStatus('saving');
-    const res = await mongoPutState(APP_ID, { data: snap, expectedVersion: versionRef.current.v });
+    const res = await mongoPutState(APP_ID, { data: safeSnap, expectedVersion: versionRef.current.v });
     if (res.ok) {
       versionRef.current.v = res.version ?? versionRef.current.v;
-      // Server returns union-merged workspace — apply so incomplete local catalogs
-      // pick up restored projects without a manual Reload.
       if (res.data && typeof res.data === 'object' && !Array.isArray(res.data)) {
-        const remoteCount = Array.isArray(res.data.projects) ? res.data.projects.length : 0;
-        const localCount = Array.isArray(snap?.projects) ? snap.projects.length : 0;
+        const remoteCount = projectCount(res.data);
         if (remoteCount > localCount || !sameState(res.data, snap)) {
-          userEditedRef.current = false;
           applyRemoteState(res.data, res.version, { force: true });
         }
       }
@@ -163,7 +210,7 @@ export function MongoSyncAdapter({
             setCloudStatus('synced');
             return true;
           }
-          const merged = mergePreconstructionClientState(latest.data, snap, {
+          const merged = mergePreconstructionClientState(latest.data, safeSnap, {
             allowProjectRemoval: canDeleteRef.current,
           });
           const retry = await mongoPutState(APP_ID, {
@@ -173,19 +220,21 @@ export function MongoSyncAdapter({
           if (retry.ok) {
             versionRef.current.v = retry.version ?? versionRef.current.v;
             const applyState = retry.data && typeof retry.data === 'object' ? retry.data : merged;
-            if (!sameState(applyState, snap)) {
-              userEditedRef.current = false;
-              applyRemoteState(applyState, retry.version, { force: true });
-            }
+            applyRemoteState(applyState, retry.version, { force: true });
             setCloudStatus('synced');
             return true;
           }
         }
       } catch {
-        /* fall through to conflict status */
+        /* fall through */
       }
       setCloudStatus('conflict');
-      toast('Save conflict — use Reload to get team data', 'err');
+      // Auto-recover: pull server catalog instead of asking the user to click Reload.
+      try {
+        await pullServerCatalog({ force: true, reason: 'conflict' });
+      } catch {
+        toast('Save conflict — could not auto-load server data', 'err');
+      }
       return false;
     }
     setCloudStatus('error');
@@ -200,13 +249,12 @@ export function MongoSyncAdapter({
     }
     setCloudStatus('loading');
     try {
-      const res = await mongoGetState(APP_ID);
-      if (res.ok && res.data && typeof res.data === 'object' && !Array.isArray(res.data)) {
-        userEditedRef.current = false;
-        applyRemoteState(res.data, res.version, { force: true });
+      const ok = await pullServerCatalog({ force: true });
+      if (ok) {
         toast('Workspace reloaded from Mongo', 'ok');
         return true;
       }
+      const res = await mongoGetState(APP_ID);
       if (res.status === 404) {
         versionRef.current.v = 0;
         setCloudStatus('new');
@@ -254,20 +302,34 @@ export function MongoSyncAdapter({
     if (!syncReady || !isMongoAutsaveEnabled() || !canUseMongoState()) return;
     const schedule = scheduleSaveRef.current;
     if (!schedule) return;
-    schedule(() => stateRef.current);
+    schedule(() => {
+      const snap = stateRef.current;
+      const localCount = projectCount(snap);
+      return {
+        ...snap,
+        _removedProjectIds:
+          Array.isArray(snap?._removedProjectIds) && snap._removedProjectIds.length > Math.max(2, localCount)
+            ? []
+            : snap?._removedProjectIds || [],
+      };
+    });
     setCloudStatus((s) => (s === 'saving' ? s : 'dirty'));
   }, [state, syncReady]);
 
   useEffect(() => {
     const onVis = () => {
-      if (document.visibilityState === 'hidden' && syncReady && isMongoAutsaveEnabled()) {
-        void flushSave();
-      }
+      if (document.visibilityState !== 'visible' || !syncReady || !canUseMongoState()) return;
+      void pullServerCatalog({ force: false, reason: 'visible' });
     };
     document.addEventListener('visibilitychange', onVis);
     window.addEventListener('pagehide', () => void flushSave());
+    // Immediate pull after boot in case first paint raced.
+    const t = setTimeout(() => {
+      void pullServerCatalog({ force: true, reason: 'boot' });
+    }, 1500);
     return () => {
       document.removeEventListener('visibilitychange', onVis);
+      clearTimeout(t);
     };
   }, [syncReady]);
 
@@ -279,23 +341,17 @@ export function MongoSyncAdapter({
         if (!r.ok) return;
         const j = await r.json();
         const remote = Number(j?.version || 0);
-        if (remote > versionRef.current.v && remote > notifiedRemoteVersion.current) {
+        if (remote > versionRef.current.v) {
           notifiedRemoteVersion.current = remote;
-          // Auto-pull when server has more projects / newer catalog (no Reload click).
-          const latest = await mongoGetState(APP_ID);
-          if (!latest.ok || !latest.data) return;
-          const remoteCount = Array.isArray(latest.data.projects) ? latest.data.projects.length : 0;
-          const localCount = Array.isArray(stateRef.current?.projects) ? stateRef.current.projects.length : 0;
-          if (remoteCount > localCount) {
-            userEditedRef.current = false;
-            applyRemoteState(latest.data, latest.version, { force: true });
-            toast?.(`Loaded ${remoteCount} projects from server`, 'ok');
-          }
+          await pullServerCatalog({ force: true, reason: 'version' });
+        } else {
+          // Even on same version, recover if local catalog is smaller.
+          await pullServerCatalog({ force: false, reason: 'poll' });
         }
       } catch {
         /* ignore */
       }
-    }, 8000);
+    }, 5000);
     return () => clearInterval(t);
   }, [syncReady, toast]);
 

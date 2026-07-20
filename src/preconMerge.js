@@ -17,8 +17,7 @@ function normalizeRemovedIds(...sources) {
 
 /**
  * Merge server + local workspace.
- * Never infer deletes from a missing project in the local catalog (prevents admin autosave wipe).
- * Deletes only via explicit `_removedProjectIds`.
+ * Ignores mass tombstone lists from poisoned local state (same rules as server).
  */
 export function mergePreconstructionClientState(serverState, localState, opts = {}) {
   void opts;
@@ -27,7 +26,18 @@ export function mergePreconstructionClientState(serverState, localState, opts = 
   const exProjects = ex.projects || [];
   const inProjects = inc.projects || [];
 
-  const removedIds = normalizeRemovedIds(ex, inc);
+  const exRemoved = new Set(normalizeRemovedIds(ex));
+  const incRemoved = normalizeRemovedIds(inc);
+  const inIds = new Set(inProjects.map((p) => String(p?.id)).filter(Boolean));
+
+  const removedIds = new Set(exRemoved);
+  for (const id of inIds) removedIds.delete(id);
+
+  const newDeletes = incRemoved.filter((id) => !inIds.has(id) && !exRemoved.has(id));
+  const MAX_NEW_DELETES_PER_SAVE = 2;
+  if (newDeletes.length > 0 && newDeletes.length <= MAX_NEW_DELETES_PER_SAVE) {
+    for (const id of newDeletes) removedIds.add(id);
+  }
 
   const byId = new Map();
   for (const p of exProjects) {
@@ -46,7 +56,7 @@ export function mergePreconstructionClientState(serverState, localState, opts = 
     departments:
       Array.isArray(inc.departments) && inc.departments.length ? inc.departments : ex.departments || [],
     activityLog: mergeActivityLogs(ex.activityLog, inc.activityLog),
-    _removedProjectIds: removedIds,
+    _removedProjectIds: [...removedIds],
     projects: [...byId.values()],
   };
 }
