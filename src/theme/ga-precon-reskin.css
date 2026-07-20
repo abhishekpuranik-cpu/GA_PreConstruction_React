@@ -1,0 +1,42 @@
+/**
+ * GA reskin — scoped top-nav / brand-mark remap for GA_PreConstruction_React.
+ *
+ * The app's real UI colors are hardcoded hex values baked into a single template
+ * string (`STYLES` in App.jsx) that gets appended to <head> as a <style> tag from a
+ * useEffect on mount (see the `document.createElement('style')` call in App.jsx) —
+ * i.e. *after* this file's statically-imported stylesheet is already in the DOM.
+ * Per-instance accents (--acc, --mw-g, --pj-accent) are set via inline style
+ * attributes driven by JS color tables and are out of scope here ("without
+ * changing JS"). index.css's :root vars are unused Vite boilerplate — nothing in
+ * the real UI reads them, so remapping them alone would have no visible effect.
+ *
+ * Because STYLES mounts after us, plain source-order overrides would lose to it;
+ * every rule below uses !important so it wins regardless of mount timing, without
+ * touching App.jsx. Most of `.tnav`'s descendant text uses inline `color: C.navy`
+ * assuming a light background, so the bar itself stays white — only the brand
+ * mark, its accent border, and the active-tab underline shift to GA navy/orange.
+ */
+
+.tnav {
+  border-bottom-color: rgba(240, 89, 44, 0.35) !important;
+}
+
+.nlogo {
+  background: #092856 !important;
+  color: #f0592c !important;
+  font-family: 'Playfair Display', 'Cormorant Garamond', Georgia, serif !important;
+}
+
+.tnav-menu-btn:hover,
+.tnav-menu-btn:focus-visible {
+  border-color: #f0592c !important;
+  color: #092856 !important;
+}
+
+.dash-stab.act {
+  border-bottom-color: #f0592c !important;
+}
+
+.dash-stab:hover {
+  color: #092856 !important;
+}
