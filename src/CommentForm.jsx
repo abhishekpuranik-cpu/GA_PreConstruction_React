@@ -228,9 +228,11 @@ export function CommentForm({
     try {
       const now = new Date();
       const comment = {
+        id: `c_${now.getTime()}_${Math.random().toString(36).slice(2, 9)}`,
         text: savedText,
         author: authorName,
         createdAt: now.toISOString(),
+        updatedAt: now.toISOString(),
         ts: now.toLocaleString('en-IN', {
           day: 'numeric',
           month: 'short',
@@ -261,11 +263,11 @@ export function CommentForm({
       toast(
         shouldMarkComplete
           ? (stagedCopy.length
-            ? 'Comment saved & activity marked complete — uploading files… Click Save in the top bar to share with the team.'
-            : 'Comment saved & activity marked complete — click Save in the top bar to share with the team.')
+            ? 'Comment saved & activity marked complete — uploading files… Syncing to team…'
+            : 'Comment saved & activity marked complete — syncing to team…')
           : (stagedCopy.length
-            ? 'Comment saved — uploading files… Click Save in the top bar to share with the team.'
-            : 'Comment saved — click Save in the top bar to share with the team.'),
+            ? 'Comment saved — uploading files… Syncing to team…'
+            : 'Comment saved — syncing to team…'),
         'ok',
       );
       setText('');

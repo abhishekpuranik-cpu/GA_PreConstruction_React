@@ -43,7 +43,7 @@ export function getLatestNextActionEntry(comments) {
   let best = null;
   let bestScore = -1;
   let commentIndex = -1;
-  (comments || []).forEach((c, i) => {
+  list.forEach((c, i) => {
     const date = String(c.nextActionDate || '').trim();
     if (!date) return;
     const score = parseCommentTs(c);

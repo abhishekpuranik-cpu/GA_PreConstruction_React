@@ -107,6 +107,7 @@ export function TaskCommentPanel({
                   nextActionDate: comment.nextActionDate,
                   flag: comment.flag,
                   markedComplete: !!comment.markedComplete,
+                  updatedAt: new Date().toISOString(),
                   attachments: [...(editable.comment?.attachments || []), ...(comment.attachments || [])],
                   notifyRecipients: comment.notifyRecipients,
                   notifyPending: comment.notifyPending,

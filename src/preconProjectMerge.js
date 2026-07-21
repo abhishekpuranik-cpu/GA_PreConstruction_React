@@ -1,4 +1,5 @@
 /** Deep merge PreConstruction projects — union phases and tasks by id (409 / team sync). */
+import { mergeTaskCommentArrays } from './preconComments.js';
 
 function normalizeRemovedTaskIds(...sources) {
   const out = new Set();
@@ -58,8 +59,6 @@ function pickMergedWho(existing, incoming) {
 function mergeTaskRow(existing, incoming) {
   if (!existing) return incoming;
   if (!incoming) return existing;
-  const exComments = Array.isArray(existing.comments) ? existing.comments.length : 0;
-  const inComments = Array.isArray(incoming.comments) ? incoming.comments.length : 0;
   const exAtt = Array.isArray(existing.attachments) ? existing.attachments.length : 0;
   const inAtt = Array.isArray(incoming.attachments) ? incoming.attachments.length : 0;
   const whoPick = pickMergedWho(existing, incoming);
@@ -68,7 +67,7 @@ function mergeTaskRow(existing, incoming) {
     ...incoming,
     who: whoPick.who,
     whoUpdatedAt: whoPick.whoUpdatedAt,
-    comments: inComments >= exComments ? incoming.comments : existing.comments,
+    comments: mergeTaskCommentArrays(existing.comments, incoming.comments),
     attachments: inAtt >= exAtt ? incoming.attachments : existing.attachments,
     msManual: incoming.msManual ?? existing.msManual,
     source: incoming.source || existing.source,

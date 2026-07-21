@@ -133,6 +133,18 @@ function mkPhasesFor(pid){
 
 // ── INITIAL DATA ────────────────────────────────────────
 function buildInit(){
+  // Empty shell — Mongo GET fills the real portfolio. Avoids slow seed→server double paint.
+  const shell = {
+    cloudUrl: "",
+    projects: [],
+    activityLog: [],
+    _removedProjectIds: [],
+  };
+  ensureStateDepartments(shell);
+  return shell;
+}
+
+function buildLegacySeedCatalogUnused(){
   const{so:ghqSO,cp:ghqCP}=mkPhasesFor("ghq");
   const{so:nkwSO,cp:nkwCP}=mkPhasesFor("nkw");
   const{so:wgaSO,cp:wgaCP}=mkPhasesFor("wga");
@@ -1759,7 +1771,7 @@ function ProjectFormFields({form,setForm}){
   );
 }
 
-function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWork,onEditProject,onDeleteProject,onAddProject,onImportJson,onImportExcel,departments,canDeleteProjects,dispatch,loginUser,activityLog}){
+function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWork,onEditProject,onDeleteProject,onAddProject,onImportJson,onImportExcel,departments,canDeleteProjects,dispatch,loginUser,activityLog,syncLoading}){
   const[dashTab,setDashTab]=useState("overview");
   const[horizonDays,setHorizonDays]=useState(30);
   const[statusFilters,setStatusFilters]=useState([]);
@@ -1771,33 +1783,45 @@ function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWo
   const assignees=useMemo(()=>collectAssignees(displayProjects),[displayProjects]);
   const roleOptions=useMemo(()=>collectAllRoles(displayProjects),[displayProjects]);
   const todayStr=todayIso();
-  const filters={statusFilters,assigneeFilter,departmentFilter,departments,roleFilter,horizonDays,todayStr};
-  const allStats=displayProjects.map(p=>({p,s:pStats(p)}));
-  const tT=allStats.reduce((a,x)=>a+x.s.tot,0),tC=allStats.reduce((a,x)=>a+x.s.comp,0),
-        tO=allStats.reduce((a,x)=>a+x.s.ov,0),tI=allStats.reduce((a,x)=>a+x.s.ip,0);
-  const op=tT?Math.round(tC/tT*100):0;
-  const statusData=[{name:"Completed",v:tC,c:"#1A6A3C"},{name:"In Progress",v:tI,c:"#1B5E9E"},{name:"Overdue",v:tO,c:"#B32E1E"},{name:"Not Started",v:allStats.reduce((a,x)=>a+x.s.up,0),c:"#9A9590"}];
-  const ghq=displayProjects.find(p=>p.id==="ghq");
-  const phaseData=ghq?ghq.phases.map(ph=>{const dm=cDates(ghq);const c=ph.tasks.filter(t=>taskStatus(t,dm)==="completed").length;return{name:ph.name.substring(0,12),pct:ph.tasks.length?Math.round(c/ph.tasks.length*100):0,col:ph.col};}):[];
-  const upcoming=[],iss=[];
-  displayProjects.forEach(proj=>{
-    const dm=cDates(proj);
-    proj.phases.forEach(ph=>ph.tasks.forEach(t=>{
-      const d=dm[t.id];if(!d)return;const st=taskStatus(t,dm);
-      if(st==="overdue")iss.push({proj,ph,t,d,dy:dbDays(d.e,todayStr)});
-      const isAction=st==="inprogress"||st==="notstarted"||st==="upcoming"||st==="paused";
-      if(isAction&&taskPassesFilters(t,dm,ph.name,filters)){
-        const dsStart=dbDays(todayStr,d.s);
-        const dsEnd=dbDays(todayStr,d.e);
-        const ds=Math.min(dsStart>=0?dsStart:999,dsEnd>=0?dsEnd:999);
-        upcoming.push({proj,ph,t,d,ds,st});
-      }
-      t.comments.forEach(c=>{if(c.flag)iss.push({proj,ph,t,d,com:c});});
-    }));
-  });
-  upcoming.sort((a,b)=>a.ds-b.ds);
+  const filters=useMemo(()=>({statusFilters,assigneeFilter,departmentFilter,departments,roleFilter,horizonDays,todayStr}),[statusFilters,assigneeFilter,departmentFilter,departments,roleFilter,horizonDays,todayStr]);
+  const overviewStats=useMemo(()=>{
+    const allStats=displayProjects.map(p=>({p,s:pStats(p)}));
+    const tT=allStats.reduce((a,x)=>a+x.s.tot,0),tC=allStats.reduce((a,x)=>a+x.s.comp,0),
+          tO=allStats.reduce((a,x)=>a+x.s.ov,0),tI=allStats.reduce((a,x)=>a+x.s.ip,0);
+    const op=tT?Math.round(tC/tT*100):0;
+    const statusData=[{name:"Completed",v:tC,c:"#1A6A3C"},{name:"In Progress",v:tI,c:"#1B5E9E"},{name:"Overdue",v:tO,c:"#B32E1E"},{name:"Not Started",v:allStats.reduce((a,x)=>a+x.s.up,0),c:"#9A9590"}];
+    const ghq=displayProjects.find(p=>p.id==="ghq");
+    const phaseData=ghq?ghq.phases.map(ph=>{const dm=cDates(ghq);const c=ph.tasks.filter(t=>taskStatus(t,dm)==="completed").length;return{name:ph.name.substring(0,12),pct:ph.tasks.length?Math.round(c/ph.tasks.length*100):0,col:ph.col};}):[];
+    const upcoming=[],iss=[];
+    displayProjects.forEach(proj=>{
+      const dm=cDates(proj);
+      proj.phases.forEach(ph=>ph.tasks.forEach(t=>{
+        const d=dm[t.id];if(!d)return;const st=taskStatus(t,dm);
+        if(st==="overdue")iss.push({proj,ph,t,d,dy:dbDays(d.e,todayStr)});
+        const isAction=st==="inprogress"||st==="notstarted"||st==="upcoming"||st==="paused";
+        if(isAction&&taskPassesFilters(t,dm,ph.name,filters)){
+          const dsStart=dbDays(todayStr,d.s);
+          const dsEnd=dbDays(todayStr,d.e);
+          const ds=Math.min(dsStart>=0?dsStart:999,dsEnd>=0?dsEnd:999);
+          upcoming.push({proj,ph,t,d,ds,st});
+        }
+        (t.comments||[]).forEach(c=>{if(c.flag)iss.push({proj,ph,t,d,com:c});});
+      }));
+    });
+    upcoming.sort((a,b)=>a.ds-b.ds);
+    return{allStats,tT,tC,tO,tI,op,statusData,phaseData,upcoming,iss};
+  },[displayProjects,filters,todayStr]);
+  const{allStats,tT,tC,tO,tI,op,statusData,phaseData,upcoming,iss}=overviewStats;
+  if(syncLoading&&!displayProjects.length){
+    return(
+      <div style={{padding:"48px 20px",textAlign:"center"}}>
+        <h1 className="disp" style={{fontSize:28,fontWeight:600,color:C.navy,marginBottom:10}}>Loading workspace…</h1>
+        <p style={{color:C.tx2,fontSize:13}}>Fetching the latest projects and comments from MongoDB.</p>
+      </div>
+    );
+  }
   return(
-    <div>
+  <div>
       <div style={{marginBottom:20}}>
         <h1 className="disp" style={{fontSize:30,fontWeight:600,color:C.navy,lineHeight:1.1}}>Pre-Construction Command Centre</h1>
         <p style={{color:C.tx2,fontSize:13,marginTop:4}}>
@@ -2431,7 +2455,7 @@ export default function App(){
 
       <main className={`main${curProj?" main-proj":""}`}>
         {curView==="dashboard"
-          ?<Dashboard projects={state.projects} cloudUrl={cloudUrl} setCloudUrl={setCloudUrl} toast={toast} onOpenProject={id=>setCurView(id)} onOpenMyWork={()=>setCurView("mywork")} onEditProject={openEditProject} onDeleteProject={confirmDeleteProject} onAddProject={()=>setModal("addProj")} onImportJson={importJSON} onImportExcel={importExcel} departments={state.departments} canDeleteProjects={canDeleteProjects} dispatch={dispatch} loginUser={loginUser} activityLog={state.activityLog}/>
+          ?<Dashboard projects={state.projects} cloudUrl={cloudUrl} setCloudUrl={setCloudUrl} toast={toast} onOpenProject={id=>setCurView(id)} onOpenMyWork={()=>setCurView("mywork")} onEditProject={openEditProject} onDeleteProject={confirmDeleteProject} onAddProject={()=>setModal("addProj")} onImportJson={importJSON} onImportExcel={importExcel} departments={state.departments} canDeleteProjects={canDeleteProjects} dispatch={dispatch} loginUser={loginUser} activityLog={state.activityLog} syncLoading={cloudStatus==="loading"}/>
           :curView==="mywork"
           ?<MyWorkView projects={visibleProjects} loginUser={loginUser} departments={state.departments} dispatch={dispatch} toast={toast} onOpenProject={id=>{setCurView(id);setSubTab(p=>({...p,[id]:"tasks"}));}}/>
           :curProj?(()=>{

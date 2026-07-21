@@ -136,19 +136,55 @@ function commentDedupeKey(c) {
   ].join('|');
 }
 
+/** Stable identity so edits (same comment, new nextActionDate) replace instead of duplicating. */
+export function commentIdentityKey(c) {
+  if (!c || typeof c !== 'object') return '';
+  const id = String(c.id || '').trim();
+  if (id) return `id:${id}`;
+  const created = String(c.createdAt || '').trim();
+  const author = String(c.author || '').trim().toLowerCase();
+  const text = String(c.text || '').trim().slice(0, 120);
+  if (created && (author || text)) return `ca:${created}|${author}|${text}`;
+  return `fp:${commentDedupeKey(c)}`;
+}
+
+function commentRichness(c) {
+  let n = 0;
+  if (String(c?.nextActionDate || '').trim()) n += 4;
+  if (String(c?.nextAction || '').trim()) n += 2;
+  if (String(c?.text || '').trim()) n += 1;
+  if (Array.isArray(c?.attachments) && c.attachments.length) n += c.attachments.length;
+  if (c?.updatedAt) n += 1;
+  return n;
+}
+
+function preferComment(a, b) {
+  const aUp = Date.parse(a?.updatedAt || '') || 0;
+  const bUp = Date.parse(b?.updatedAt || '') || 0;
+  if (bUp !== aUp) return bUp > aUp ? b : a;
+  const aTs = commentSortKey(a);
+  const bTs = commentSortKey(b);
+  if (bTs !== aTs) return bTs > aTs ? b : a;
+  return commentRichness(b) >= commentRichness(a) ? b : a;
+}
+
 /** Merge multiple normalized comment lists without duplicates. */
 export function mergeCommentBuckets(lists) {
-  const seen = new Set();
-  const out = [];
+  const byKey = new Map();
   (lists || []).forEach((list) => {
     normalizeTaskComments(list).forEach((comment) => {
-      const key = commentDedupeKey(comment);
-      if (seen.has(key)) return;
-      seen.add(key);
-      out.push(comment);
+      const key = commentIdentityKey(comment) || commentDedupeKey(comment);
+      if (!key) return;
+      const prev = byKey.get(key);
+      byKey.set(key, prev ? preferComment(prev, comment) : comment);
     });
   });
-  return out;
+  return [...byKey.values()];
+}
+
+/** Content-union of two task comment arrays (never length-only replace). */
+export function mergeTaskCommentArrays(existing, incoming) {
+  return mergeCommentBuckets([existing, incoming]);
 }
 
 export function normTaskKey(name) {
