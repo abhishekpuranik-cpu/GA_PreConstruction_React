@@ -106,7 +106,7 @@ export function MongoSyncAdapter({
       const merged = mergePreconstructionClientState(remote, local, {
         allowProjectRemoval: canDeleteRef.current,
       });
-      dispatch({ type: 'loadState', state: merged });
+      dispatch({ type: 'loadState', state: merged, fast: true });
       try {
         initialStateJsonRef.current = JSON.stringify(merged);
       } catch {
@@ -125,7 +125,7 @@ export function MongoSyncAdapter({
       ...remote,
       _removedProjectIds: Array.isArray(remote._removedProjectIds) ? remote._removedProjectIds : [],
     };
-    dispatch({ type: 'loadState', state: cleaned });
+    dispatch({ type: 'loadState', state: cleaned, fast: true });
     try {
       initialStateJsonRef.current = JSON.stringify(cleaned);
     } catch {
@@ -345,6 +345,14 @@ export function MongoSyncAdapter({
       if (reloadRef) reloadRef.current = null;
     };
   });
+
+  useEffect(() => {
+    if (!syncReady || !state.__needsHydrate) return undefined;
+    const t = window.setTimeout(() => {
+      dispatch({ type: 'hydrateWorkspace' });
+    }, 0);
+    return () => clearTimeout(t);
+  }, [syncReady, state.__needsHydrate, dispatch]);
 
   useEffect(() => {
     if (!syncReady || !state.__commentsRepairPending) return undefined;

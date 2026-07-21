@@ -41,6 +41,7 @@ import { migrateAssigneeNamesState } from "./preconAssigneeNames.js";
 import { formatNavStatusMessage } from './preconNavStatus.js';
 import { recordActivityFromAction, setPreconActivityActor, dedupeActivityLog } from './preconActivityLog.js';
 import { applyTaskTombstonesToProject } from './preconProjectMerge.js';
+import { expandPhasesForDisplay, realPhaseId } from './preconDesignApproval.js';
 import {
   annotateTreeMeta,
   orderTasksAsTree,
@@ -1293,6 +1294,7 @@ function GanttView({proj}){
     c.scrollLeft=Math.max(0,todayPx-160);
     return()=>{n.removeEventListener("scroll",ns);c.removeEventListener("scroll",cs);};
   },[todayPx]);
+  const displayPhases=useMemo(()=>expandPhasesForDisplay(proj.phases),[proj.phases]);
   return(
     <div className="gw">
       <div style={{padding:"8px 13px",background:"#F3F0EA",borderBottom:"1px solid #E2DDD4",display:"flex",gap:12,fontSize:11,color:"#96918A",flexWrap:"wrap"}}>
@@ -1302,7 +1304,7 @@ function GanttView({proj}){
       <div className="gsplit">
         <div ref={namesRef} className="gnames">
           <div style={{height:28,background:"#F3F0EA",borderBottom:"1px solid #E2DDD4",display:"flex",alignItems:"center",padding:"0 11px",fontSize:10,textTransform:"uppercase",letterSpacing:".7px",color:"#96918A",flexShrink:0}}>Task / Phase</div>
-          {proj.phases.map(ph=>{
+          {displayPhases.map(ph=>{
             const treeRows=annotateTreeMeta(ph.tasks);
             return(
             <div key={ph.id}>
@@ -1321,7 +1323,7 @@ function GanttView({proj}){
             {months.map((m,i)=><div key={i} className="gmon" style={{width:Math.round(m.d*DPX)}}>{m.lbl}</div>)}
             {TL}
           </div>
-          {proj.phases.map(ph=>{
+          {displayPhases.map(ph=>{
             const treeRows=annotateTreeMeta(ph.tasks);
             return(
             <div key={ph.id}>
@@ -1439,13 +1441,14 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
   const[roleFilter,setRoleFilter]=useState("");
   const assignees=useMemo(()=>collectAssignees([proj]),[proj]);
   const roleOptions=useMemo(()=>collectAllRoles([proj]),[proj]);
+  const displayPhases=useMemo(()=>expandPhasesForDisplay(proj.phases),[proj.phases]);
   const todayStr=todayIso();
   const filters={statusFilters,assigneeFilter,departmentFilter,departments,roleFilter,horizonDays,todayStr};
   const filtersActive=!!(statusFilters.length||assigneeFilter||departmentFilter||roleFilter||horizonDays!=null);
   const expandAll=()=>{
     const nextPh={};
     const nextTasks={};
-    proj.phases.forEach(ph=>{
+    displayPhases.forEach(ph=>{
       nextPh[phaseExpandKey(proj.id,ph.id)]=true;
       annotateTreeMeta(ph.tasks).forEach(({task:t,hasChildren})=>{
         if(hasChildren) nextTasks[t.id]=true;
@@ -1457,7 +1460,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
   const collapseAll=()=>{
     const nextPh={};
     const nextTasks={};
-    proj.phases.forEach(ph=>{
+    displayPhases.forEach(ph=>{
       nextPh[phaseExpandKey(proj.id,ph.id)]=false;
       annotateTreeMeta(ph.tasks).forEach(({task:t,hasChildren})=>{
         if(hasChildren) nextTasks[t.id]=false;
@@ -1474,7 +1477,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
   };
   const dropReorder=(ph,fromId,toId)=>{
     if(!fromId||!toId||fromId===toId)return;
-    dispatch({type:"reorderTask",projId:proj.id,phId:ph.id,fromId,toId});
+    dispatch({type:"reorderTask",projId:proj.id,phId:realPhaseId(ph),fromId,toId});
     toast("Task order updated","ok");
   };
   const dropReorderPhase=(fromId,toId)=>{
@@ -1525,7 +1528,8 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
         </div>
       </div>
       <div className="phases-stack">
-      {proj.phases.map((ph,pi)=>{
+      {displayPhases.map((ph,pi)=>{
+        const sourcePhId=realPhaseId(ph);
         const byId=indexTasksById(ph.tasks);
         const treeRows=annotateTreeMeta(ph.tasks)
           .filter(({task:t})=>taskPassesFilters(t,dm,ph.name,filters))
@@ -1536,30 +1540,31 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
         const pct=visible.length?Math.round(comp/visible.length*100):0;
         const ek=phaseExpandKey(proj.id,ph.id);
         const isOpen=expandedPh[ek]!==false;
-        const dept=getDepartmentForPhase(ph.name,departments);
-        const isPhDragOver=dragOverPhId===ph.id&&dragPhase?.phId&&dragPhase.phId!==ph.id;
+        const dept=getDepartmentForPhase(ph._section==="design"?"Design & Team Appointments":ph._section==="approval"?"Regulatory Approvals":ph.name,departments);
+        const isPhDragOver=dragOverPhId===sourcePhId&&dragPhase?.phId&&dragPhase.phId!==sourcePhId;
         return(
-          <div key={ph.id} className={`ps${isPhDragOver?" ps-drag-over":""}`} style={{"--phase-accent":ph.col||"#CEC8BB"}}
-            onDragOver={e=>{if(!dragPhase||dragPhase.phId===ph.id)return;e.preventDefault();e.dataTransfer.dropEffect="move";setDragOverPhId(ph.id);}}
-            onDragLeave={()=>{if(dragOverPhId===ph.id)setDragOverPhId(null);}}
+          <div key={ph.id} className={`ps${isPhDragOver?" ps-drag-over":""}${ph._section?` ps-section-${ph._section}`:""}`} style={{"--phase-accent":ph.col||"#CEC8BB"}}
+            onDragOver={e=>{if(!dragPhase||dragPhase.phId===sourcePhId)return;e.preventDefault();e.dataTransfer.dropEffect="move";setDragOverPhId(sourcePhId);}}
+            onDragLeave={()=>{if(dragOverPhId===sourcePhId)setDragOverPhId(null);}}
             onDrop={e=>{
               e.preventDefault();
               setDragOverPhId(null);
-              if(!dragPhase||dragPhase.phId===ph.id)return;
-              dropReorderPhase(dragPhase.phId,ph.id);
+              if(!dragPhase||dragPhase.phId===sourcePhId)return;
+              dropReorderPhase(dragPhase.phId,sourcePhId);
               setDragPhase(null);
             }}
           >
             <div className="psh" onClick={()=>setExpandedPh(p=>({...p,[ek]:!isOpen}))}>
               <div className="psh-left">
-                <span className="pdrag" draggable title="Drag section to reorder"
+                <span className="pdrag" draggable={!ph._section} title="Drag section to reorder"
                   onClick={e=>e.stopPropagation()}
-                  onDragStart={e=>{e.stopPropagation();setDragPhase({phId:ph.id});e.dataTransfer.effectAllowed="move";}}
+                  onDragStart={e=>{if(ph._section){e.preventDefault();return;}e.stopPropagation();setDragPhase({phId:sourcePhId});e.dataTransfer.effectAllowed="move";}}
                   onDragEnd={()=>{setDragPhase(null);setDragOverPhId(null);}}
                 >⋮⋮</span>
                 <span className="ps-meta" aria-hidden>{isOpen?"▾":"▸"}</span>
                 <span className="ps-phase-dot" style={{width:9,height:9,borderRadius:"50%",background:ph.col,flexShrink:0,display:"inline-block"}}/>
                 <span className="ps-phase-name" style={{color:ph.col}}>{ph.name}</span>
+                {ph._section?<span className="ps-dept" title="View section only — Mongo data unchanged">{ph._section==="design"?"Design work":"Approvals & regulatory"}</span>:null}
                 {dept?<span className="ps-dept" title="Department head">{dept.name} · {dept.head}</span>:null}
                 <span className="ps-meta">{visible.length}{visible.length!==ph.tasks.length?` / ${ph.tasks.length}`:""} tasks</span>
                 <div className="ppbar"><div className="ppfill" style={{width:`${pct}%`,background:ph.col}}/></div>
@@ -1577,14 +1582,14 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                         const n=incomplete.length;
                         const scope=filtersActive?"visible ":"";
                         if(!confirm(`Complete all ${n} ${scope}task${n!==1?"s":""} in "${ph.name}"?`))return;
-                        dispatch({type:"bulkCompletePhase",projId:proj.id,phId:ph.id,taskIds:incomplete.map(t=>t.id)});
+                        dispatch({type:"bulkCompletePhase",projId:proj.id,phId:sourcePhId,taskIds:incomplete.map(t=>t.id)});
                         toast(`Marked ${n} complete`,"ok");
                       }}
                     >Complete all</button>
                   );
                 })()}
-                <button className="bts" onClick={()=>dispatch({type:"addTask",projId:proj.id,phId:ph.id,afterId:null})}>+ Task</button>
-                <button className="bts" onClick={()=>{if(confirm(`Delete phase "${ph.name}"?`))dispatch({type:"delPhase",projId:proj.id,phId:ph.id});}}>✕</button>
+                <button className="bts" onClick={()=>dispatch({type:"addTask",projId:proj.id,phId:sourcePhId,afterId:null})}>+ Task</button>
+                {!ph._section?<button className="bts" onClick={()=>{if(confirm(`Delete phase "${ph.name}"?`))dispatch({type:"delPhase",projId:proj.id,phId:sourcePhId});}}>✕</button>:null}
               </div>
             </div>
             {isOpen&&<div className="ttable-wrap"><table className="ttable">
@@ -1614,19 +1619,19 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                   const isDragOver=dragOverId===t.id&&dragTask?.phId===ph.id;
                   return(
                     <tr key={t.id} className={`trow${depth>0?" trow-sub":""}${isDragOver?" trow-drag-over":""}`}
-                      onDragOver={e=>{if(!canDrag||!dragTask||dragTask.phId!==ph.id)return;e.preventDefault();e.dataTransfer.dropEffect="move";setDragOverId(t.id);}}
+                      onDragOver={e=>{if(!canDrag||!dragTask||dragTask.phId!==sourcePhId)return;e.preventDefault();e.dataTransfer.dropEffect="move";setDragOverId(t.id);}}
                       onDragLeave={()=>{if(dragOverId===t.id)setDragOverId(null);}}
                       onDrop={e=>{
                         e.preventDefault();
                         setDragOverId(null);
-                        if(!canDrag||!dragTask||dragTask.phId!==ph.id)return;
+                        if(!canDrag||!dragTask||dragTask.phId!==sourcePhId)return;
                         dropReorder(ph,dragTask.tId,t.id);
                         setDragTask(null);
                       }}
                     >
                       <td className="tcol-drag">
                         <span className={`tdrag${canDrag?"":" tdrag-off"}`} draggable={canDrag} title={canDrag?"Drag to reorder (subtree moves together)":"Clear filters to reorder"}
-                          onDragStart={e=>{if(!canDrag){e.preventDefault();return;}setDragTask({phId:ph.id,tId:t.id});e.dataTransfer.effectAllowed="move";}}
+                          onDragStart={e=>{if(!canDrag){e.preventDefault();return;}setDragTask({phId:sourcePhId,tId:t.id});e.dataTransfer.effectAllowed="move";}}
                           onDragEnd={()=>{setDragTask(null);setDragOverId(null);}}
                         >⋮⋮</span>
                       </td>
@@ -1644,11 +1649,11 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                           <div className="ttree-main">
                             <div className="ttree-name-row">
                               <div className="ec" contentEditable suppressContentEditableWarning
-                                onBlur={e=>dispatch({type:"updTask",projId:proj.id,phId:ph.id,tId:t.id,f:"name",v:e.target.textContent.trim()})}
+                                onBlur={e=>dispatch({type:"updTask",projId:proj.id,phId:sourcePhId,tId:t.id,f:"name",v:e.target.textContent.trim()})}
                                 onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();e.target.blur();}}}
                               >{t.name}</div>
                               <button type="button" className="abt abt-sub" aria-label="Add subtask" title="Add subtask under this activity" onClick={()=>{
-                                dispatch({type:"addTask",projId:proj.id,phId:ph.id,parentId:t.id,name:"New subtask"});
+                                dispatch({type:"addTask",projId:proj.id,phId:sourcePhId,parentId:t.id,name:"New subtask"});
                                 setExpandedTasks(prev=>({...prev,[t.id]:true}));
                                 toast("Subtask added","ok");
                               }}>⊞</button>
@@ -1660,16 +1665,16 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                       <td className="tcol-start">{rolledUp?(
                         <input type="date" className="di di-ro" value={d.s||""} readOnly title="Start = first subtask start" tabIndex={-1}/>
                       ):(
-                        <input type="date" className="di" value={t.ms||d.s||""} onChange={e=>dispatch({type:"setMS",projId:proj.id,phId:ph.id,tId:t.id,v:e.target.value||null})}/>
+                        <input type="date" className="di" value={t.ms||d.s||""} onChange={e=>dispatch({type:"setMS",projId:proj.id,phId:sourcePhId,tId:t.id,v:e.target.value||null})}/>
                       )}</td>
                       <td className="tcol-dur">{rolledUp?(
                         <input type="number" className="ni ni-ro" value={rolledDur} readOnly title="Duration spans first subtask start → last subtask end" tabIndex={-1}/>
                       ):(
-                        <input type="number" className="ni" value={t.dur??""} min={1} max={999} onChange={e=>dispatch({type:"updTask",projId:proj.id,phId:ph.id,tId:t.id,f:"dur",v:parseInt(e.target.value)||1})}/>
+                        <input type="number" className="ni" value={t.dur??""} min={1} max={999} onChange={e=>dispatch({type:"updTask",projId:proj.id,phId:sourcePhId,tId:t.id,f:"dur",v:parseInt(e.target.value)||1})}/>
                       )}</td>
                       <td className="tcol-end" style={{color:C.tx2,fontSize:12,whiteSpace:"nowrap"}} title={rolledUp?"End = last subtask end":undefined}>{fmt(d.e)}</td>
                       <td className="tcol-who">
-                        <AssigneeMultiSelect compact value={t.who||""} options={assigneeRoster} onChange={v=>dispatch({type:"updTask",projId:proj.id,phId:ph.id,tId:t.id,f:"who",v})}/>
+                        <AssigneeMultiSelect compact value={t.who||""} options={assigneeRoster} onChange={v=>dispatch({type:"updTask",projId:proj.id,phId:sourcePhId,tId:t.id,f:"who",v})}/>
                       </td>
                       <td className="tcol-status">
                         <div className={`status-wrap status-wrap-${st}`}>
@@ -1678,7 +1683,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                             onChange={e=>{
                               const v=e.target.value;
                               const prev=taskStatusSelectValue(t);
-                              dispatch({type:"setTaskStatus",projId:proj.id,phId:ph.id,tId:t.id,v});
+                              dispatch({type:"setTaskStatus",projId:proj.id,phId:sourcePhId,tId:t.id,v});
                               notifyStatus(ph,t,prev,v);
                             }}>
                             {TASK_STATUS_OPTIONS.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}
@@ -1698,7 +1703,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                         {cc>0?<span className="tcol-count" title={`${cc} comment${cc!==1?"s":""}`}>{cc}</span>:null}
                         <button type="button" className="bts tcm-open-btn" title="View comment history and post an update" onClick={(e)=>{
                           e.stopPropagation();
-                          openCommentModal(ph,t);
+                          openCommentModal({...ph,id:sourcePhId},t);
                         }}>{cc?`Comments (${cc})`:"Add comment"}</button>
                       </td>
                       <td className="tcol-del"><div className="tact">
@@ -1707,7 +1712,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                           const msg=nKids
                             ?`Delete "${t.name}" and all its subtasks?`
                             :`Delete "${t.name}"?`;
-                          if(confirm(msg))dispatch({type:"delTask",projId:proj.id,phId:ph.id,tId:t.id});
+                          if(confirm(msg))dispatch({type:"delTask",projId:proj.id,phId:sourcePhId,tId:t.id});
                         }}>🗑</button>
                       </div></td>
                     </tr>
@@ -2197,6 +2202,36 @@ function reducer(state,action){
     }
     case"loadState":{
       const preservedLog=Array.isArray(action.state?.activityLog)?action.state.activityLog:null;
+      const incoming=action.state&&typeof action.state==="object"?action.state:{};
+      // Fast path: paint Mongo projects immediately. Heavy merges run in hydrateWorkspace.
+      if(action.fast){
+        const quick={
+          ...incoming,
+          projects:Array.isArray(incoming.projects)?incoming.projects:[],
+          activityLog:dedupeActivityLog(Array.isArray(preservedLog)?preservedLog:(Array.isArray(incoming.activityLog)?incoming.activityLog:[])),
+          _removedProjectIds:Array.isArray(incoming._removedProjectIds)?incoming._removedProjectIds:[],
+          __needsHydrate:true,
+        };
+        ensureStateDepartments(quick);
+        (quick.projects||[]).forEach((proj)=>{
+          applyTaskTombstonesToProject(proj);
+          (proj.phases||[]).forEach(ph=>{
+            (ph.tasks||[]).forEach(t=>{
+              normalizeParentIdOnTask(t);
+              if(!t.status){
+                if(t.ae)t.status="completed";
+                else if(t.as)t.status="inprogress";
+                else t.status="notstarted";
+              }
+              if(!Array.isArray(t.roles))t.roles=parseRolesInput(t.roles);
+              if(!Array.isArray(t.comments)||typeof t.comments==="string"||(t.comments&&typeof t.comments==="object"&&!Array.isArray(t.comments))){
+                t.comments=normalizeTaskComments(t.comments);
+              }
+            });
+          });
+        });
+        return quick;
+      }
       const{state:merged,totalAdded}=mergeLifecycleIntoState(action.state);
       migratePreWorkFollowUpState(merged);
       mergeAkashActivitiesIntoState(merged);
@@ -2206,6 +2241,7 @@ function reducer(state,action){
       ensureStateDepartments(merged);
       (merged.projects||[]).forEach((proj)=>applyTaskTombstonesToProject(proj));
       merged.activityLog=dedupeActivityLog(Array.isArray(preservedLog)?preservedLog:(Array.isArray(merged.activityLog)?merged.activityLog:[]));
+      if(merged.__needsHydrate)delete merged.__needsHydrate;
       (merged.projects||[]).forEach(proj=>{
         (proj.phases||[]).forEach(ph=>{
           (ph.tasks||[]).forEach(t=>{
@@ -2226,9 +2262,35 @@ function reducer(state,action){
       });
       return merged;
     }
+    case"hydrateWorkspace":{
+      if(!S.__needsHydrate)return state;
+      const{state:merged}=mergeLifecycleIntoState(S);
+      migratePreWorkFollowUpState(merged);
+      mergeAkashActivitiesIntoState(merged);
+      migrateAssigneeNamesState(merged);
+      const{changed:commentsRepaired}=repairAllTaskComments(merged);
+      if(commentsRepaired)merged.__commentsRepairPending=true;
+      ensureStateDepartments(merged);
+      (merged.projects||[]).forEach((proj)=>applyTaskTombstonesToProject(proj));
+      if(merged.__needsHydrate)delete merged.__needsHydrate;
+      (merged.projects||[]).forEach(proj=>{
+        (proj.phases||[]).forEach(ph=>{
+          (ph.tasks||[]).forEach(t=>{
+            normalizeParentIdOnTask(t);
+            if(!Array.isArray(t.roles))t.roles=parseRolesInput(t.roles);
+            if(!Array.isArray(t.comments)||typeof t.comments==="string"||(t.comments&&typeof t.comments==="object"&&!Array.isArray(t.comments))){
+              t.comments=normalizeTaskComments(t.comments);
+            }else{
+              t.comments=t.comments.map((c)=>ensureCommentCreatedAt(c));
+            }
+          });
+        });
+      });
+      return merged;
+    }
     default:break;
   }
-  if(action.type!=="loadState"&&action.type!=="clearFlushFlag"&&action.type!=="clearCommentRepairFlag"){
+  if(action.type!=="loadState"&&action.type!=="hydrateWorkspace"&&action.type!=="clearFlushFlag"&&action.type!=="clearCommentRepairFlag"){
     recordActivityFromAction(S,activityAction);
   }
   if(MONGO_FLUSH_ACTIONS.has(action.type))S.__flushPending=true;
