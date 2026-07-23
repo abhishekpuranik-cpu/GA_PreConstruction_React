@@ -10,6 +10,8 @@ import {
 } from '../../ga_mongo/mongoStateClient.js';
 
 const APP_ID = 'preconstruction';
+const SNAP_KEY = 'ga_precon_workspace_snap_v2';
+const ACTIVITY_BOOT_CAP = 200;
 
 function enableMongoOnCloud() {
   if (!canUseMongoState()) return;
@@ -25,7 +27,75 @@ function projectCount(data) {
 }
 
 function isDirtyLocal(state, userEdited) {
-  return !!(userEdited || state?.__flushPending || state?.__commentsRepairPending);
+  return !!(userEdited || state?.__flushPending);
+}
+
+/** Strip ephemeral UI flags before PUT / snapshot. */
+function stripEphemeral(state) {
+  if (!state || typeof state !== 'object') return state;
+  const {
+    __needsHydrate,
+    __flushPending,
+    __commentsRepairPending,
+    __lifecycleHydrated,
+    ...rest
+  } = state;
+  return rest;
+}
+
+function trimActivityLog(data, cap = ACTIVITY_BOOT_CAP) {
+  if (!data || typeof data !== 'object') return data;
+  const log = Array.isArray(data.activityLog) ? data.activityLog : [];
+  if (log.length <= cap) return data;
+  return { ...data, activityLog: log.slice(0, cap) };
+}
+
+function writeWorkspaceSnap(data, version) {
+  try {
+    const slim = trimActivityLog(stripEphemeral(data), ACTIVITY_BOOT_CAP);
+    sessionStorage.setItem(
+      SNAP_KEY,
+      JSON.stringify({
+        version: Number(version) || 0,
+        savedAt: Date.now(),
+        data: {
+          cloudUrl: slim.cloudUrl || '',
+          departments: slim.departments || [],
+          projects: slim.projects || [],
+          activityLog: slim.activityLog || [],
+          _removedProjectIds: slim._removedProjectIds || [],
+        },
+      }),
+    );
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+function readWorkspaceSnap() {
+  try {
+    const raw = sessionStorage.getItem(SNAP_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.data || !Array.isArray(parsed.data.projects) || !parsed.data.projects.length) return null;
+    // Keep snap for the session; drop if older than 7 days.
+    if (Date.now() - Number(parsed.savedAt || 0) > 7 * 24 * 3600 * 1000) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function payloadForSave(snap) {
+  const localCount = projectCount(snap);
+  const cleaned = stripEphemeral(snap);
+  return {
+    ...cleaned,
+    _removedProjectIds:
+      Array.isArray(snap?._removedProjectIds) && snap._removedProjectIds.length > Math.max(2, localCount)
+        ? []
+        : snap?._removedProjectIds || [],
+  };
 }
 
 /**
@@ -45,16 +115,14 @@ export function MongoSyncAdapter({
   const [cloudStatus, setCloudStatus] = useState('loading');
   const stateRef = useRef(state);
   const versionRef = useRef({ v: 0 });
-  const notifiedRemoteVersion = useRef(0);
   const scheduleSaveRef = useRef(null);
   const userEditedRef = useRef(false);
-  const initialStateJsonRef = useRef(null);
   const canDeleteRef = useRef(canDeleteProjects);
   const initialLoadDoneRef = useRef(false);
-  const applyRemoteStateRef = useRef(null);
   const flushSaveRefInternal = useRef(null);
   const pullServerCatalogRef = useRef(null);
   const flushInFlightRef = useRef(null);
+  const bootSnapAppliedRef = useRef(false);
 
   useEffect(() => {
     canDeleteRef.current = canDeleteProjects;
@@ -62,25 +130,7 @@ export function MongoSyncAdapter({
 
   useLayoutEffect(() => {
     stateRef.current = state;
-    // Do not mark "user edited" until after the first Mongo load — otherwise seed/local
-    // catalog blocks applying the full server portfolio.
-    if (!initialLoadDoneRef.current) {
-      try {
-        if (initialStateJsonRef.current === null) {
-          initialStateJsonRef.current = JSON.stringify(state);
-        }
-      } catch {
-        /* ignore */
-      }
-      return;
-    }
-    try {
-      const json = JSON.stringify(state);
-      if (initialStateJsonRef.current === null) initialStateJsonRef.current = json;
-      else if (json !== initialStateJsonRef.current) userEditedRef.current = true;
-    } catch {
-      userEditedRef.current = true;
-    }
+    // Dirty is set only by user flush actions — never by stringify of the whole workspace.
   }, [state]);
 
   useEffect(() => {
@@ -91,28 +141,17 @@ export function MongoSyncAdapter({
     if (typeof onSyncStatus === 'function') onSyncStatus(cloudStatus);
   }, [cloudStatus, onSyncStatus]);
 
-  /**
-   * Apply remote workspace.
-   * - Boot / explicit reload: replace local with server.
-   * - If local is dirty: content-union merge so comments/edits are never discarded.
-   */
   const applyRemoteState = (remote, version, { force = false, mergeIfDirty = true } = {}) => {
     if (!remote || typeof remote !== 'object' || Array.isArray(remote)) return false;
     const local = stateRef.current;
     const dirty = isDirtyLocal(local, userEditedRef.current);
+    const trimmed = trimActivityLog(remote);
 
-    // Never clobber unsaved local work with a blind replace.
     if (dirty && mergeIfDirty) {
-      const merged = mergePreconstructionClientState(remote, local, {
+      const merged = mergePreconstructionClientState(trimmed, local, {
         allowProjectRemoval: canDeleteRef.current,
       });
       dispatch({ type: 'loadState', state: merged, fast: true });
-      try {
-        initialStateJsonRef.current = JSON.stringify(merged);
-      } catch {
-        /* ignore */
-      }
-      // Keep dirty so flush persists the unioned comments.
       userEditedRef.current = true;
       versionRef.current.v = version || versionRef.current.v || 0;
       setCloudStatus('dirty');
@@ -122,28 +161,15 @@ export function MongoSyncAdapter({
     if (!force && dirty) return false;
 
     const cleaned = {
-      ...remote,
-      _removedProjectIds: Array.isArray(remote._removedProjectIds) ? remote._removedProjectIds : [],
+      ...trimmed,
+      _removedProjectIds: Array.isArray(trimmed._removedProjectIds) ? trimmed._removedProjectIds : [],
     };
     dispatch({ type: 'loadState', state: cleaned, fast: true });
-    try {
-      initialStateJsonRef.current = JSON.stringify(cleaned);
-    } catch {
-      /* ignore */
-    }
     userEditedRef.current = false;
     versionRef.current.v = version || 0;
+    writeWorkspaceSnap(cleaned, versionRef.current.v);
     setCloudStatus('synced');
     return true;
-  };
-  applyRemoteStateRef.current = applyRemoteState;
-
-  const sameState = (a, b) => {
-    try {
-      return JSON.stringify(a) === JSON.stringify(b);
-    } catch {
-      return false;
-    }
   };
 
   const flushSave = async () => {
@@ -155,31 +181,18 @@ export function MongoSyncAdapter({
 
     const run = (async () => {
       const snap = stateRef.current;
-      const localCount = projectCount(snap);
-      const safeSnap = {
-        ...snap,
-        _removedProjectIds:
-          Array.isArray(snap?._removedProjectIds) && snap._removedProjectIds.length > Math.max(2, localCount)
-            ? []
-            : snap?._removedProjectIds || [],
-      };
+      const safeSnap = payloadForSave(snap);
       setCloudStatus('saving');
-      const res = await mongoPutState(APP_ID, { data: safeSnap, expectedVersion: versionRef.current.v });
+      const res = await mongoPutState(APP_ID, {
+        data: safeSnap,
+        expectedVersion: versionRef.current.v,
+        // Prefer version-only response — avoid downloading the full portfolio after every save.
+        returnData: false,
+      });
       if (res.ok) {
         versionRef.current.v = res.version ?? versionRef.current.v;
-        if (res.data && typeof res.data === 'object' && !Array.isArray(res.data)) {
-          const remoteCount = projectCount(res.data);
-          // Prefer merge so a concurrent teammate comment is kept AND our just-saved comments stay.
-          if (remoteCount > localCount || !sameState(res.data, snap)) {
-            applyRemoteState(res.data, res.version, { force: false, mergeIfDirty: true });
-          }
-        }
-        try {
-          initialStateJsonRef.current = JSON.stringify(stateRef.current);
-        } catch {
-          /* ignore */
-        }
         userEditedRef.current = false;
+        writeWorkspaceSnap(safeSnap, versionRef.current.v);
         setCloudStatus('synced');
         return true;
       }
@@ -187,24 +200,20 @@ export function MongoSyncAdapter({
         try {
           const latest = await mongoGetState(APP_ID);
           if (latest.ok && latest.data) {
-            if (sameState(latest.data, snap)) {
-              versionRef.current.v = latest.version || versionRef.current.v;
-              setCloudStatus('synced');
-              return true;
-            }
             const freshLocal = stateRef.current;
             const merged = mergePreconstructionClientState(latest.data, freshLocal, {
               allowProjectRemoval: canDeleteRef.current,
             });
             const retry = await mongoPutState(APP_ID, {
-              data: merged,
+              data: payloadForSave(merged),
               expectedVersion: latest.version ?? versionRef.current.v,
+              returnData: false,
             });
             if (retry.ok) {
               versionRef.current.v = retry.version ?? versionRef.current.v;
-              const applyState = retry.data && typeof retry.data === 'object' ? retry.data : merged;
-              applyRemoteState(applyState, retry.version, { force: false, mergeIfDirty: true });
+              dispatch({ type: 'loadState', state: merged, fast: true });
               userEditedRef.current = false;
+              writeWorkspaceSnap(merged, versionRef.current.v);
               setCloudStatus('synced');
               return true;
             }
@@ -241,7 +250,6 @@ export function MongoSyncAdapter({
     const localCount = projectCount(stateRef.current);
     const dirty = isDirtyLocal(stateRef.current, userEditedRef.current);
 
-    // Boot / explicit reload: replace only when local is not dirty.
     if (force && !dirty) {
       applyRemoteState(res.data, res.version, { force: true, mergeIfDirty: false });
       if (remoteCount > localCount && reason) {
@@ -250,11 +258,11 @@ export function MongoSyncAdapter({
       return true;
     }
 
-    if (dirty || remoteCount > localCount || force) {
+    // Only apply when forced, dirty-merge needed, remote has more projects, or version advanced.
+    const versionAdvanced = Number(res.version || 0) > Number(versionRef.current.v || 0);
+    if (dirty || remoteCount > localCount || force || versionAdvanced) {
       applyRemoteState(res.data, res.version, { force: false, mergeIfDirty: true });
-      if (dirty) {
-        void flushSaveRefInternal.current?.();
-      }
+      if (dirty) void flushSaveRefInternal.current?.();
       return true;
     }
 
@@ -262,6 +270,18 @@ export function MongoSyncAdapter({
     return false;
   };
   pullServerCatalogRef.current = pullServerCatalog;
+
+  // Instant paint from session snapshot, then refresh from Mongo.
+  useEffect(() => {
+    if (bootSnapAppliedRef.current) return;
+    bootSnapAppliedRef.current = true;
+    const snap = readWorkspaceSnap();
+    if (snap?.data) {
+      versionRef.current.v = Number(snap.version) || 0;
+      dispatch({ type: 'loadState', state: snap.data, fast: true, fromSnap: true });
+      setCloudStatus('loading');
+    }
+  }, [dispatch]);
 
   useEffect(() => {
     const ac = new AbortController();
@@ -279,12 +299,14 @@ export function MongoSyncAdapter({
           applyRemoteState(res.data, res.version, { force: true, mergeIfDirty: false });
         } else if (res.status === 404) {
           versionRef.current.v = 0;
-          setCloudStatus('new');
+          setCloudStatus(projectCount(stateRef.current) ? 'synced' : 'new');
         } else {
-          setCloudStatus('error');
+          setCloudStatus(projectCount(stateRef.current) ? 'synced' : 'error');
         }
       } catch {
-        if (!ac.signal.aborted) setCloudStatus('offline');
+        if (!ac.signal.aborted) {
+          setCloudStatus(projectCount(stateRef.current) ? 'synced' : 'offline');
+        }
       } finally {
         if (!ac.signal.aborted) {
           initialLoadDoneRef.current = true;
@@ -313,7 +335,6 @@ export function MongoSyncAdapter({
     }
     setCloudStatus('loading');
     try {
-      // Explicit reload: discard dirty and take server.
       userEditedRef.current = false;
       const ok = await pullServerCatalog({ force: true });
       if (ok) {
@@ -346,62 +367,60 @@ export function MongoSyncAdapter({
     };
   });
 
+  // Light hydrate once after first Mongo apply (lifecycle stamps prevent repeat).
   useEffect(() => {
     if (!syncReady || !state.__needsHydrate) return undefined;
     const t = window.setTimeout(() => {
       dispatch({ type: 'hydrateWorkspace' });
-    }, 0);
+    }, 50);
     return () => clearTimeout(t);
   }, [syncReady, state.__needsHydrate, dispatch]);
 
   useEffect(() => {
-    if (!syncReady || !state.__commentsRepairPending) return undefined;
-    dispatch({ type: 'clearCommentRepairFlag' });
-    const timer = setTimeout(() => {
-      void flushSave();
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [syncReady, state.__commentsRepairPending, dispatch]);
-
-  useEffect(() => {
     if (!syncReady || !state.__flushPending) return undefined;
+    userEditedRef.current = true;
     dispatch({ type: 'clearFlushFlag' });
     const timer = setTimeout(() => {
       void flushSave();
-    }, 80);
+    }, 60);
     return () => clearTimeout(timer);
   }, [syncReady, state.__flushPending, dispatch]);
 
+  // Autosave only when the user actually edited (not on remote load / hydrate).
   useEffect(() => {
     if (!syncReady || !isMongoAutsaveEnabled() || !canUseMongoState()) return;
+    if (!userEditedRef.current) return;
     const schedule = scheduleSaveRef.current;
     if (!schedule) return;
-    schedule(() => {
-      const snap = stateRef.current;
-      const localCount = projectCount(snap);
-      return {
-        ...snap,
-        _removedProjectIds:
-          Array.isArray(snap?._removedProjectIds) && snap._removedProjectIds.length > Math.max(2, localCount)
-            ? []
-            : snap?._removedProjectIds || [],
-      };
-    });
+    schedule(() => payloadForSave(stateRef.current));
     setCloudStatus((s) => (s === 'saving' ? s : 'dirty'));
   }, [state, syncReady]);
 
   useEffect(() => {
-    const onVis = () => {
+    const onVis = async () => {
       if (document.visibilityState !== 'visible' || !syncReady || !canUseMongoState()) return;
-      void pullServerCatalog({ force: false, reason: 'visible' });
+      try {
+        const r = await fetch(`/api/apps/${APP_ID}/meta`);
+        if (!r.ok) return;
+        const j = await r.json();
+        const remote = Number(j?.version || 0);
+        if (remote > versionRef.current.v) {
+          await pullServerCatalogRef.current?.({ force: false, reason: 'visible' });
+        }
+      } catch {
+        /* ignore */
+      }
     };
     document.addEventListener('visibilitychange', onVis);
-    window.addEventListener('pagehide', () => void flushSave());
+    window.addEventListener('pagehide', () => {
+      if (userEditedRef.current) void flushSave();
+    });
     return () => {
       document.removeEventListener('visibilitychange', onVis);
     };
   }, [syncReady]);
 
+  // Meta-only poll — full GET only when remote version advances.
   useEffect(() => {
     if (!syncReady || !canUseMongoState()) return undefined;
     const t = setInterval(async () => {
@@ -411,18 +430,14 @@ export function MongoSyncAdapter({
         const j = await r.json();
         const remote = Number(j?.version || 0);
         if (remote > versionRef.current.v) {
-          notifiedRemoteVersion.current = remote;
-          // Merge (never blind-replace) when teammates save.
-          await pullServerCatalog({ force: false, reason: 'version' });
-        } else {
-          await pullServerCatalog({ force: false, reason: 'poll' });
+          await pullServerCatalogRef.current?.({ force: false, reason: 'version' });
         }
       } catch {
         /* ignore */
       }
-    }, 8000);
+    }, 12000);
     return () => clearInterval(t);
-  }, [syncReady, toast]);
+  }, [syncReady]);
 
   return null;
 }

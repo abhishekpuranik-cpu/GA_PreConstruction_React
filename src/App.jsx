@@ -8,6 +8,7 @@ import {
   buildLifecyclePhasesForProject,
   mergeLifecycleIntoState,
   applyKickoffOffsets,
+  LIFECYCLE_VERSION,
 } from "./preconLifecycle.js";
 import { ensureStateDepartments,
   getDepartmentForPhase,
@@ -35,7 +36,6 @@ import { filterAndSortProjects } from "./projectSearch.js";
 import { ProjectNavPicker } from "./ProjectNavPicker.jsx";
 import { notifyTaskStatusChange } from "./preconNotify.js";
 import { migratePreWorkFollowUpState, applyGhqPreWorkToPhases } from "./preconGhqPreWorkMigrate.js";
-import { repairAllTaskComments } from "./preconCommentReconcile.js";
 import { mergeAkashActivitiesIntoState } from "./preconAkashGhqMerge.js";
 import { migrateAssigneeNamesState } from "./preconAssigneeNames.js";
 import { formatNavStatusMessage } from './preconNavStatus.js';
@@ -1424,7 +1424,7 @@ function truncateText(text, max = 72) {
 }
 
 function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
-  const dm=cDates(proj);
+  const dm=useMemo(()=>cDates(proj),[proj.id,proj.ko,proj.phases]);
   const[commentTarget,setCommentTarget]=useState(null);
   const[expandedPh,setExpandedPh]=useState({});
   const[expandedTasks,setExpandedTasks]=useState({}); // false = collapsed; missing/true = expanded
@@ -1988,6 +1988,80 @@ const MONGO_FLUSH_ACTIONS=new Set([
 ]);
 
 function reducer(state,action){
+  // Cheap no-ops first — never deep-clone the whole portfolio for flag clears / already-hydrated.
+  if(action.type==="clearFlushFlag"){
+    if(!state.__flushPending)return state;
+    const next={...state};
+    delete next.__flushPending;
+    return next;
+  }
+  if(action.type==="clearCommentRepairFlag"){
+    if(!state.__commentsRepairPending)return state;
+    const next={...state};
+    delete next.__commentsRepairPending;
+    return next;
+  }
+  if(action.type==="loadState"){
+    const preservedLog=Array.isArray(action.state?.activityLog)?action.state.activityLog:null;
+    const incoming=action.state&&typeof action.state==="object"?action.state:{};
+    const needsHydrate=!(incoming.__lifecycleHydrated===LIFECYCLE_VERSION)&&!action.skipHydrate;
+    const quick={
+      ...incoming,
+      projects:Array.isArray(incoming.projects)?incoming.projects:[],
+      activityLog:dedupeActivityLog(Array.isArray(preservedLog)?preservedLog:(Array.isArray(incoming.activityLog)?incoming.activityLog:[])).slice(0,300),
+      _removedProjectIds:Array.isArray(incoming._removedProjectIds)?incoming._removedProjectIds:[],
+    };
+    if(needsHydrate)quick.__needsHydrate=true;
+    else if(quick.__needsHydrate)delete quick.__needsHydrate;
+    ensureStateDepartments(quick);
+    (quick.projects||[]).forEach((proj)=>{
+      applyTaskTombstonesToProject(proj);
+      (proj.phases||[]).forEach(ph=>{
+        (ph.tasks||[]).forEach(t=>{
+          normalizeParentIdOnTask(t);
+          if(!t.status){
+            if(t.ae)t.status="completed";
+            else if(t.as)t.status="inprogress";
+            else t.status="notstarted";
+          }
+          if(!Array.isArray(t.roles))t.roles=parseRolesInput(t.roles);
+          if(!Array.isArray(t.comments)||typeof t.comments==="string"||(t.comments&&typeof t.comments==="object"&&!Array.isArray(t.comments))){
+            t.comments=normalizeTaskComments(t.comments);
+          }
+        });
+      });
+    });
+    return quick;
+  }
+  if(action.type==="hydrateWorkspace"){
+    if(!state.__needsHydrate)return state;
+    if(state.__lifecycleHydrated===LIFECYCLE_VERSION){
+      const next={...state};
+      delete next.__needsHydrate;
+      return next;
+    }
+    const S=JSON.parse(JSON.stringify(state));
+    const{state:merged,totalAdded}=mergeLifecycleIntoState(S);
+    migratePreWorkFollowUpState(merged);
+    mergeAkashActivitiesIntoState(merged);
+    migrateAssigneeNamesState(merged);
+    // Comment repair stays on server write path — avoid client repair→save→reload loops.
+    ensureStateDepartments(merged);
+    (merged.projects||[]).forEach((proj)=>applyTaskTombstonesToProject(proj));
+    if(merged.__needsHydrate)delete merged.__needsHydrate;
+    merged.__lifecycleHydrated=LIFECYCLE_VERSION;
+    if(totalAdded>0)merged.__flushPending=true;
+    (merged.projects||[]).forEach(proj=>{
+      (proj.phases||[]).forEach(ph=>{
+        (ph.tasks||[]).forEach(t=>{
+          normalizeParentIdOnTask(t);
+          if(!Array.isArray(t.roles))t.roles=parseRolesInput(t.roles);
+        });
+      });
+    });
+    return merged;
+  }
+
   const S=JSON.parse(JSON.stringify(state));
   const fp=(pid)=>S.projects.find(p=>p.id===pid);
   const fph=(pid,phid)=>fp(pid)?.phases.find(ph=>ph.id===phid);
@@ -2192,102 +2266,6 @@ function reducer(state,action){
       break;
     }
     case"setCloudUrl":S.cloudUrl=action.v;break;
-    case"clearCommentRepairFlag":{
-      if(S.__commentsRepairPending)delete S.__commentsRepairPending;
-      return S;
-    }
-    case"clearFlushFlag":{
-      if(S.__flushPending)delete S.__flushPending;
-      return S;
-    }
-    case"loadState":{
-      const preservedLog=Array.isArray(action.state?.activityLog)?action.state.activityLog:null;
-      const incoming=action.state&&typeof action.state==="object"?action.state:{};
-      // Fast path: paint Mongo projects immediately. Heavy merges run in hydrateWorkspace.
-      if(action.fast){
-        const quick={
-          ...incoming,
-          projects:Array.isArray(incoming.projects)?incoming.projects:[],
-          activityLog:dedupeActivityLog(Array.isArray(preservedLog)?preservedLog:(Array.isArray(incoming.activityLog)?incoming.activityLog:[])),
-          _removedProjectIds:Array.isArray(incoming._removedProjectIds)?incoming._removedProjectIds:[],
-          __needsHydrate:true,
-        };
-        ensureStateDepartments(quick);
-        (quick.projects||[]).forEach((proj)=>{
-          applyTaskTombstonesToProject(proj);
-          (proj.phases||[]).forEach(ph=>{
-            (ph.tasks||[]).forEach(t=>{
-              normalizeParentIdOnTask(t);
-              if(!t.status){
-                if(t.ae)t.status="completed";
-                else if(t.as)t.status="inprogress";
-                else t.status="notstarted";
-              }
-              if(!Array.isArray(t.roles))t.roles=parseRolesInput(t.roles);
-              if(!Array.isArray(t.comments)||typeof t.comments==="string"||(t.comments&&typeof t.comments==="object"&&!Array.isArray(t.comments))){
-                t.comments=normalizeTaskComments(t.comments);
-              }
-            });
-          });
-        });
-        return quick;
-      }
-      const{state:merged,totalAdded}=mergeLifecycleIntoState(action.state);
-      migratePreWorkFollowUpState(merged);
-      mergeAkashActivitiesIntoState(merged);
-      migrateAssigneeNamesState(merged);
-      const{changed:commentsRepaired}=repairAllTaskComments(merged);
-      if(commentsRepaired)merged.__commentsRepairPending=true;
-      ensureStateDepartments(merged);
-      (merged.projects||[]).forEach((proj)=>applyTaskTombstonesToProject(proj));
-      merged.activityLog=dedupeActivityLog(Array.isArray(preservedLog)?preservedLog:(Array.isArray(merged.activityLog)?merged.activityLog:[]));
-      if(merged.__needsHydrate)delete merged.__needsHydrate;
-      (merged.projects||[]).forEach(proj=>{
-        (proj.phases||[]).forEach(ph=>{
-          (ph.tasks||[]).forEach(t=>{
-            normalizeParentIdOnTask(t);
-            if(!t.status){
-              if(t.ae)t.status="completed";
-              else if(t.as)t.status="inprogress";
-              else t.status="notstarted";
-            }
-            if(!Array.isArray(t.roles))t.roles=parseRolesInput(t.roles);
-            if(!Array.isArray(t.comments)||typeof t.comments==="string"||(t.comments&&typeof t.comments==="object"&&!Array.isArray(t.comments))){
-              t.comments=normalizeTaskComments(t.comments);
-            }else{
-              t.comments=t.comments.map((c)=>ensureCommentCreatedAt(c));
-            }
-          });
-        });
-      });
-      return merged;
-    }
-    case"hydrateWorkspace":{
-      if(!S.__needsHydrate)return state;
-      const{state:merged}=mergeLifecycleIntoState(S);
-      migratePreWorkFollowUpState(merged);
-      mergeAkashActivitiesIntoState(merged);
-      migrateAssigneeNamesState(merged);
-      const{changed:commentsRepaired}=repairAllTaskComments(merged);
-      if(commentsRepaired)merged.__commentsRepairPending=true;
-      ensureStateDepartments(merged);
-      (merged.projects||[]).forEach((proj)=>applyTaskTombstonesToProject(proj));
-      if(merged.__needsHydrate)delete merged.__needsHydrate;
-      (merged.projects||[]).forEach(proj=>{
-        (proj.phases||[]).forEach(ph=>{
-          (ph.tasks||[]).forEach(t=>{
-            normalizeParentIdOnTask(t);
-            if(!Array.isArray(t.roles))t.roles=parseRolesInput(t.roles);
-            if(!Array.isArray(t.comments)||typeof t.comments==="string"||(t.comments&&typeof t.comments==="object"&&!Array.isArray(t.comments))){
-              t.comments=normalizeTaskComments(t.comments);
-            }else{
-              t.comments=t.comments.map((c)=>ensureCommentCreatedAt(c));
-            }
-          });
-        });
-      });
-      return merged;
-    }
     default:break;
   }
   if(action.type!=="loadState"&&action.type!=="hydrateWorkspace"&&action.type!=="clearFlushFlag"&&action.type!=="clearCommentRepairFlag"){
