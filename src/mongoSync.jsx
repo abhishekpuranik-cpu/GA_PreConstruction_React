@@ -38,6 +38,7 @@ function stripEphemeral(state) {
     __flushPending,
     __commentsRepairPending,
     __lifecycleHydrated,
+    __slimBoot,
     ...rest
   } = state;
   return rest;
@@ -162,8 +163,10 @@ export function MongoSyncAdapter({
 
     const cleaned = {
       ...trimmed,
+      __slimBoot: undefined,
       _removedProjectIds: Array.isArray(trimmed._removedProjectIds) ? trimmed._removedProjectIds : [],
     };
+    delete cleaned.__slimBoot;
     dispatch({ type: 'loadState', state: cleaned, fast: true });
     userEditedRef.current = false;
     versionRef.current.v = version || 0;
@@ -296,7 +299,11 @@ export function MongoSyncAdapter({
         const res = await mongoGetState(APP_ID);
         if (ac.signal.aborted) return;
         if (res.ok && res.data && typeof res.data === 'object' && !Array.isArray(res.data)) {
-          applyRemoteState(res.data, res.version, { force: true, mergeIfDirty: false });
+          // Prefer merge when session snap already painted so we don't wipe early edits.
+          applyRemoteState(res.data, res.version, {
+            force: !isDirtyLocal(stateRef.current, userEditedRef.current),
+            mergeIfDirty: true,
+          });
         } else if (res.status === 404) {
           versionRef.current.v = 0;
           setCloudStatus(projectCount(stateRef.current) ? 'synced' : 'new');

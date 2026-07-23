@@ -1817,20 +1817,13 @@ function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWo
     return{allStats,tT,tC,tO,tI,op,statusData,phaseData,upcoming,iss};
   },[displayProjects,filters,todayStr]);
   const{allStats,tT,tC,tO,tI,op,statusData,phaseData,upcoming,iss}=overviewStats;
-  if(syncLoading&&!displayProjects.length){
-    return(
-      <div style={{padding:"48px 20px",textAlign:"center"}}>
-        <h1 className="disp" style={{fontSize:28,fontWeight:600,color:C.navy,marginBottom:10}}>Loading workspace…</h1>
-        <p style={{color:C.tx2,fontSize:13}}>Fetching the latest projects and comments from MongoDB.</p>
-      </div>
-    );
-  }
   return(
   <div>
       <div style={{marginBottom:20}}>
         <h1 className="disp" style={{fontSize:30,fontWeight:600,color:C.navy,lineHeight:1.1}}>Pre-Construction Command Centre</h1>
         <p style={{color:C.tx2,fontSize:13,marginTop:4}}>
           Golden Abodes · {displayProjects.length}{projSearch.trim()?` of ${projects.length}`:""} Projects · {fmt(todayStr)}
+          {syncLoading&&!displayProjects.length?" · Refreshing from Mongo…":""}
         </p>
         <input
           type="search"
@@ -2318,7 +2311,7 @@ function Modal({open,onClose,title,wide,children,footer}){
 }
 
 // ── MAIN APP ─────────────────────────────────────────────
-const CLOUD_LABELS={loading:"Mongo…",synced:"Mongo ✓",dirty:"Saving…",saving:"Saving…",new:"Mongo (new)",offline:"Mongo offline",local:"Local only",error:"Mongo error",conflict:"Conflict"};
+const CLOUD_LABELS={loading:"Refreshing…",synced:"Mongo ✓",dirty:"Saving…",saving:"Saving…",new:"Mongo (new)",offline:"Mongo offline",local:"Local only",error:"Mongo error",conflict:"Conflict"};
 
 export default function App(){
   const[state,dispatch]=useReducer(reducer,null,()=>buildInit());
