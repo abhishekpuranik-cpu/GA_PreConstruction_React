@@ -10,8 +10,8 @@ import {
 } from '../../ga_mongo/mongoStateClient.js';
 
 const APP_ID = 'preconstruction';
-const SNAP_KEY = 'ga_precon_workspace_snap_v2';
-const ACTIVITY_BOOT_CAP = 200;
+const SNAP_KEY = 'ga_precon_workspace_snap_v3';
+const ACTIVITY_BOOT_CAP = 120;
 
 function enableMongoOnCloud() {
   if (!canUseMongoState()) return;
@@ -24,6 +24,16 @@ function enableMongoOnCloud() {
 
 function projectCount(data) {
   return Array.isArray(data?.projects) ? data.projects.length : 0;
+}
+
+function hasTaskTree(data) {
+  const projects = Array.isArray(data?.projects) ? data.projects : [];
+  for (const p of projects) {
+    for (const ph of p?.phases || []) {
+      if (Array.isArray(ph?.tasks) && ph.tasks.length) return true;
+    }
+  }
+  return false;
 }
 
 function isDirtyLocal(state, userEdited) {
@@ -39,6 +49,7 @@ function stripEphemeral(state) {
     __commentsRepairPending,
     __lifecycleHydrated,
     __slimBoot,
+    __boot,
     ...rest
   } = state;
   return rest;
@@ -52,36 +63,51 @@ function trimActivityLog(data, cap = ACTIVITY_BOOT_CAP) {
 }
 
 function writeWorkspaceSnap(data, version) {
+  const slim = trimActivityLog(stripEphemeral(data), ACTIVITY_BOOT_CAP);
+  const payload = JSON.stringify({
+    version: Number(version) || 0,
+    savedAt: Date.now(),
+    data: {
+      cloudUrl: slim.cloudUrl || '',
+      departments: slim.departments || [],
+      projects: slim.projects || [],
+      activityLog: slim.activityLog || [],
+      _removedProjectIds: slim._removedProjectIds || [],
+    },
+  });
   try {
-    const slim = trimActivityLog(stripEphemeral(data), ACTIVITY_BOOT_CAP);
-    sessionStorage.setItem(
-      SNAP_KEY,
-      JSON.stringify({
-        version: Number(version) || 0,
-        savedAt: Date.now(),
-        data: {
-          cloudUrl: slim.cloudUrl || '',
-          departments: slim.departments || [],
-          projects: slim.projects || [],
-          activityLog: slim.activityLog || [],
-          _removedProjectIds: slim._removedProjectIds || [],
-        },
-      }),
-    );
+    sessionStorage.setItem(SNAP_KEY, payload);
   } catch {
-    /* quota / private mode */
+    /* ignore */
+  }
+  // Persist across sessions when the browser allows (return visits open instantly).
+  if (hasTaskTree(slim)) {
+    try {
+      localStorage.setItem(SNAP_KEY, payload);
+    } catch {
+      try {
+        localStorage.removeItem(SNAP_KEY);
+      } catch {
+        /* ignore */
+      }
+    }
   }
 }
 
 function readWorkspaceSnap() {
-  try {
-    const raw = sessionStorage.getItem(SNAP_KEY);
+  const tryParse = (raw) => {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed?.data || !Array.isArray(parsed.data.projects) || !parsed.data.projects.length) return null;
-    // Keep snap for the session; drop if older than 7 days.
-    if (Date.now() - Number(parsed.savedAt || 0) > 7 * 24 * 3600 * 1000) return null;
+    if (Date.now() - Number(parsed.savedAt || 0) > 14 * 24 * 3600 * 1000) return null;
     return parsed;
+  };
+  try {
+    const session = tryParse(sessionStorage.getItem(SNAP_KEY));
+    if (session && hasTaskTree(session.data)) return session;
+    const local = tryParse(localStorage.getItem(SNAP_KEY));
+    if (local) return local;
+    return session;
   } catch {
     return null;
   }
@@ -90,6 +116,10 @@ function readWorkspaceSnap() {
 function payloadForSave(snap) {
   const localCount = projectCount(snap);
   const cleaned = stripEphemeral(snap);
+  // Never PUT catalog-only shells (empty phases) — server merge is safe, but avoid noisy writes.
+  if (!hasTaskTree(cleaned)) {
+    return null;
+  }
   return {
     ...cleaned,
     _removedProjectIds:
@@ -131,7 +161,6 @@ export function MongoSyncAdapter({
 
   useLayoutEffect(() => {
     stateRef.current = state;
-    // Dirty is set only by user flush actions — never by stringify of the whole workspace.
   }, [state]);
 
   useEffect(() => {
@@ -161,16 +190,22 @@ export function MongoSyncAdapter({
 
     if (!force && dirty) return false;
 
+    // Prefer richer local task trees over empty catalog shells when not forcing.
+    if (!force && hasTaskTree(local) && !hasTaskTree(trimmed)) {
+      versionRef.current.v = Math.max(versionRef.current.v, version || 0);
+      return false;
+    }
+
     const cleaned = {
       ...trimmed,
-      __slimBoot: undefined,
       _removedProjectIds: Array.isArray(trimmed._removedProjectIds) ? trimmed._removedProjectIds : [],
     };
     delete cleaned.__slimBoot;
+    delete cleaned.__boot;
     dispatch({ type: 'loadState', state: cleaned, fast: true });
     userEditedRef.current = false;
     versionRef.current.v = version || 0;
-    writeWorkspaceSnap(cleaned, versionRef.current.v);
+    if (hasTaskTree(cleaned)) writeWorkspaceSnap(cleaned, versionRef.current.v);
     setCloudStatus('synced');
     return true;
   };
@@ -185,11 +220,14 @@ export function MongoSyncAdapter({
     const run = (async () => {
       const snap = stateRef.current;
       const safeSnap = payloadForSave(snap);
+      if (!safeSnap) {
+        setCloudStatus(projectCount(snap) ? 'synced' : 'new');
+        return false;
+      }
       setCloudStatus('saving');
       const res = await mongoPutState(APP_ID, {
         data: safeSnap,
         expectedVersion: versionRef.current.v,
-        // Prefer version-only response — avoid downloading the full portfolio after every save.
         returnData: false,
       });
       if (res.ok) {
@@ -201,7 +239,7 @@ export function MongoSyncAdapter({
       }
       if (res.status === 409) {
         try {
-          const latest = await mongoGetState(APP_ID);
+          const latest = await mongoGetState(APP_ID, { view: 'work' });
           if (latest.ok && latest.data) {
             const freshLocal = stateRef.current;
             const merged = mergePreconstructionClientState(latest.data, freshLocal, {
@@ -247,7 +285,7 @@ export function MongoSyncAdapter({
   flushSaveRefInternal.current = flushSave;
 
   const pullServerCatalog = async ({ force = false, reason = '' } = {}) => {
-    const res = await mongoGetState(APP_ID);
+    const res = await mongoGetState(APP_ID, { view: 'work' });
     if (!res.ok || !res.data) return false;
     const remoteCount = projectCount(res.data);
     const localCount = projectCount(stateRef.current);
@@ -261,9 +299,8 @@ export function MongoSyncAdapter({
       return true;
     }
 
-    // Only apply when forced, dirty-merge needed, remote has more projects, or version advanced.
     const versionAdvanced = Number(res.version || 0) > Number(versionRef.current.v || 0);
-    if (dirty || remoteCount > localCount || force || versionAdvanced) {
+    if (dirty || remoteCount > localCount || force || versionAdvanced || !hasTaskTree(stateRef.current)) {
       applyRemoteState(res.data, res.version, { force: false, mergeIfDirty: true });
       if (dirty) void flushSaveRefInternal.current?.();
       return true;
@@ -274,7 +311,7 @@ export function MongoSyncAdapter({
   };
   pullServerCatalogRef.current = pullServerCatalog;
 
-  // Instant paint from session snapshot, then refresh from Mongo.
+  // Instant paint from local/session snapshot.
   useEffect(() => {
     if (bootSnapAppliedRef.current) return;
     bootSnapAppliedRef.current = true;
@@ -282,10 +319,11 @@ export function MongoSyncAdapter({
     if (snap?.data) {
       versionRef.current.v = Number(snap.version) || 0;
       dispatch({ type: 'loadState', state: snap.data, fast: true, fromSnap: true });
-      setCloudStatus('loading');
+      setCloudStatus(hasTaskTree(snap.data) ? 'synced' : 'loading');
     }
   }, [dispatch]);
 
+  // Two-phase Mongo load: tiny catalog first, then work (tasks/comments).
   useEffect(() => {
     const ac = new AbortController();
     (async () => {
@@ -296,18 +334,30 @@ export function MongoSyncAdapter({
         return;
       }
       try {
-        const res = await mongoGetState(APP_ID);
+        const catalogPromise = mongoGetState(APP_ID, { view: 'catalog' });
+        const workPromise = mongoGetState(APP_ID, { view: 'work' });
+
+        const catalog = await catalogPromise;
         if (ac.signal.aborted) return;
-        if (res.ok && res.data && typeof res.data === 'object' && !Array.isArray(res.data)) {
-          // Prefer merge when session snap already painted so we don't wipe early edits.
-          applyRemoteState(res.data, res.version, {
+        if (catalog.ok && catalog.data && typeof catalog.data === 'object' && !Array.isArray(catalog.data)) {
+          applyRemoteState(catalog.data, catalog.version, {
+            force: !hasTaskTree(stateRef.current) && !isDirtyLocal(stateRef.current, userEditedRef.current),
+            mergeIfDirty: true,
+          });
+          if (!hasTaskTree(stateRef.current)) setCloudStatus('loading');
+        }
+
+        const work = await workPromise;
+        if (ac.signal.aborted) return;
+        if (work.ok && work.data && typeof work.data === 'object' && !Array.isArray(work.data)) {
+          applyRemoteState(work.data, work.version, {
             force: !isDirtyLocal(stateRef.current, userEditedRef.current),
             mergeIfDirty: true,
           });
-        } else if (res.status === 404) {
+        } else if (work.status === 404 && catalog.status === 404) {
           versionRef.current.v = 0;
           setCloudStatus(projectCount(stateRef.current) ? 'synced' : 'new');
-        } else {
+        } else if (!hasTaskTree(stateRef.current)) {
           setCloudStatus(projectCount(stateRef.current) ? 'synced' : 'error');
         }
       } catch {
@@ -348,7 +398,7 @@ export function MongoSyncAdapter({
         toast('Workspace reloaded from Mongo', 'ok');
         return true;
       }
-      const res = await mongoGetState(APP_ID);
+      const res = await mongoGetState(APP_ID, { view: 'work' });
       if (res.status === 404) {
         versionRef.current.v = 0;
         setCloudStatus('new');
@@ -374,7 +424,6 @@ export function MongoSyncAdapter({
     };
   });
 
-  // Light hydrate once after first Mongo apply (lifecycle stamps prevent repeat).
   useEffect(() => {
     if (!syncReady || !state.__needsHydrate) return undefined;
     const t = window.setTimeout(() => {
@@ -393,13 +442,15 @@ export function MongoSyncAdapter({
     return () => clearTimeout(timer);
   }, [syncReady, state.__flushPending, dispatch]);
 
-  // Autosave only when the user actually edited (not on remote load / hydrate).
   useEffect(() => {
     if (!syncReady || !isMongoAutsaveEnabled() || !canUseMongoState()) return;
     if (!userEditedRef.current) return;
+    if (!hasTaskTree(stateRef.current)) return;
     const schedule = scheduleSaveRef.current;
     if (!schedule) return;
-    schedule(() => payloadForSave(stateRef.current));
+    const payload = payloadForSave(stateRef.current);
+    if (!payload) return;
+    schedule(() => payload);
     setCloudStatus((s) => (s === 'saving' ? s : 'dirty'));
   }, [state, syncReady]);
 
@@ -427,7 +478,6 @@ export function MongoSyncAdapter({
     };
   }, [syncReady]);
 
-  // Meta-only poll — full GET only when remote version advances.
   useEffect(() => {
     if (!syncReady || !canUseMongoState()) return undefined;
     const t = setInterval(async () => {

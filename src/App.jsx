@@ -226,8 +226,23 @@ function buildLegacySeedCatalogUnused(){
 
 const gSt=(t,dm)=>taskStatus(t,dm);
 function pStats(proj){
+  const phases=proj?.phases||[];
+  const hasTasks=phases.some(ph=>Array.isArray(ph?.tasks)&&ph.tasks.length);
+  if(!hasTasks&&proj?._stats){
+    const s=proj._stats;
+    return{
+      tot:Number(s.total)||0,
+      comp:Number(s.comp)||0,
+      ip:Number(s.ip)||0,
+      ov:Number(s.ov)||0,
+      up:Math.max(0,(Number(s.total)||0)-(Number(s.comp)||0)-(Number(s.ip)||0)-(Number(s.ov)||0)),
+      paused:0,
+      pct:Number(s.pct)||0,
+      nextName:s.nextName||"",
+    };
+  }
   const dm=cDates(proj);let tot=0,comp=0,ip=0,ov=0,up=0,paused=0;
-  proj.phases.forEach(ph=>ph.tasks.forEach(t=>{
+  phases.forEach(ph=>(ph.tasks||[]).forEach(t=>{
     tot++;const st=taskStatus(t,dm);
     if(st==="completed")comp++;else if(st==="inprogress")ip++;else if(st==="overdue")ov++;
     else if(st==="paused")paused++;else up++;
@@ -1796,11 +1811,11 @@ function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWo
     const op=tT?Math.round(tC/tT*100):0;
     const statusData=[{name:"Completed",v:tC,c:"#1A6A3C"},{name:"In Progress",v:tI,c:"#1B5E9E"},{name:"Overdue",v:tO,c:"#B32E1E"},{name:"Not Started",v:allStats.reduce((a,x)=>a+x.s.up,0),c:"#9A9590"}];
     const ghq=displayProjects.find(p=>p.id==="ghq");
-    const phaseData=ghq?ghq.phases.map(ph=>{const dm=cDates(ghq);const c=ph.tasks.filter(t=>taskStatus(t,dm)==="completed").length;return{name:ph.name.substring(0,12),pct:ph.tasks.length?Math.round(c/ph.tasks.length*100):0,col:ph.col};}):[];
+    const phaseData=ghq?(ghq.phases||[]).map(ph=>{const dm=cDates(ghq);const tasks=ph.tasks||[];const c=tasks.filter(t=>taskStatus(t,dm)==="completed").length;return{name:String(ph.name||"").substring(0,12),pct:tasks.length?Math.round(c/tasks.length*100):0,col:ph.col};}):[];
     const upcoming=[],iss=[];
     displayProjects.forEach(proj=>{
       const dm=cDates(proj);
-      proj.phases.forEach(ph=>ph.tasks.forEach(t=>{
+      (proj.phases||[]).forEach(ph=>(ph.tasks||[]).forEach(t=>{
         const d=dm[t.id];if(!d)return;const st=taskStatus(t,dm);
         if(st==="overdue")iss.push({proj,ph,t,d,dy:dbDays(d.e,todayStr)});
         const isAction=st==="inprogress"||st==="notstarted"||st==="upcoming"||st==="paused";
@@ -1868,7 +1883,10 @@ function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWo
         {allStats.length?allStats.map(({p,s})=>{
           const r=34,circ=2*Math.PI*r,off=circ*(1-s.pct/100);
           const dm=cDates(p);let nxt=null;
-          for(const ph of p.phases)for(const t of ph.tasks){const st=taskStatus(t,dm);if(st==="inprogress"||st==="notstarted"){nxt=t;break;}if(nxt)break;}
+          if(Array.isArray(p.phases)){
+            for(const ph of p.phases)for(const t of ph.tasks||[]){const st=taskStatus(t,dm);if(st==="inprogress"||st==="notstarted"){nxt=t;break;}if(nxt)break;}
+          }
+          const nxtLabel=nxt?.name||s.nextName||"";
           return(
             <div key={p.id} className="pcard" style={{cursor:onOpenProject?"pointer":"default"}} onClick={()=>onOpenProject&&onOpenProject(p.id)}>
               <svg width="64" height="64" viewBox="0 0 80 80" style={{flexShrink:0}}>
@@ -1885,7 +1903,7 @@ function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWo
                   <span style={{color:C.blue}}>{s.ip} active</span>
                   <span style={{color:C.red}}>{s.ov} late</span>
                 </div>
-                {nxt&&<div style={{fontSize:11,color:C.tx3,marginTop:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>↳ {nxt.name}</div>}
+                {nxtLabel?<div style={{fontSize:11,color:C.tx3,marginTop:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>↳ {nxtLabel}</div>:null}
                 <div style={{display:"flex",gap:5,marginTop:8}} onClick={e=>e.stopPropagation()}>
                   {onEditProject&&<button type="button" className="bts" onClick={()=>onEditProject(p)}>Edit</button>}
                   {canDeleteProjects&&onDeleteProject&&<button type="button" className="btd bts" onClick={()=>onDeleteProject(p)}>Delete</button>}
