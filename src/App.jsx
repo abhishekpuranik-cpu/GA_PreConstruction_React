@@ -1035,6 +1035,10 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .tcm-open-btn{white-space:nowrap;font-weight:600}
 .tcm-hero .badge{background:rgba(255,255,255,.15)!important;border-color:rgba(255,255,255,.25)!important;color:#fff!important}
 .mbox{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:600;background:#fff;border:1px solid #E2DDD4;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.12);width:560px;max-width:calc(100vw - 32px);max-height:80vh;display:flex;flex-direction:column}
+.mbox.unsaved-mbox{width:420px;z-index:700}
+.unsaved-mbox .unsaved-body{font-size:13px;color:#55504A;line-height:1.55}
+.unsaved-mbox .unsaved-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;width:100%}
+.mb.unsaved-mbox-mb{z-index:650}
 .mbox.wide{width:700px}
 .fg{margin-bottom:13px}
 .fg label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#96918A;margin-bottom:4px;font-weight:600}
@@ -2331,12 +2335,12 @@ function DepartmentHeadsModal({open,onClose,departments,dispatch,toast}){
 }
 
 // ── MODAL COMPONENT ──────────────────────────────────────
-function Modal({open,onClose,title,wide,children,footer}){
+function Modal({open,onClose,title,wide,children,footer,className}){
   if(!open)return null;
   return(
     <>
-      <div className="mb" onClick={onClose}/>
-      <div className={`mbox${wide?" wide":""}`}>
+      <div className={`mb${className?" "+className+"-mb":""}`} onClick={onClose}/>
+      <div className={`mbox${wide?" wide":""}${className?" "+className:""}`}>
         <div style={{padding:"16px 18px",borderBottom:`1px solid ${C.bd}`,display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
           <span className="disp" style={{fontSize:19,fontWeight:600,color:C.navy}}>{title}</span>
           <button style={{width:26,height:26,border:"none",background:"none",fontSize:17,color:C.tx3,cursor:"pointer",borderRadius:4}} onClick={onClose}>✕</button>
@@ -2360,8 +2364,11 @@ export default function App(){
   const[navOpen,setNavOpen]=useState(false);
   const[editProjId,setEditProjId]=useState(null);
   const[cloudStatus,setCloudStatus]=useState("loading");
+  const[unsavedPrompt,setUnsavedPrompt]=useState(null);
+  const[unsavedBusy,setUnsavedBusy]=useState(false);
   const mongoFlushRef=useRef(null);
   const mongoReloadRef=useRef(null);
+  const mongoDiscardRef=useRef(null);
   const deleteFlushPendingRef=useRef(false);
   const loginUser=useLoginUser();
   const[projectRoster,setProjectRoster]=useState({names:[],projectTagged:[],securityUsers:[]});
@@ -2370,6 +2377,64 @@ export default function App(){
   },[loginUser?.ready,loginUser?.name]);
   const canDeleteProjects=useMemo(()=>canDeletePreconProjects(loginUser),[loginUser]);
   const{navHint,toast}=useNavStatus();
+  const hasUnsaved=cloudStatus==="dirty"||cloudStatus==="saving";
+  const runGuardedNav=useCallback((action)=>{
+    if(typeof action!=="function")return;
+    if(!hasUnsaved){
+      action();
+      return;
+    }
+    setUnsavedPrompt({action});
+  },[hasUnsaved]);
+  const closeUnsavedPrompt=useCallback(()=>{
+    if(unsavedBusy)return;
+    setUnsavedPrompt(null);
+  },[unsavedBusy]);
+  const confirmUnsavedSave=useCallback(async()=>{
+    if(!unsavedPrompt?.action)return;
+    setUnsavedBusy(true);
+    try{
+      if(!mongoFlushRef.current){
+        toast("Cloud save unavailable","err");
+        return;
+      }
+      const ok=await mongoFlushRef.current();
+      if(!ok){
+        toast("Could not save — stay on this page or choose Don't Save","err");
+        return;
+      }
+      const next=unsavedPrompt.action;
+      setUnsavedPrompt(null);
+      next();
+    }finally{
+      setUnsavedBusy(false);
+    }
+  },[unsavedPrompt,toast]);
+  const confirmUnsavedDiscard=useCallback(async()=>{
+    if(!unsavedPrompt?.action)return;
+    setUnsavedBusy(true);
+    try{
+      if(mongoDiscardRef.current){
+        const ok=await mongoDiscardRef.current();
+        if(!ok)toast("Could not discard cleanly — check connection","err");
+      }
+      const next=unsavedPrompt.action;
+      setUnsavedPrompt(null);
+      next();
+    }finally{
+      setUnsavedBusy(false);
+    }
+  },[unsavedPrompt,toast]);
+  useEffect(()=>{
+    if(!hasUnsaved)return undefined;
+    const onBeforeUnload=(e)=>{
+      e.preventDefault();
+      e.returnValue="";
+      return"";
+    };
+    window.addEventListener("beforeunload",onBeforeUnload);
+    return()=>window.removeEventListener("beforeunload",onBeforeUnload);
+  },[hasUnsaved]);
   const saveActivityToMongo=useCallback(async(meta)=>{
     if(!mongoFlushRef.current){
       toast("Cloud save unavailable","err");
@@ -2408,8 +2473,16 @@ export default function App(){
     const s=document.createElement("style");s.textContent=STYLES;document.head.appendChild(s);return()=>s.remove();
   },[]);
 
-  const sv=(id)=>{if(id==="__add"){setModal("addProj");return;}setCurView(id);};
-  const sst=(pid,tab)=>setSubTab(p=>({...p,[pid]:tab}));
+  const sv=(id)=>{
+    if(id==="__add"){setModal("addProj");return;}
+    if(id===curView)return;
+    runGuardedNav(()=>setCurView(id));
+  };
+  const sst=(pid,tab)=>{
+    const cur=subTab[pid]||"tasks";
+    if(cur===tab)return;
+    runGuardedNav(()=>setSubTab(p=>({...p,[pid]:tab})));
+  };
   const cloudUrl=state.cloudUrl;
   const setCloudUrl=(v)=>dispatch({type:"setCloudUrl",v});
 
@@ -2474,7 +2547,7 @@ export default function App(){
 
   return(
     <div style={{minHeight:"100dvh",background:C.bg,maxWidth:"100vw",overflowX:"hidden"}}>
-      <MongoSyncAdapter state={state} dispatch={dispatch} toast={toast} flushRef={mongoFlushRef} reloadRef={mongoReloadRef} onSyncStatus={setCloudStatus} canDeleteProjects={canDeleteProjects}/>
+      <MongoSyncAdapter state={state} dispatch={dispatch} toast={toast} flushRef={mongoFlushRef} reloadRef={mongoReloadRef} discardRef={mongoDiscardRef} onSyncStatus={setCloudStatus} canDeleteProjects={canDeleteProjects}/>
       <nav className="tnav">
         <div className="tnav-row">
           <div className="tnav-brand" style={{borderRight:`1.5px solid ${C.bd}`,paddingRight:12,marginRight:2}}>
@@ -2492,7 +2565,10 @@ export default function App(){
           <button
             type="button"
             className={`btg mw-nav-tab${curView==="mywork"?" act":""}`}
-            onClick={()=>{setCurView("mywork");setNavOpen(false);}}
+            onClick={()=>{
+              if(curView==="mywork"){setNavOpen(false);return;}
+              runGuardedNav(()=>{setCurView("mywork");setNavOpen(false);});
+            }}
             title="Your tasks across all projects"
           >
             ◎ My Work
@@ -2535,9 +2611,9 @@ export default function App(){
 
       <main className={`main${curProj?" main-proj":""}`}>
         {curView==="dashboard"
-          ?<Dashboard projects={state.projects} cloudUrl={cloudUrl} setCloudUrl={setCloudUrl} toast={toast} onOpenProject={id=>setCurView(id)} onOpenMyWork={()=>setCurView("mywork")} onEditProject={openEditProject} onDeleteProject={confirmDeleteProject} onAddProject={()=>setModal("addProj")} onImportJson={importJSON} onImportExcel={importExcel} departments={state.departments} canDeleteProjects={canDeleteProjects} dispatch={dispatch} loginUser={loginUser} activityLog={state.activityLog} syncLoading={cloudStatus==="loading"} onPersist={saveActivityToMongo}/>
+          ?<Dashboard projects={state.projects} cloudUrl={cloudUrl} setCloudUrl={setCloudUrl} toast={toast} onOpenProject={id=>runGuardedNav(()=>setCurView(id))} onOpenMyWork={()=>runGuardedNav(()=>setCurView("mywork"))} onEditProject={openEditProject} onDeleteProject={confirmDeleteProject} onAddProject={()=>setModal("addProj")} onImportJson={importJSON} onImportExcel={importExcel} departments={state.departments} canDeleteProjects={canDeleteProjects} dispatch={dispatch} loginUser={loginUser} activityLog={state.activityLog} syncLoading={cloudStatus==="loading"} onPersist={saveActivityToMongo}/>
           :curView==="mywork"
-          ?<MyWorkView projects={visibleProjects} loginUser={loginUser} departments={state.departments} dispatch={dispatch} toast={toast} onOpenProject={id=>{setCurView(id);setSubTab(p=>({...p,[id]:"tasks"}));}} onPersist={saveActivityToMongo}/>
+          ?<MyWorkView projects={visibleProjects} loginUser={loginUser} departments={state.departments} dispatch={dispatch} toast={toast} onOpenProject={id=>runGuardedNav(()=>{setCurView(id);setSubTab(p=>({...p,[id]:"tasks"}));})} onPersist={saveActivityToMongo}/>
           :curProj?(()=>{
             const s=pStats(curProj);const sub=subTab[curProj.id]||"tasks";
             return(
@@ -2564,6 +2640,22 @@ export default function App(){
       </main>
 
       <DepartmentHeadsModal open={modal==="deptHeads"} onClose={()=>setModal(null)} departments={state.departments} dispatch={dispatch} toast={toast}/>
+
+      <Modal
+        open={!!unsavedPrompt}
+        onClose={closeUnsavedPrompt}
+        title="Unsaved changes"
+        className="unsaved-mbox"
+        footer={
+          <div className="unsaved-actions">
+            <button type="button" className="btg" disabled={unsavedBusy} onClick={closeUnsavedPrompt}>Cancel</button>
+            <button type="button" className="btd" disabled={unsavedBusy} onClick={()=>void confirmUnsavedDiscard()}>Don't Save</button>
+            <button type="button" className="btp" disabled={unsavedBusy} onClick={()=>void confirmUnsavedSave()}>{unsavedBusy?"Working…":"Save"}</button>
+          </div>
+        }
+      >
+        <p className="unsaved-body">You have unsaved changes. Save them before leaving this page?</p>
+      </Modal>
 
       {/* Add Project Modal */}
       <Modal open={modal==="addProj"} onClose={()=>{setModal(null);setNewProj(emptyProjForm());}} title="Add New Project"

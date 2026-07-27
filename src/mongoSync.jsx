@@ -148,6 +148,7 @@ export function MongoSyncAdapter({
   toast,
   flushRef,
   reloadRef,
+  discardRef,
   onSyncStatus,
   canDeleteProjects = false,
 }) {
@@ -499,12 +500,36 @@ export function MongoSyncAdapter({
     }
   };
 
+  /** Drop unsaved local edits and restore last Mongo work snapshot. */
+  const discardLocalEdits = async () => {
+    userEditedRef.current = false;
+    if (!canUseMongoState()) {
+      setCloudStatus('local');
+      return true;
+    }
+    setCloudStatus('loading');
+    try {
+      const ok = await pullServerCatalog({ force: true, reason: 'reload' });
+      if (ok) {
+        setCloudStatus('synced');
+        return true;
+      }
+      setCloudStatus('synced');
+      return true;
+    } catch {
+      setCloudStatus('offline');
+      return false;
+    }
+  };
+
   useEffect(() => {
     if (flushRef) flushRef.current = flushSave;
     if (reloadRef) reloadRef.current = reloadFromCloud;
+    if (discardRef) discardRef.current = discardLocalEdits;
     return () => {
       if (flushRef) flushRef.current = null;
       if (reloadRef) reloadRef.current = null;
+      if (discardRef) discardRef.current = null;
     };
   });
 
