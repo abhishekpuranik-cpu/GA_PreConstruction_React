@@ -25,6 +25,7 @@ export function TaskCommentModal({
   departments,
   assigneeOptions = [],
   onOpenProject,
+  onPersist,
 }) {
   const [composeMode, setComposeMode] = useState('new');
 
@@ -189,6 +190,7 @@ export function TaskCommentModal({
                 hideNotifyBanner={composeMode === 'edit'}
                 compactForm={false}
                 historyTitle=""
+                onPersist={onPersist}
               />
             </div>
           </section>
@@ -196,7 +198,7 @@ export function TaskCommentModal({
 
         <footer className="tcm-foot">
           <p className="tcm-foot-note">
-            Click <strong>Save</strong> in the top bar after your update so the team sees it on Reload · Email &amp; WhatsApp notify dept heads and assignees when configured
+            Comment <strong>Save</strong> writes to Mongo for the team · Use the row <strong>Save</strong> button after assignee/date edits · Email &amp; WhatsApp notify when configured
           </p>
           <div className="tcm-foot-actions">
             {onOpenProject ? (

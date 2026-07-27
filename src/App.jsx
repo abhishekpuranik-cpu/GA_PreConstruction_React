@@ -726,7 +726,9 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .ttable .tcol-who{width:128px}
 .ttable .tcol-status{width:132px}
 .ttable .tcol-comments{width:140px}
+.ttable .tcol-save{width:64px;overflow:visible}
 .ttable .tcol-del{width:40px;overflow:visible}
+.ttable .trow-save{padding:4px 6px;font-size:11px;font-weight:600;min-width:52px}
 .trow:nth-child(even) td{background:#FDFCFA}
 .trow:hover td{background:#FBF7EE!important}
 .trow.trow-drag-over td{background:#FBF7EE!important;border-top:2px solid #C89A3A}
@@ -1438,7 +1440,7 @@ function truncateText(text, max = 72) {
   return `${t.slice(0, max - 1)}…`;
 }
 
-function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
+function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster,onSaveActivity}){
   const dm=useMemo(()=>cDates(proj),[proj.id,proj.ko,proj.phases]);
   const[commentTarget,setCommentTarget]=useState(null);
   const[expandedPh,setExpandedPh]=useState({});
@@ -1618,6 +1620,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                 <th className="tcol-who">Assignee</th>
                 <th className="tcol-status">Status</th>
                 <th className="tcol-comments">Comments</th>
+                <th className="tcol-save">Save</th>
                 <th className="tcol-del" aria-label="Delete"/>
               </tr></thead>
               <tbody>
@@ -1721,6 +1724,20 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
                           openCommentModal({...ph,id:sourcePhId},t);
                         }}>{cc?`Comments (${cc})`:"Add comment"}</button>
                       </td>
+                      <td className="tcol-save">
+                        <button
+                          type="button"
+                          className="btp trow-save"
+                          title="Save this activity (assignee, dates, status) to Mongo"
+                          disabled={!onSaveActivity}
+                          onClick={async(e)=>{
+                            e.stopPropagation();
+                            if(!onSaveActivity){toast("Save unavailable","err");return;}
+                            const ok=await onSaveActivity({projId:proj.id,phId:sourcePhId,tId:t.id,name:t.name});
+                            if(ok)toast(`Saved “${t.name}”`,"ok");
+                          }}
+                        >Save</button>
+                      </td>
                       <td className="tcol-del"><div className="tact">
                         <button type="button" className="abt del" title="Delete (includes subtasks)" onClick={()=>{
                           const nKids=annotateTreeMeta(ph.tasks).find(r=>r.task.id===t.id)?.hasChildren;
@@ -1766,6 +1783,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster}){
         authorEmail={loginUser?.email}
         departments={departments}
         assigneeOptions={assigneeRoster}
+        onPersist={onSaveActivity}
       />
     </div>
   );
@@ -1791,7 +1809,7 @@ function ProjectFormFields({form,setForm}){
   );
 }
 
-function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWork,onEditProject,onDeleteProject,onAddProject,onImportJson,onImportExcel,departments,canDeleteProjects,dispatch,loginUser,activityLog,syncLoading}){
+function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWork,onEditProject,onDeleteProject,onAddProject,onImportJson,onImportExcel,departments,canDeleteProjects,dispatch,loginUser,activityLog,syncLoading,onPersist}){
   const[dashTab,setDashTab]=useState("overview");
   const[horizonDays,setHorizonDays]=useState(30);
   const[statusFilters,setStatusFilters]=useState([]);
@@ -1864,7 +1882,7 @@ function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWo
       {dashTab==="ask"?(
         <AnalyticsAskView projects={displayProjects} dispatch={dispatch} toast={toast} onOpenProject={onOpenProject} loginUser={loginUser}/>
       ):dashTab==="calendar"?(
-        <DashboardCalendarView projects={displayProjects} sourceProjects={projects} departments={departments} dispatch={dispatch} toast={toast} loginUser={loginUser} onOpenProject={onOpenProject}/>
+        <DashboardCalendarView projects={displayProjects} sourceProjects={projects} departments={departments} dispatch={dispatch} toast={toast} loginUser={loginUser} onOpenProject={onOpenProject} onPersist={onPersist}/>
       ):dashTab==="reports"?(
         <DashboardReportsView activityLog={activityLog||[]} projects={displayProjects} onOpenProject={onOpenProject} dispatch={dispatch} toast={toast} loginUser={loginUser}/>
       ):(
@@ -2061,7 +2079,8 @@ function reducer(state,action){
     (merged.projects||[]).forEach((proj)=>applyTaskTombstonesToProject(proj));
     if(merged.__needsHydrate)delete merged.__needsHydrate;
     merged.__lifecycleHydrated=LIFECYCLE_VERSION;
-    if(totalAdded>0)merged.__flushPending=true;
+    // Do not auto-mark dirty on hydrate — saves are explicit (per-activity / top Save).
+    void totalAdded;
     (merged.projects||[]).forEach(proj=>{
       (proj.phases||[]).forEach(ph=>{
         (ph.tasks||[]).forEach(t=>{
@@ -2330,7 +2349,7 @@ function Modal({open,onClose,title,wide,children,footer}){
 }
 
 // ── MAIN APP ─────────────────────────────────────────────
-const CLOUD_LABELS={loading:"Refreshing…",synced:"Mongo ✓",dirty:"Saving…",saving:"Saving…",new:"Mongo (new)",offline:"Mongo offline",local:"Local only",error:"Mongo error",conflict:"Conflict"};
+const CLOUD_LABELS={loading:"Refreshing…",synced:"Mongo ✓",dirty:"Unsaved",saving:"Saving…",new:"Mongo (new)",offline:"Mongo offline",local:"Local only",error:"Mongo error",conflict:"Conflict"};
 
 export default function App(){
   const[state,dispatch]=useReducer(reducer,null,()=>buildInit());
@@ -2351,6 +2370,15 @@ export default function App(){
   },[loginUser?.ready,loginUser?.name]);
   const canDeleteProjects=useMemo(()=>canDeletePreconProjects(loginUser),[loginUser]);
   const{navHint,toast}=useNavStatus();
+  const saveActivityToMongo=useCallback(async(meta)=>{
+    if(!mongoFlushRef.current){
+      toast("Cloud save unavailable","err");
+      return false;
+    }
+    const ok=await mongoFlushRef.current();
+    if(!ok&&meta?.name)toast(`Could not save “${meta.name}”`,"err");
+    return !!ok;
+  },[toast]);
   const visibleProjects=useMemo(()=>filterProjectsForUser(state.projects,loginUser),[state.projects,loginUser]);
   const curProj=state.projects.find(p=>p.id===curView);
   useEffect(()=>{
@@ -2495,21 +2523,21 @@ export default function App(){
               {navHint.short}
             </span>
           ):null}
-          <span className="tnav-mongo" title="MongoDB sync">{CLOUD_LABELS[cloudStatus]||cloudStatus}</span>
-          <button type="button" className="btg" title="Reload workspace from MongoDB" disabled={cloudStatus==="loading"} onClick={()=>{if(mongoReloadRef.current)void mongoReloadRef.current();else toast("Cloud reload unavailable","err");}}>↻ Reload</button>
+          <span className="tnav-mongo" title="Edits stay local until you click Save on an activity (or Save here)">{CLOUD_LABELS[cloudStatus]||cloudStatus}</span>
+          <button type="button" className="btg" title="Reload workspace from MongoDB (disabled while Unsaved)" disabled={cloudStatus==="loading"||cloudStatus==="dirty"||cloudStatus==="saving"} onClick={()=>{if(mongoReloadRef.current)void mongoReloadRef.current();else toast("Cloud reload unavailable","err");}}>↻ Reload</button>
           <button type="button" className="btp" disabled={cloudStatus==="loading"||cloudStatus==="saving"} onClick={async()=>{
             if(!mongoFlushRef.current){toast("Cloud save unavailable","err");return;}
             const ok=await mongoFlushRef.current();
-            if(ok)toast("Saved to server — teammates can ↻ Reload to see comments & tasks","ok");
-          }}>Save</button>
+            if(ok)toast("Saved to server — teammates can ↻ Reload to see updates","ok");
+          }}>Save all</button>
         </div>
       </nav>
 
       <main className={`main${curProj?" main-proj":""}`}>
         {curView==="dashboard"
-          ?<Dashboard projects={state.projects} cloudUrl={cloudUrl} setCloudUrl={setCloudUrl} toast={toast} onOpenProject={id=>setCurView(id)} onOpenMyWork={()=>setCurView("mywork")} onEditProject={openEditProject} onDeleteProject={confirmDeleteProject} onAddProject={()=>setModal("addProj")} onImportJson={importJSON} onImportExcel={importExcel} departments={state.departments} canDeleteProjects={canDeleteProjects} dispatch={dispatch} loginUser={loginUser} activityLog={state.activityLog} syncLoading={cloudStatus==="loading"}/>
+          ?<Dashboard projects={state.projects} cloudUrl={cloudUrl} setCloudUrl={setCloudUrl} toast={toast} onOpenProject={id=>setCurView(id)} onOpenMyWork={()=>setCurView("mywork")} onEditProject={openEditProject} onDeleteProject={confirmDeleteProject} onAddProject={()=>setModal("addProj")} onImportJson={importJSON} onImportExcel={importExcel} departments={state.departments} canDeleteProjects={canDeleteProjects} dispatch={dispatch} loginUser={loginUser} activityLog={state.activityLog} syncLoading={cloudStatus==="loading"} onPersist={saveActivityToMongo}/>
           :curView==="mywork"
-          ?<MyWorkView projects={visibleProjects} loginUser={loginUser} departments={state.departments} dispatch={dispatch} toast={toast} onOpenProject={id=>{setCurView(id);setSubTab(p=>({...p,[id]:"tasks"}));}}/>
+          ?<MyWorkView projects={visibleProjects} loginUser={loginUser} departments={state.departments} dispatch={dispatch} toast={toast} onOpenProject={id=>{setCurView(id);setSubTab(p=>({...p,[id]:"tasks"}));}} onPersist={saveActivityToMongo}/>
           :curProj?(()=>{
             const s=pStats(curProj);const sub=subTab[curProj.id]||"tasks";
             return(
@@ -2524,7 +2552,7 @@ export default function App(){
                 onDeleteProject={()=>confirmDeleteProject(curProj)}
                 canDeleteProjects={canDeleteProjects}
               >
-                {sub==="tasks"&&<TasksView proj={curProj} dispatch={dispatch} toast={toast} departments={state.departments} loginUser={loginUser} assigneeRoster={assigneeRoster}/>}
+                {sub==="tasks"&&<TasksView proj={curProj} dispatch={dispatch} toast={toast} departments={state.departments} loginUser={loginUser} assigneeRoster={assigneeRoster} onSaveActivity={saveActivityToMongo}/>}
                 {sub==="allocate"&&<BulkAllocateView proj={curProj} dispatch={dispatch} assigneeRoster={assigneeRoster} departments={state.departments} toast={toast} onEditDepartments={()=>setModal("deptHeads")}/>}
                 {sub==="gantt"&&<GanttView proj={curProj}/>}
                 {sub==="regs"&&<RegView proj={curProj} regStatus={regStatus} setRegStatus={setRegStatus}/>}

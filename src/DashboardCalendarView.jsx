@@ -44,6 +44,7 @@ export function DashboardCalendarView({
   toast,
   loginUser,
   onOpenProject,
+  onPersist,
 }) {
   const [hideCompleted, setHideCompleted] = useState(true);
   const [statusFilters, setStatusFilters] = useState([]);
@@ -315,6 +316,7 @@ export function DashboardCalendarView({
           departments={departments}
           assigneeOptions={assigneeRoster}
           onOpenProject={onOpenProject}
+          onPersist={onPersist}
         />
       ) : null}    </div>
   );

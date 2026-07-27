@@ -2,9 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { mergePreconstructionClientState } from './preconMerge.js';
 import {
   canUseMongoState,
-  createMongoDebouncedSaver,
   GA_MONGO_ENABLE_KEY,
-  isMongoAutsaveEnabled,
   mongoGetState,
   mongoPutState
 } from '../../ga_mongo/mongoStateClient.js';
@@ -157,7 +155,6 @@ export function MongoSyncAdapter({
   const [cloudStatus, setCloudStatus] = useState('loading');
   const stateRef = useRef(state);
   const versionRef = useRef({ v: 0 });
-  const scheduleSaveRef = useRef(null);
   const userEditedRef = useRef(false);
   const canDeleteRef = useRef(canDeleteProjects);
   const initialLoadDoneRef = useRef(false);
@@ -373,14 +370,15 @@ export function MongoSyncAdapter({
     }
 
     const versionAdvanced = Number(res.version || 0) > Number(versionRef.current.v || 0);
-    if (dirty || remoteCount > localCount || force || versionAdvanced || !hasTaskTree(stateRef.current) || remoteWho > localWho) {
+    // Never pull remote while local edits are unsaved — that was wiping assignee/date changes.
+    if (dirty) return false;
+    if (remoteCount > localCount || force || versionAdvanced || !hasTaskTree(stateRef.current) || remoteWho > localWho) {
       applyRemoteState(res.data, res.version, {
         force: false,
         mergeIfDirty: true,
         reason,
         epoch,
       });
-      if (dirty) void flushSaveRefInternal.current?.();
       return true;
     }
 
@@ -471,17 +469,6 @@ export function MongoSyncAdapter({
     return () => ac.abort();
   }, [dispatch]);
 
-  useEffect(() => {
-    if (!syncReady || !canUseMongoState()) return undefined;
-    scheduleSaveRef.current = createMongoDebouncedSaver(APP_ID, versionRef, 2400, {
-      mergeOnConflict: (serverData, localData) =>
-        mergePreconstructionClientState(serverData, localData, {
-          allowProjectRemoval: canDeleteRef.current,
-        }),
-    });
-    return undefined;
-  }, [syncReady]);
-
   const reloadFromCloud = async () => {
     if (!canUseMongoState()) {
       toast('Mongo sync unavailable (open from platform URL)', 'err');
@@ -529,31 +516,20 @@ export function MongoSyncAdapter({
     return () => clearTimeout(t);
   }, [syncReady, state.__needsHydrate, dispatch]);
 
+  // Manual-save mode: edits mark Unsaved only — never auto-PUT to Mongo.
   useEffect(() => {
     if (!syncReady || !state.__flushPending) return undefined;
     userEditedRef.current = true;
     dispatch({ type: 'clearFlushFlag' });
-    const timer = setTimeout(() => {
-      void flushSave();
-    }, 60);
-    return () => clearTimeout(timer);
+    setCloudStatus((s) => (s === 'saving' || s === 'loading' ? s : 'dirty'));
+    return undefined;
   }, [syncReady, state.__flushPending, dispatch]);
 
-  useEffect(() => {
-    if (!syncReady || !isMongoAutsaveEnabled() || !canUseMongoState()) return;
-    if (!userEditedRef.current) return;
-    if (!hasTaskTree(stateRef.current)) return;
-    const schedule = scheduleSaveRef.current;
-    if (!schedule) return;
-    const payload = payloadForSave(stateRef.current);
-    if (!payload) return;
-    schedule(() => payload);
-    setCloudStatus((s) => (s === 'saving' ? s : 'dirty'));
-  }, [state, syncReady]);
-
+  // No debounced autosave. No pagehide auto-save. No background pull while unsaved.
   useEffect(() => {
     const onVis = async () => {
       if (document.visibilityState !== 'visible' || !syncReady || !canUseMongoState()) return;
+      if (isDirtyLocal(stateRef.current, userEditedRef.current)) return;
       try {
         const r = await fetch(`/api/apps/${APP_ID}/meta`);
         if (!r.ok) return;
@@ -567,9 +543,6 @@ export function MongoSyncAdapter({
       }
     };
     document.addEventListener('visibilitychange', onVis);
-    window.addEventListener('pagehide', () => {
-      if (userEditedRef.current) void flushSave();
-    });
     return () => {
       document.removeEventListener('visibilitychange', onVis);
     };
@@ -578,6 +551,7 @@ export function MongoSyncAdapter({
   useEffect(() => {
     if (!syncReady || !canUseMongoState()) return undefined;
     const t = setInterval(async () => {
+      if (isDirtyLocal(stateRef.current, userEditedRef.current)) return;
       try {
         const r = await fetch(`/api/apps/${APP_ID}/meta`);
         if (!r.ok) return;
@@ -589,7 +563,7 @@ export function MongoSyncAdapter({
       } catch {
         /* ignore */
       }
-    }, 12000);
+    }, 30000);
     return () => clearInterval(t);
   }, [syncReady]);
 

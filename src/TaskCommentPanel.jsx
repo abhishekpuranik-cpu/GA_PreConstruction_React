@@ -31,6 +31,7 @@ export function TaskCommentPanel({
   compactForm = false,
   displayComments: displayCommentsProp,
   historyTitle = 'Previous comments',
+  onPersist,
 }) {
   const displayComments = useMemo(
     () => displayCommentsProp ?? collectTaskComments(proj, ph, task),
@@ -94,6 +95,7 @@ export function TaskCommentPanel({
             }
           }}
           onSaved={(comment) => {
+            let commentIndex;
             if (editable && !blankForm) {
               dispatch({
                 type: 'updComment',
@@ -115,17 +117,23 @@ export function TaskCommentPanel({
                   emailError: comment.emailError,
                 },
               });
-              return editable.commentIndex;
+              commentIndex = editable.commentIndex;
+            } else {
+              commentIndex = (task.comments || []).length;
+              dispatch({
+                type: 'addComment',
+                projId: proj.id,
+                phId: ph.id,
+                tId: task.id,
+                comment,
+              });
             }
-            const idx = (task.comments || []).length;
-            dispatch({
-              type: 'addComment',
-              projId: proj.id,
-              phId: ph.id,
-              tId: task.id,
-              comment,
-            });
-            return idx;
+            if (typeof onPersist === 'function') {
+              window.setTimeout(() => {
+                void Promise.resolve(onPersist({ reason: 'comment', taskId: task.id })).catch(() => {});
+              }, 120);
+            }
+            return commentIndex;
           }}
           onNotifyComplete={(patch, commentIndex) => {
             dispatch({

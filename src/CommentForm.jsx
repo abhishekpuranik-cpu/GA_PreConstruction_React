@@ -263,11 +263,11 @@ export function CommentForm({
       toast(
         shouldMarkComplete
           ? (stagedCopy.length
-            ? 'Comment saved & activity marked complete — uploading files… Syncing to team…'
-            : 'Comment saved & activity marked complete — syncing to team…')
+            ? 'Comment saved & activity marked complete — uploading files…'
+            : 'Comment saved & activity marked complete')
           : (stagedCopy.length
-            ? 'Comment saved — uploading files… Syncing to team…'
-            : 'Comment saved — syncing to team…'),
+            ? 'Comment saved — uploading files…'
+            : 'Comment saved'),
         'ok',
       );
       setText('');

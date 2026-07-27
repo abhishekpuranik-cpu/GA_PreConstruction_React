@@ -33,7 +33,7 @@ const LEGEND = [
   { label: 'Completed', color: DUE_HEAT_COLORS.completed },
 ];
 
-export function MyWorkView({ projects, loginUser, departments, dispatch, toast, onOpenProject }) {
+export function MyWorkView({ projects, loginUser, departments, dispatch, toast, onOpenProject, onPersist }) {
   const defaultPerson = loginUser?.ready ? loginUser.name || '' : '';
   const [person, setPerson] = useState('');
   const [hideCompleted, setHideCompleted] = useState(true);
@@ -307,6 +307,7 @@ export function MyWorkView({ projects, loginUser, departments, dispatch, toast, 
           departments={departments}
           assigneeOptions={roster}
           onOpenProject={onOpenProject}
+          onPersist={onPersist}
         />
       ) : null}
     </div>
