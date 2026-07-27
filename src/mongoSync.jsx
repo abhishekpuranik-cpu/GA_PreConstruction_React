@@ -36,6 +36,18 @@ function hasTaskTree(data) {
   return false;
 }
 
+function countAssignees(data) {
+  let n = 0;
+  for (const p of data?.projects || []) {
+    for (const ph of p?.phases || []) {
+      for (const t of ph?.tasks || []) {
+        if (String(t?.who || '').trim()) n += 1;
+      }
+    }
+  }
+  return n;
+}
+
 function isDirtyLocal(state, userEdited) {
   return !!(userEdited || state?.__flushPending);
 }
@@ -80,7 +92,6 @@ function writeWorkspaceSnap(data, version) {
   } catch {
     /* ignore */
   }
-  // Persist across sessions when the browser allows (return visits open instantly).
   if (hasTaskTree(slim)) {
     try {
       localStorage.setItem(SNAP_KEY, payload);
@@ -154,6 +165,8 @@ export function MongoSyncAdapter({
   const pullServerCatalogRef = useRef(null);
   const flushInFlightRef = useRef(null);
   const bootSnapAppliedRef = useRef(false);
+  /** Bumped on successful PUT / explicit reload so in-flight GETs cannot wipe fresh saves. */
+  const applyEpochRef = useRef(0);
 
   useEffect(() => {
     canDeleteRef.current = canDeleteProjects;
@@ -171,11 +184,34 @@ export function MongoSyncAdapter({
     if (typeof onSyncStatus === 'function') onSyncStatus(cloudStatus);
   }, [cloudStatus, onSyncStatus]);
 
-  const applyRemoteState = (remote, version, { force = false, mergeIfDirty = true } = {}) => {
+  const applyRemoteState = (
+    remote,
+    version,
+    {
+      force = false,
+      mergeIfDirty = true,
+      allowStale = false,
+      reason = '',
+      epoch = null,
+    } = {},
+  ) => {
     if (!remote || typeof remote !== 'object' || Array.isArray(remote)) return false;
+    if (epoch != null && epoch !== applyEpochRef.current) return false;
+
     const local = stateRef.current;
     const dirty = isDirtyLocal(local, userEditedRef.current);
     const trimmed = trimActivityLog(remote);
+    const remoteV = Number(version) || 0;
+    const localV = Number(versionRef.current.v) || 0;
+
+    // Never apply an older workspace over a newer local/saved version (except explicit reload).
+    if (!allowStale && remoteV < localV) return false;
+
+    // Catalog / empty shells must never replace a real task tree.
+    if (hasTaskTree(local) && !hasTaskTree(trimmed)) {
+      versionRef.current.v = Math.max(localV, remoteV);
+      return false;
+    }
 
     if (dirty && mergeIfDirty) {
       const merged = mergePreconstructionClientState(trimmed, local, {
@@ -183,17 +219,36 @@ export function MongoSyncAdapter({
       });
       dispatch({ type: 'loadState', state: merged, fast: true });
       userEditedRef.current = true;
-      versionRef.current.v = version || versionRef.current.v || 0;
+      versionRef.current.v = Math.max(localV, remoteV);
       setCloudStatus('dirty');
       return true;
     }
 
     if (!force && dirty) return false;
 
-    // Prefer richer local task trees over empty catalog shells when not forcing.
-    if (!force && hasTaskTree(local) && !hasTaskTree(trimmed)) {
-      versionRef.current.v = Math.max(versionRef.current.v, version || 0);
-      return false;
+    // Prefer merge when local already has tasks and this is not an explicit full reload.
+    // Prevents late boot/poll responses from wiping assignees/dates after Mongo Saved.
+    const explicitReload = force && (reason === 'reload' || reason === 'conflict');
+    if (hasTaskTree(local) && !explicitReload) {
+      if (remoteV === localV && !force) {
+        return false;
+      }
+      const merged = mergePreconstructionClientState(trimmed, local, {
+        allowProjectRemoval: canDeleteRef.current,
+      });
+      // If remote is newer and local is clean, prefer remote tree but keep richer local assignees/dates via mergeTaskRow.
+      const preferRemote = !dirty && remoteV > localV;
+      const next = preferRemote
+        ? mergePreconstructionClientState(local, trimmed, {
+            allowProjectRemoval: canDeleteRef.current,
+          })
+        : merged;
+      dispatch({ type: 'loadState', state: next, fast: true });
+      userEditedRef.current = dirty;
+      versionRef.current.v = Math.max(localV, remoteV);
+      if (hasTaskTree(next)) writeWorkspaceSnap(next, versionRef.current.v);
+      setCloudStatus(dirty ? 'dirty' : 'synced');
+      return true;
     }
 
     const cleaned = {
@@ -204,7 +259,7 @@ export function MongoSyncAdapter({
     delete cleaned.__boot;
     dispatch({ type: 'loadState', state: cleaned, fast: true });
     userEditedRef.current = false;
-    versionRef.current.v = version || 0;
+    versionRef.current.v = Math.max(localV, remoteV);
     if (hasTaskTree(cleaned)) writeWorkspaceSnap(cleaned, versionRef.current.v);
     setCloudStatus('synced');
     return true;
@@ -231,6 +286,8 @@ export function MongoSyncAdapter({
         returnData: false,
       });
       if (res.ok) {
+        // Fence: any in-flight catalog/work GET started before this save must be ignored.
+        applyEpochRef.current += 1;
         versionRef.current.v = res.version ?? versionRef.current.v;
         userEditedRef.current = false;
         writeWorkspaceSnap(safeSnap, versionRef.current.v);
@@ -245,12 +302,15 @@ export function MongoSyncAdapter({
             const merged = mergePreconstructionClientState(latest.data, freshLocal, {
               allowProjectRemoval: canDeleteRef.current,
             });
+            const retryPayload = payloadForSave(merged);
+            if (!retryPayload) return false;
             const retry = await mongoPutState(APP_ID, {
-              data: payloadForSave(merged),
+              data: retryPayload,
               expectedVersion: latest.version ?? versionRef.current.v,
               returnData: false,
             });
             if (retry.ok) {
+              applyEpochRef.current += 1;
               versionRef.current.v = retry.version ?? versionRef.current.v;
               dispatch({ type: 'loadState', state: merged, fast: true });
               userEditedRef.current = false;
@@ -285,23 +345,41 @@ export function MongoSyncAdapter({
   flushSaveRefInternal.current = flushSave;
 
   const pullServerCatalog = async ({ force = false, reason = '' } = {}) => {
+    const epoch = applyEpochRef.current;
     const res = await mongoGetState(APP_ID, { view: 'work' });
+    if (epoch !== applyEpochRef.current) return false;
     if (!res.ok || !res.data) return false;
     const remoteCount = projectCount(res.data);
     const localCount = projectCount(stateRef.current);
     const dirty = isDirtyLocal(stateRef.current, userEditedRef.current);
+    const remoteWho = countAssignees(res.data);
+    const localWho = countAssignees(stateRef.current);
 
-    if (force && !dirty) {
-      applyRemoteState(res.data, res.version, { force: true, mergeIfDirty: false });
-      if (remoteCount > localCount && reason) {
+    if (force && !dirty && reason === 'reload') {
+      applyEpochRef.current += 1;
+      applyRemoteState(res.data, res.version, {
+        force: true,
+        mergeIfDirty: false,
+        allowStale: true,
+        reason: 'reload',
+        epoch: applyEpochRef.current,
+      });
+      if (remoteCount > localCount) {
         toast?.(`Loaded ${remoteCount} projects from server`, 'ok');
+      } else if (remoteWho > localWho) {
+        toast?.(`Restored ${remoteWho} assignees from server`, 'ok');
       }
       return true;
     }
 
     const versionAdvanced = Number(res.version || 0) > Number(versionRef.current.v || 0);
-    if (dirty || remoteCount > localCount || force || versionAdvanced || !hasTaskTree(stateRef.current)) {
-      applyRemoteState(res.data, res.version, { force: false, mergeIfDirty: true });
+    if (dirty || remoteCount > localCount || force || versionAdvanced || !hasTaskTree(stateRef.current) || remoteWho > localWho) {
+      applyRemoteState(res.data, res.version, {
+        force: false,
+        mergeIfDirty: true,
+        reason,
+        epoch,
+      });
       if (dirty) void flushSaveRefInternal.current?.();
       return true;
     }
@@ -323,9 +401,10 @@ export function MongoSyncAdapter({
     }
   }, [dispatch]);
 
-  // Two-phase Mongo load: tiny catalog first, then work (tasks/comments).
+  // Boot: catalog is cards-only; work carries assignees/dates. Never force-replace after a save fence.
   useEffect(() => {
     const ac = new AbortController();
+    const bootEpoch = applyEpochRef.current;
     (async () => {
       if (!canUseMongoState()) {
         setCloudStatus('local');
@@ -338,22 +417,40 @@ export function MongoSyncAdapter({
         const workPromise = mongoGetState(APP_ID, { view: 'work' });
 
         const catalog = await catalogPromise;
-        if (ac.signal.aborted) return;
+        if (ac.signal.aborted || bootEpoch !== applyEpochRef.current) return;
         if (catalog.ok && catalog.data && typeof catalog.data === 'object' && !Array.isArray(catalog.data)) {
+          // Catalog never force-replaces a task tree.
           applyRemoteState(catalog.data, catalog.version, {
-            force: !hasTaskTree(stateRef.current) && !isDirtyLocal(stateRef.current, userEditedRef.current),
+            force: false,
             mergeIfDirty: true,
+            reason: 'boot-catalog',
+            epoch: bootEpoch,
           });
           if (!hasTaskTree(stateRef.current)) setCloudStatus('loading');
         }
 
         const work = await workPromise;
-        if (ac.signal.aborted) return;
+        if (ac.signal.aborted || bootEpoch !== applyEpochRef.current) return;
         if (work.ok && work.data && typeof work.data === 'object' && !Array.isArray(work.data)) {
+          const localHasTree = hasTaskTree(stateRef.current);
+          const remoteWho = countAssignees(work.data);
+          const localWho = countAssignees(stateRef.current);
           applyRemoteState(work.data, work.version, {
-            force: !isDirtyLocal(stateRef.current, userEditedRef.current),
+            // Only full-replace when local has no tasks yet (first paint).
+            force: !localHasTree,
             mergeIfDirty: true,
+            reason: 'boot-work',
+            epoch: bootEpoch,
           });
+          if (localHasTree && remoteWho > localWho && !isDirtyLocal(stateRef.current, userEditedRef.current)) {
+            // Ensure richer server assignees win over a wiped local snap.
+            applyRemoteState(work.data, work.version, {
+              force: false,
+              mergeIfDirty: true,
+              reason: 'boot-work-richer',
+              epoch: bootEpoch,
+            });
+          }
         } else if (work.status === 404 && catalog.status === 404) {
           versionRef.current.v = 0;
           setCloudStatus(projectCount(stateRef.current) ? 'synced' : 'new');
@@ -393,7 +490,7 @@ export function MongoSyncAdapter({
     setCloudStatus('loading');
     try {
       userEditedRef.current = false;
-      const ok = await pullServerCatalog({ force: true });
+      const ok = await pullServerCatalog({ force: true, reason: 'reload' });
       if (ok) {
         toast('Workspace reloaded from Mongo', 'ok');
         return true;

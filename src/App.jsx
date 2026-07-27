@@ -2157,6 +2157,7 @@ function reducer(state,action){
       if(!t)break;
       t.ms=action.v||null;
       t.msManual=!!action.v;
+      t.msUpdatedAt=new Date().toISOString();
       break;
     }
     case"setTaskStatus":{

@@ -30,29 +30,95 @@ function whoStampMs(task) {
   return Number.isFinite(t) ? t : 0;
 }
 
-/** Prefer newer whoUpdatedAt; otherwise keep a non-empty assignee over accidental blanks. */
+function fieldStampMs(task, key) {
+  const t = Date.parse(task?.[key] || '');
+  return Number.isFinite(t) ? t : 0;
+}
+
+function nonEmpty(v) {
+  if (v == null) return false;
+  if (typeof v === 'string') return v.trim().length > 0;
+  return true;
+}
+
+/**
+ * Prefer newer whoUpdatedAt, but never let a blank assignee clobber a non-empty one
+ * unless the blank carries a strictly newer stamp (explicit clear).
+ */
 function pickMergedWho(existing, incoming) {
+  const exWho = String(existing?.who || '').trim();
+  const inWho = String(incoming?.who || '').trim();
   const exT = whoStampMs(existing);
   const inT = whoStampMs(incoming);
+
+  if (inWho && !exWho) {
+    return { who: incoming.who, whoUpdatedAt: incoming.whoUpdatedAt || existing?.whoUpdatedAt };
+  }
+  if (exWho && !inWho) {
+    if (inT > exT && inT > 0) {
+      return { who: '', whoUpdatedAt: incoming.whoUpdatedAt };
+    }
+    return { who: existing.who, whoUpdatedAt: existing.whoUpdatedAt || incoming?.whoUpdatedAt };
+  }
   if (exT || inT) {
-    if (inT >= exT) {
+    if (inT > exT) {
       return {
-        who: incoming.who != null ? incoming.who : existing.who || '',
-        whoUpdatedAt: incoming.whoUpdatedAt || existing.whoUpdatedAt,
+        who: incoming.who != null ? incoming.who : existing?.who || '',
+        whoUpdatedAt: incoming.whoUpdatedAt || existing?.whoUpdatedAt,
       };
     }
-    return {
-      who: existing.who != null ? existing.who : incoming.who || '',
-      whoUpdatedAt: existing.whoUpdatedAt || incoming.whoUpdatedAt,
-    };
+    if (exT > inT) {
+      return {
+        who: existing.who != null ? existing.who : incoming?.who || '',
+        whoUpdatedAt: existing.whoUpdatedAt || incoming?.whoUpdatedAt,
+      };
+    }
   }
-  const inWho = String(incoming?.who || '').trim();
-  const exWho = String(existing?.who || '').trim();
-  if (inWho) return { who: incoming.who, whoUpdatedAt: incoming.whoUpdatedAt };
-  if (exWho) return { who: existing.who, whoUpdatedAt: existing.whoUpdatedAt };
+  if (inWho) return { who: incoming.who, whoUpdatedAt: incoming.whoUpdatedAt || existing?.whoUpdatedAt };
+  if (exWho) return { who: existing.who, whoUpdatedAt: existing.whoUpdatedAt || incoming?.whoUpdatedAt };
   return {
     who: Object.prototype.hasOwnProperty.call(incoming || {}, 'who') ? incoming.who : existing?.who || '',
     whoUpdatedAt: incoming?.whoUpdatedAt || existing?.whoUpdatedAt,
+  };
+}
+
+/** Keep non-empty schedule fields; blank/null must not clobber assignees' start dates. */
+function pickMergedSchedule(existing, incoming) {
+  const pick = (key, stampKey, preferManual = false) => {
+    const exV = existing?.[key];
+    const inV = incoming?.[key];
+    const exOk = nonEmpty(exV);
+    const inOk = nonEmpty(inV);
+    if (preferManual) {
+      const exMan = !!existing?.msManual;
+      const inMan = !!incoming?.msManual;
+      if (inMan && inOk && !exMan) return inV;
+      if (exMan && exOk && !inMan) return exV;
+    }
+    const exT = fieldStampMs(existing, stampKey);
+    const inT = fieldStampMs(incoming, stampKey);
+    if (inT || exT) {
+      if (inT > exT && inOk) return inV;
+      if (exT > inT && exOk) return exV;
+      if (inT > exT && !inOk && exOk) return exV;
+    }
+    if (inOk) return inV;
+    if (exOk) return exV;
+    return Object.prototype.hasOwnProperty.call(incoming || {}, key) ? inV : exV;
+  };
+
+  const msManual =
+    incoming?.msManual != null ? !!(incoming.msManual || existing?.msManual) : !!existing?.msManual;
+  const exT = fieldStampMs(existing, 'msUpdatedAt');
+  const inT = fieldStampMs(incoming, 'msUpdatedAt');
+
+  return {
+    ms: pick('ms', 'msUpdatedAt', true),
+    as: pick('as', 'asUpdatedAt'),
+    ae: pick('ae', 'aeUpdatedAt'),
+    offsetFromKo: pick('offsetFromKo', 'offsetUpdatedAt'),
+    msManual,
+    msUpdatedAt: inT >= exT && incoming?.msUpdatedAt ? incoming.msUpdatedAt : existing?.msUpdatedAt || incoming?.msUpdatedAt,
   };
 }
 
@@ -62,14 +128,20 @@ function mergeTaskRow(existing, incoming) {
   const exAtt = Array.isArray(existing.attachments) ? existing.attachments.length : 0;
   const inAtt = Array.isArray(incoming.attachments) ? incoming.attachments.length : 0;
   const whoPick = pickMergedWho(existing, incoming);
+  const sched = pickMergedSchedule(existing, incoming);
   return {
     ...existing,
     ...incoming,
     who: whoPick.who,
     whoUpdatedAt: whoPick.whoUpdatedAt,
+    ms: sched.ms,
+    as: sched.as,
+    ae: sched.ae,
+    offsetFromKo: sched.offsetFromKo,
+    msManual: sched.msManual,
+    msUpdatedAt: sched.msUpdatedAt,
     comments: mergeTaskCommentArrays(existing.comments, incoming.comments),
     attachments: inAtt >= exAtt ? incoming.attachments : existing.attachments,
-    msManual: incoming.msManual ?? existing.msManual,
     source: incoming.source || existing.source,
   };
 }
