@@ -46,6 +46,26 @@ function countAssignees(data) {
   return n;
 }
 
+/** Manual start dates — used to detect wiped local snaps vs richer server work. */
+function countManualStarts(data) {
+  let n = 0;
+  for (const p of data?.projects || []) {
+    for (const ph of p?.phases || []) {
+      for (const t of ph?.tasks || []) {
+        if (t?.msManual && String(t?.ms || '').trim()) n += 1;
+      }
+    }
+  }
+  return n;
+}
+
+function remoteRicherThanLocal(remote, local) {
+  return (
+    countAssignees(remote) > countAssignees(local) ||
+    countManualStarts(remote) > countManualStarts(local)
+  );
+}
+
 function isDirtyLocal(state, userEdited) {
   return !!(userEdited || state?.__flushPending);
 }
@@ -228,14 +248,16 @@ export function MongoSyncAdapter({
     // Prevents late boot/poll responses from wiping assignees/dates after Mongo Saved.
     const explicitReload = force && (reason === 'reload' || reason === 'conflict');
     if (hasTaskTree(local) && !explicitReload) {
-      if (remoteV === localV && !force) {
+      const richerRemote = !dirty && remoteRicherThanLocal(trimmed, local);
+      // Same version + wiped local snap used to skip heal forever — still merge when server is richer.
+      if (remoteV === localV && !force && !richerRemote) {
         return false;
       }
       const merged = mergePreconstructionClientState(trimmed, local, {
         allowProjectRemoval: canDeleteRef.current,
       });
-      // If remote is newer and local is clean, prefer remote tree but keep richer local assignees/dates via mergeTaskRow.
-      const preferRemote = !dirty && remoteV > localV;
+      // Prefer remote when version advanced OR server has more assignees/manual starts than local.
+      const preferRemote = !dirty && (remoteV > localV || richerRemote);
       const next = preferRemote
         ? mergePreconstructionClientState(local, trimmed, {
             allowProjectRemoval: canDeleteRef.current,
@@ -371,9 +393,18 @@ export function MongoSyncAdapter({
     }
 
     const versionAdvanced = Number(res.version || 0) > Number(versionRef.current.v || 0);
+    const remoteMs = countManualStarts(res.data);
+    const localMs = countManualStarts(stateRef.current);
     // Never pull remote while local edits are unsaved — that was wiping assignee/date changes.
     if (dirty) return false;
-    if (remoteCount > localCount || force || versionAdvanced || !hasTaskTree(stateRef.current) || remoteWho > localWho) {
+    if (
+      remoteCount > localCount ||
+      force ||
+      versionAdvanced ||
+      !hasTaskTree(stateRef.current) ||
+      remoteWho > localWho ||
+      remoteMs > localMs
+    ) {
       applyRemoteState(res.data, res.version, {
         force: false,
         mergeIfDirty: true,
@@ -432,8 +463,6 @@ export function MongoSyncAdapter({
         if (ac.signal.aborted || bootEpoch !== applyEpochRef.current) return;
         if (work.ok && work.data && typeof work.data === 'object' && !Array.isArray(work.data)) {
           const localHasTree = hasTaskTree(stateRef.current);
-          const remoteWho = countAssignees(work.data);
-          const localWho = countAssignees(stateRef.current);
           applyRemoteState(work.data, work.version, {
             // Only full-replace when local has no tasks yet (first paint).
             force: !localHasTree,
@@ -441,8 +470,12 @@ export function MongoSyncAdapter({
             reason: 'boot-work',
             epoch: bootEpoch,
           });
-          if (localHasTree && remoteWho > localWho && !isDirtyLocal(stateRef.current, userEditedRef.current)) {
-            // Ensure richer server assignees win over a wiped local snap.
+          if (
+            localHasTree &&
+            remoteRicherThanLocal(work.data, stateRef.current) &&
+            !isDirtyLocal(stateRef.current, userEditedRef.current)
+          ) {
+            // Ensure richer server assignees/dates win over a wiped local snap (even same version).
             applyRemoteState(work.data, work.version, {
               force: false,
               mergeIfDirty: true,

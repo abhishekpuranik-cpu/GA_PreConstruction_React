@@ -20,7 +20,7 @@ import { ensureStateDepartments,
 } from "./preconDepartments.js";
 import { taskHasRole, taskInDepartment } from "./bulkAssign.js";
 import { PortfolioRagMatrix } from "./PortfolioRagMatrix.jsx";
-import { ensureCommentCreatedAt, formatCommentLine, getLatestComment, normalizeTaskComments, sortCommentsChronologically, collectTaskComments } from "./preconComments.js";
+import { ensureCommentCreatedAt, formatCommentLine, normalizeTaskComments, sortCommentsChronologically, collectTaskComments } from "./preconComments.js";
 import { useLoginUser } from "./useLoginUser.js";
 import { fetchPreconTeamRoster } from "./preconSession.js";
 import { canDeletePreconProjects } from "./preconPermissions.js";
@@ -28,7 +28,6 @@ import { MyWorkView } from "./MyWorkView.jsx";
 import { DashboardCalendarView } from "./DashboardCalendarView.jsx";
 import { TaskCommentModal } from "./TaskCommentModal.jsx";
 import { ProjectPageShell } from "./ProjectPageShell.jsx";
-import { TaskCommentsListSection } from "./TaskCommentsListSection.jsx";
 import { StatusFilterChips } from "./StatusFilterChips.jsx";
 import { AssigneeMultiSelect } from "./AssigneeMultiSelect.jsx";
 import { filterProjectsForUser, buildAssigneeRoster, projectsForAssigneeRoster, taskMatchesAssigneeFilter, UNASSIGNED_FILTER } from "./preconAssignees.js";
@@ -720,13 +719,13 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .ttable .tcol-drag{width:28px;padding-left:6px;padding-right:4px;overflow:visible}
 .ttable .tcol-num{width:30px;text-align:center;color:#6A6560}
 .ttable .tcol-task{width:auto;min-width:0;overflow:visible}
-.ttable .tcol-start{width:132px}
-.ttable .tcol-dur{width:64px}
-.ttable .tcol-end{width:88px}
-.ttable .tcol-who{width:128px}
-.ttable .tcol-status{width:132px}
-.ttable .tcol-comments{width:140px}
-.ttable .tcol-save{width:64px;overflow:visible}
+.ttable .tcol-start{width:118px}
+.ttable .tcol-dur{width:52px}
+.ttable .tcol-end{width:78px}
+.ttable .tcol-who{width:120px}
+.ttable .tcol-status{width:118px}
+.ttable .tcol-comments{width:92px}
+.ttable .tcol-save{width:58px;overflow:visible}
 .ttable .tcol-del{width:40px;overflow:visible}
 .ttable .trow-save{padding:4px 6px;font-size:11px;font-weight:600;min-width:52px}
 .trow:nth-child(even) td{background:#FDFCFA}
@@ -740,17 +739,17 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .ttree-toggle:hover{border-color:#C89A3A;background:#FBF7EE;color:#1A304A}
 .ttree-toggle-spacer{flex:0 0 auto;width:22px;height:22px}
 .ttree-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
-.ttree-name-row{display:flex;align-items:center;gap:6px;min-width:0;flex-wrap:nowrap}
+.ttree-name-row{display:flex;align-items:flex-start;gap:6px;min-width:0;flex-wrap:nowrap}
 .ttree-name-row .ec{flex:1 1 auto;min-width:0;max-width:100%}
 .ttree-parent-tag{font-size:9px;font-weight:700;color:#9A6E20;background:#FBF7EE;border:1px solid #E8D4A0;border-radius:999px;padding:1px 6px;white-space:nowrap;align-self:flex-start}
 .di-ro,.ni-ro{opacity:.85;background:#F5F3EE;color:#55504A;cursor:default}
-.abt-sub{color:#1A5A30;font-weight:700;flex:0 0 auto;width:26px;min-width:26px;height:26px;padding:0;font-size:14px;line-height:1}
+.abt-sub{color:#1A5A30;font-weight:700;flex:0 0 auto;width:26px;min-width:26px;height:26px;padding:0;font-size:14px;line-height:1;margin-top:2px}
 .abt-sub:hover{background:#EAF5EE;border-color:#A7D4B5;color:#145226}
-.ec{border-radius:8px;padding:5px 8px;outline:none;font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:text;line-height:1.35;color:#1A1815;border:1.5px solid transparent;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ec{border-radius:8px;padding:5px 8px;outline:none;font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:text;line-height:1.4;color:#1A1815;border:1.5px solid transparent;white-space:normal;overflow-wrap:anywhere;word-break:break-word;overflow:visible}
 .ec:hover{background:#F3F0EA}
-.ec:focus{outline:none;border-color:#C89A3A;background:#fff;box-shadow:0 0 0 3px rgba(200,154,58,.12);white-space:normal;overflow:visible}
+.ec:focus{outline:none;border-color:#C89A3A;background:#fff;box-shadow:0 0 0 3px rgba(200,154,58,.12)}
 .di,.ni{padding:6px 8px;border:1px solid #E2DDD4;border-radius:8px;background:#FAFAF8;font-size:12px;outline:none;font-family:'DM Sans',sans-serif;box-sizing:border-box;max-width:100%}
-.di{width:100%;max-width:122px}.ni{width:100%;max-width:54px}
+.di{width:100%;max-width:110px}.ni{width:100%;max-width:48px}
 .di:focus,.ni:focus{border-color:#C89A3A;box-shadow:0 0 0 3px rgba(200,154,58,.12)}
 .status-wrap{display:inline-flex;align-items:center;gap:4px;padding:2px;border-radius:8px}
 .status-wrap-completed{background:#EAF5EE}
@@ -760,8 +759,10 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .status-wrap-paused{background:#FDF3E8}
 .status-sel{padding:6px 10px;border-radius:6px;border:1px solid transparent;background:transparent;font-size:11px;font-weight:700;font-family:'DM Sans',sans-serif;min-width:108px;cursor:pointer}
 .status-sel:focus{outline:none;box-shadow:0 0 0 2px rgba(26,48,74,.12)}
-.tcol-comments{min-width:100px;white-space:nowrap}
-.tcol-count{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;padding:0 7px;border-radius:999px;background:#FBF7EE;border:1px solid #E8D4A0;font-size:10px;font-weight:700;color:#9A6E20;margin-right:6px;vertical-align:middle}
+.tcol-comments{min-width:0;white-space:nowrap}
+.tcol-comments-cell{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.tcol-count{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#FBF7EE;border:1px solid #E8D4A0;font-size:10px;font-weight:700;color:#9A6E20;vertical-align:middle}
+.tcm-open-btn{padding:4px 8px!important;font-size:10px!important}
 .tact{display:flex;gap:4px}
 .abt{width:28px;height:28px;border-radius:8px;border:1px solid #E2DDD4;background:#fff;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;color:#55504A;transition:background .12s,border-color .12s}
 .abt:hover{background:#F3F0EA;border-color:#CEC8BB}
@@ -1058,8 +1059,8 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .tnav-brand{display:flex;align-items:center;gap:9px;flex-shrink:0}
 .tnav-row{display:contents}
 .tnav-menu-btn{display:none;align-items:center;justify-content:center;padding:8px 12px;border:1px solid #E2DDD4;border-radius:6px;background:#fff;color:#1A304A;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;margin-left:auto}
-.ttable-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
-.ttable-wrap .ttable{min-width:900px}
+.ttable-wrap{width:100%;overflow-x:hidden}
+.ttable-wrap .ttable{min-width:0;width:100%}
 .phases-stack{display:flex;flex-direction:column;gap:12px}
 .task-tip{flex:1;min-width:0}
 .stabs{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
@@ -1146,7 +1147,7 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
   .abt-sub{min-height:28px;min-width:28px;width:28px}
   .di{width:100%;max-width:140px}
   .ni{width:100%;max-width:64px}
-  .ttable-wrap .ttable{min-width:860px}
+  .ttable-wrap .ttable{min-width:0}
   .gsplit{flex-direction:column;max-height:none}
   .gnames{width:100%;max-height:min(220px,35vh);border-right:none;border-bottom:1.5px solid #E2DDD4}
   .gchart{min-height:240px}
@@ -1172,7 +1173,7 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
   .stabs-v2{width:100%;overflow-x:auto}
   .tasks-toolbar{flex-direction:column;align-items:stretch}
   .tasks-toolbar-actions{justify-content:flex-start}
-  .ttable-wrap .ttable{min-width:520px}
+  .ttable-wrap .ttable{min-width:0}
   .cexp-panel{padding:10px 8px}
   .cform-foot .btp{width:100%}
   .att-pick-item{flex-wrap:wrap}
@@ -1438,19 +1439,11 @@ function RegView({proj,regStatus,setRegStatus}){
 // ── TASKS VIEW ───────────────────────────────────────────
 function phaseExpandKey(projId,phId){return`${projId}:${phId}`;}
 
-function truncateText(text, max = 72) {
-  const t = String(text || '').trim();
-  if (t.length <= max) return t;
-  return `${t.slice(0, max - 1)}…`;
-}
-
 function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster,onSaveActivity}){
   const dm=useMemo(()=>cDates(proj),[proj.id,proj.ko,proj.phases]);
   const[commentTarget,setCommentTarget]=useState(null);
   const[expandedPh,setExpandedPh]=useState({});
   const[expandedTasks,setExpandedTasks]=useState({}); // false = collapsed; missing/true = expanded
-  const[showCommentsConsolidated,setShowCommentsConsolidated]=useState(true);
-  const[showOnlyWithComments,setShowOnlyWithComments]=useState(true);
   const[dragTask,setDragTask]=useState(null);
   const[dragOverId,setDragOverId]=useState(null);
   const[dragPhase,setDragPhase]=useState(null);
@@ -1532,7 +1525,6 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster,onS
       <div className="tasks-toolbar">
         <p className="tasks-toolbar-tip">Drag ⋮⋮ to reorder · ▸/▾ expands subtasks · ⊞ adds a subtask · Parent dates follow first→last subtask · {filtersActive?"Clear filters to enable drag reorder":"Expand phases to edit tasks"}</p>
         <div className="tasks-toolbar-actions">
-          <button type="button" className={`btg${showCommentsConsolidated?" btg-on":""}`} onClick={()=>setShowCommentsConsolidated(v=>!v)} title="Show comment list for filtered tasks">{showCommentsConsolidated?"Comments on":"Show comments"}</button>
           <button type="button" className="btg" onClick={expandAll}>Expand all</button>
           <button type="button" className="btg" onClick={collapseAll}>Collapse all</button>
           <button className="btg" onClick={()=>dispatch({type:"addPhase",projId:proj.id})}>+ Phase</button>
@@ -1636,7 +1628,6 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster,onS
                   const rolledDur=rolledUp?dateSpanDays(d.s,d.e):(t.dur??"");
                   const taskComments=collectTaskComments(proj,ph,t);
                   const cc=taskComments.length;
-                  const latestComment=getLatestComment(taskComments);
                   const canDrag=!filtersActive;
                   const isDragOver=dragOverId===t.id&&dragTask?.phId===ph.id;
                   return(
@@ -1716,17 +1707,13 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster,onS
                         {heat==="ontrack"&&st!=="completed"&&st!=="paused"&&<span className="badge bcomp" style={{marginLeft:4}} title="Well within due date">On track</span>}
                       </td>
                       <td className="tcol-comments">
-                        {!showCommentsConsolidated&&latestComment?(
-                          <div className="tcol-cmt-preview" title={latestComment.text}>
-                            <span className="tcol-cmt-author">{latestComment.author||"Anon"} · {latestComment.ts||"—"}</span>
-                            <span className="tcol-cmt-text">{truncateText(latestComment.text, 80)}</span>
-                          </div>
-                        ):null}
-                        {cc>0?<span className="tcol-count" title={`${cc} comment${cc!==1?"s":""}`}>{cc}</span>:null}
-                        <button type="button" className="bts tcm-open-btn" title="View comment history and post an update" onClick={(e)=>{
-                          e.stopPropagation();
-                          openCommentModal({...ph,id:sourcePhId},t);
-                        }}>{cc?`Comments (${cc})`:"Add comment"}</button>
+                        <div className="tcol-comments-cell">
+                          {cc>0?<span className="tcol-count" title={`${cc} comment${cc!==1?"s":""}`}>{cc}</span>:null}
+                          <button type="button" className="bts tcm-open-btn" title="View comment history and post an update" onClick={(e)=>{
+                            e.stopPropagation();
+                            openCommentModal({...ph,id:sourcePhId},t);
+                          }}>{cc?"Open":"Add"}</button>
+                        </div>
                       </td>
                       <td className="tcol-save">
                         <button
@@ -1760,21 +1747,6 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster,onS
         );
       }).filter(Boolean)}
       </div>
-      {showCommentsConsolidated?(
-        <TaskCommentsListSection
-          proj={proj}
-          dm={dm}
-          filters={filters}
-          filtersActive={filtersActive}
-          taskPassesFilters={taskPassesFilters}
-          statusLabel={statusLabel}
-          taskStatus={taskStatus}
-          fmt={fmt}
-          onOpenComments={openCommentModal}
-          showOnlyWithComments={showOnlyWithComments}
-          setShowOnlyWithComments={setShowOnlyWithComments}
-        />
-      ):null}
       <TaskCommentModal
         open={!!commentTarget}
         onClose={closeCommentModal}

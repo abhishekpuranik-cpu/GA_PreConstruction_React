@@ -102,6 +102,11 @@ function pickMergedSchedule(existing, incoming) {
       if (exT > inT && exOk) return exV;
       if (inT > exT && !inOk && exOk) return exV;
     }
+    // When stamps don't decide, never let an earlier ISO date replace a later one
+    // (stale clients often re-send kickoff-offset starts and wipe manual dates).
+    if (preferManual && exOk && inOk && String(exV) !== String(inV)) {
+      return String(exV) >= String(inV) ? exV : inV;
+    }
     if (inOk) return inV;
     if (exOk) return exV;
     return Object.prototype.hasOwnProperty.call(incoming || {}, key) ? inV : exV;
