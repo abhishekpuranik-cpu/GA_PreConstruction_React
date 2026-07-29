@@ -1440,7 +1440,7 @@ function RegView({proj,regStatus,setRegStatus}){
 // ── TASKS VIEW ───────────────────────────────────────────
 function phaseExpandKey(projId,phId){return`${projId}:${phId}`;}
 
-function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster,onSaveActivity}){
+function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster,onSaveActivity,onOpenProject}){
   const dm=useMemo(()=>cDates(proj),[proj.id,proj.ko,proj.phases]);
   const[commentTarget,setCommentTarget]=useState(null);
   const[expandedPh,setExpandedPh]=useState({});
@@ -1672,6 +1672,11 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster,onS
                                 toast("Subtask added","ok");
                               }}>⊞</button>
                             </div>
+                            {t.drawingReview?(
+                              <span className="ttree-parent-tag" style={{color:t.drawingReview.status==="Approved"?C.green:t.drawingReview.status==="Rejected"?C.red:C.gold}}>
+                                Drawing V{t.drawingReview.version||1} · {t.drawingReview.status||"For review"}
+                              </span>
+                            ):null}
                             {hasChildren?<span className="ttree-parent-tag">has subtasks · dates from first→last</span>:null}
                           </div>
                         </div>
@@ -1760,6 +1765,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster,onS
         authorEmail={loginUser?.email}
         departments={departments}
         assigneeOptions={assigneeRoster}
+        onOpenProject={onOpenProject}
         onPersist={onSaveActivity}
       />
     </div>
@@ -1862,7 +1868,7 @@ function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWo
       ):dashTab==="calendar"?(
         <DashboardCalendarView projects={displayProjects} sourceProjects={projects} departments={departments} dispatch={dispatch} toast={toast} loginUser={loginUser} onOpenProject={onOpenProject} onPersist={onPersist} assigneeFilter={assigneeFilter} setAssigneeFilter={setAssigneeFilter}/>
       ):dashTab==="drawings"?(
-        <DrawingsVault projects={displayProjects} toast={toast} onOpenProject={onOpenProject}/>
+        <DrawingsVault projects={displayProjects} toast={toast} onOpenProject={onOpenProject} departments={departments} dispatch={dispatch} onPersist={onPersist}/>
       ):dashTab==="reports"?(
         <DashboardReportsView activityLog={activityLog||[]} projects={displayProjects} onOpenProject={onOpenProject} dispatch={dispatch} toast={toast} loginUser={loginUser}/>
       ):(
@@ -1992,7 +1998,7 @@ const STRUCTURAL_ACTIONS=new Set(["addTask","delTask","addPhase","delPhase","add
 /** Persist to Mongo soon after comments, status, assignees, and structural changes. */
 const MONGO_FLUSH_ACTIONS=new Set([
   ...STRUCTURAL_ACTIONS,
-  "addComment","updComment","addTaskAttachments","markDone","setTaskStatus",
+  "addComment","updComment","addTaskAttachments","addDrawingReviewTasks","drawingReviewDecision","markDone","setTaskStatus",
   "updTask","bulkAssignByRole","bulkAssignByDepartment","setMS","setDepartmentHead","setKO","updProject",
 ]);
 
@@ -2221,6 +2227,56 @@ function reducer(state,action){
       }
       if(action.afterId){const i=ph.tasks.findIndex(t=>t.id===action.afterId);if(i>=0){ph.tasks.splice(i+1,0,nt);break;}}
       ph.tasks.push(nt);break;
+    }
+    case"addDrawingReviewTasks":{
+      const p=fp(action.projId);if(!p)break;
+      let ph=(p.phases||[]).find(x=>x.id===action.phId);
+      if(!ph){
+        ph={id:action.phId||`ph_design_${Date.now()}`,name:"Design & Approvals",col:PCOL[0],open:true,tasks:[]};
+        if(!Array.isArray(p.phases))p.phases=[];
+        p.phases.push(ph);
+      }
+      if(!Array.isArray(ph.tasks))ph.tasks=[];
+      (action.tasks||[]).forEach(row=>{
+        if(!row?.id||ph.tasks.some(t=>t.id===row.id))return;
+        ph.tasks.push(mkT(row.id,row.name||"Review drawing",row.dur||2,[],null,{
+          source:"drawing-review",
+          who:row.who||"",
+          roles:["Design Head"],
+          drawingReview:row.drawingReview||{},
+        }));
+      });
+      activityAction={...action,phId:ph.id,phaseName:ph.name,addedCount:(action.tasks||[]).length};
+      break;
+    }
+    case"drawingReviewDecision":{
+      const t=ft(action.projId,action.phId,action.tId);if(!t)break;
+      const td=todayIso();
+      // The review task is complete for every decision; a revised upload creates a new V+n task.
+      const completed=true;
+      t.status=completed?"completed":"inprogress";
+      t.ae=completed?td:null;
+      if(!t.as)t.as=td;
+      t.drawingReview={
+        ...(t.drawingReview||{}),
+        status:action.status,
+        decision:action.decision,
+        decisionNote:action.note||"",
+        decisionBy:action.by||"",
+        decisionAt:action.at||new Date().toISOString(),
+      };
+      if(!Array.isArray(t.comments))t.comments=[];
+      t.comments.push(ensureCommentCreatedAt({
+        id:`c_drawing_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
+        text:`Drawing ${action.status}${action.note?`: ${action.note}`:""}`,
+        author:action.by||"Design Head",
+        createdAt:action.at||new Date().toISOString(),
+        updatedAt:action.at||new Date().toISOString(),
+        nextAction:action.decision==="changes"?"Upload revised drawing version":"",
+        nextActionDate:"",
+        attachments:[],
+      }));
+      break;
     }
     case"reorderTask":{
       const ph=fph(action.projId,action.phId);if(!ph||!ph.tasks?.length)break;
@@ -2589,7 +2645,7 @@ export default function App(){
         {curView==="dashboard"
           ?<Dashboard projects={visibleProjects} cloudUrl={cloudUrl} setCloudUrl={setCloudUrl} toast={toast} onOpenProject={(id,tab)=>runGuardedNav(()=>{setCurView(id);if(tab)setSubTab(p=>({...p,[id]:tab}));})} onOpenMyWork={()=>runGuardedNav(()=>setCurView("mywork"))} onEditProject={openEditProject} onDeleteProject={confirmDeleteProject} onAddProject={()=>setModal("addProj")} onImportJson={importJSON} onImportExcel={importExcel} departments={state.departments} canDeleteProjects={canDeleteProjects} dispatch={dispatch} loginUser={loginUser} activityLog={state.activityLog} syncLoading={cloudStatus==="loading"} onPersist={saveActivityToMongo}/>
           :curView==="mywork"
-          ?<MyWorkView projects={visibleProjects} loginUser={loginUser} departments={state.departments} dispatch={dispatch} toast={toast} onOpenProject={id=>runGuardedNav(()=>{setCurView(id);setSubTab(p=>({...p,[id]:"tasks"}));})} onPersist={saveActivityToMongo}/>
+          ?<MyWorkView projects={visibleProjects} loginUser={loginUser} departments={state.departments} dispatch={dispatch} toast={toast} onOpenProject={(id,tab="tasks")=>runGuardedNav(()=>{setCurView(id);setSubTab(p=>({...p,[id]:tab}));})} onPersist={saveActivityToMongo}/>
           :curProj?(()=>{
             const s=pStats(curProj);const sub=subTab[curProj.id]||"tasks";
             return(
@@ -2604,8 +2660,8 @@ export default function App(){
                 onDeleteProject={()=>confirmDeleteProject(curProj)}
                 canDeleteProjects={canDeleteProjects}
               >
-                {sub==="tasks"&&<TasksView proj={curProj} dispatch={dispatch} toast={toast} departments={state.departments} loginUser={loginUser} assigneeRoster={assigneeRoster} onSaveActivity={saveActivityToMongo}/>}
-                {sub==="drawings"&&<DrawingsVault projects={visibleProjects} fixedProjectId={curProj.id} toast={toast}/>}
+                {sub==="tasks"&&<TasksView proj={curProj} dispatch={dispatch} toast={toast} departments={state.departments} loginUser={loginUser} assigneeRoster={assigneeRoster} onSaveActivity={saveActivityToMongo} onOpenProject={(id,tab="tasks")=>setSubTab(p=>({...p,[id]:tab}))}/>}
+                {sub==="drawings"&&<DrawingsVault projects={visibleProjects} fixedProjectId={curProj.id} toast={toast} departments={state.departments} dispatch={dispatch} onPersist={saveActivityToMongo}/>}
                 {sub==="allocate"&&<BulkAllocateView proj={curProj} dispatch={dispatch} assigneeRoster={assigneeRoster} departments={state.departments} toast={toast} onEditDepartments={()=>setModal("deptHeads")}/>}
                 {sub==="gantt"&&<GanttView proj={curProj}/>}
                 {sub==="regs"&&<RegView proj={curProj} regStatus={regStatus} setRegStatus={setRegStatus}/>}

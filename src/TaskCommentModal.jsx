@@ -7,6 +7,7 @@ import { cDates } from './preconDates.js';
 import { statusBadgeClass, statusLabel, taskStatus, dueDateHeat, currentDueIso } from './preconTaskStatus.js';
 import { formatShortDate } from './preconMyWork.js';
 import { AssigneeMultiSelect } from './AssigneeMultiSelect.jsx';
+import { DrawingApprovalPanel } from './DrawingApprovalPanel.jsx';
 
 /**
  * Full comment workspace modal — timeline + compose (project Tasks tab).
@@ -173,6 +174,15 @@ export function TaskCommentModal({
               )}
             </div>
             <div className="tcm-pane-scroll tcm-pane-scroll-compose">
+              <DrawingApprovalPanel
+                task={liveTask}
+                proj={proj}
+                ph={ph}
+                dispatch={dispatch}
+                toast={toast}
+                onPersist={onPersist}
+                onOpenProject={onOpenProject}
+              />
               <TaskCommentPanel
                 key={`${liveTask.id}-${composeMode}`}
                 proj={proj}

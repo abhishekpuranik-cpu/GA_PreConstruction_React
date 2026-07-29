@@ -151,6 +151,32 @@ export function recordActivityFromAction(state, action) {
         detail: { phaseId: c.phaseId },
       });
       break;
+    case 'addDrawingReviewTasks':
+      logEntry = entry({
+        action: 'drawing.review.created',
+        projectId: action.projId || c.projectId,
+        projectName: c.projectName,
+        phaseId: action.phId || c.phaseId,
+        phaseName: action.phaseName || c.phaseName || 'Design & Approvals',
+        summary: `Created ${action.addedCount || action.tasks?.length || 0} Design Head drawing review task(s)`,
+        detail: {
+          count: action.addedCount || action.tasks?.length || 0,
+          drawingIds: (action.tasks || []).map((t) => t.drawingReview?.drawingId).filter(Boolean),
+        },
+      });
+      break;
+    case 'drawingReviewDecision':
+      logEntry = entry({
+        action: 'drawing.review.decision',
+        ...c,
+        summary: `${action.by || 'Design Head'} marked drawing ${action.status || action.decision}`,
+        detail: {
+          decision: action.decision,
+          status: action.status,
+          note: action.note || '',
+        },
+      });
+      break;
     case 'delTask':
       logEntry = entry({
         action: 'task.delete',

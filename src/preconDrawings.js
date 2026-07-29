@@ -18,9 +18,10 @@ async function jsonOrError(res) {
   return data;
 }
 
-export async function listDrawings(projectId = '') {
+export async function listDrawings(projectId = '', { archived = false } = {}) {
   const q = new URLSearchParams();
   if (projectId) q.set('projectId', projectId);
+  if (archived) q.set('view', 'archive');
   const suffix = q.toString() ? `?${q}` : '';
   const res = await fetch(`/api/preconstruction/drawings${suffix}`, {
     credentials: 'include',
@@ -34,10 +35,11 @@ export async function uploadDrawings(meta, files) {
   const fd = new FormData();
   Object.entries({
     projectId: meta.projectId,
-    phaseId: meta.phaseId,
-    phaseName: meta.phaseName,
+    projectPhase: meta.projectPhase,
     building: meta.building,
     drawingType: meta.drawingType,
+    subDrawing: meta.subDrawing,
+    parentDrawingId: meta.parentDrawingId,
     revision: meta.revision,
     status: meta.status,
     description: meta.description,
@@ -70,6 +72,24 @@ export async function archiveDrawing(id) {
   const res = await fetch(`/api/preconstruction/drawings/${encodeURIComponent(id)}`, {
     method: 'DELETE',
     credentials: 'include',
+  });
+  return jsonOrError(res);
+}
+
+export async function restoreDrawing(id) {
+  const res = await fetch(`/api/preconstruction/drawings/${encodeURIComponent(id)}/restore`, {
+    method: 'POST',
+    credentials: 'include',
+  });
+  return jsonOrError(res);
+}
+
+export async function decideDrawing(id, decision, note = '') {
+  const res = await fetch(`/api/preconstruction/drawings/${encodeURIComponent(id)}/decision`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ decision, note }),
   });
   return jsonOrError(res);
 }
