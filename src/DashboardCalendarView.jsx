@@ -45,10 +45,14 @@ export function DashboardCalendarView({
   loginUser,
   onOpenProject,
   onPersist,
+  assigneeFilter: assigneeFilterProp,
+  setAssigneeFilter: setAssigneeFilterProp,
 }) {
   const [hideCompleted, setHideCompleted] = useState(true);
   const [statusFilters, setStatusFilters] = useState([]);
-  const [assigneeFilter, setAssigneeFilter] = useState('');
+  const [assigneeFilterLocal, setAssigneeFilterLocal] = useState('');
+  const assigneeFilter = assigneeFilterProp !== undefined ? assigneeFilterProp : assigneeFilterLocal;
+  const setAssigneeFilter = setAssigneeFilterProp || setAssigneeFilterLocal;
   const [projSearch, setProjSearch] = useState('');
   const [projectFilter, setProjectFilter] = useState(null);
   const [viewLevel, setViewLevel] = useState('overall');
@@ -156,9 +160,14 @@ export function DashboardCalendarView({
           <p className="mw-eyebrow">Portfolio workboard</p>
           <h2 className="mw-title disp">Work Calendar</h2>
           <p className="mw-sub">
-            All assignees across {scopedProjects.length}
+            {assigneeFilter && assigneeFilter !== UNASSIGNED_FILTER
+              ? `Showing tasks for ${assigneeFilter}`
+              : assigneeFilter === UNASSIGNED_FILTER
+                ? 'Showing unassigned tasks'
+                : 'All assignees'}
+            {' '}across {scopedProjects.length}
             {projSearch.trim() || projectFilter != null ? ` of ${projects.length}` : ''} project
-            {scopedProjects.length !== 1 ? 's' : ''}. Filter by project or department.
+            {scopedProjects.length !== 1 ? 's' : ''}. Filter by assignee, project, or department.
           </p>
         </div>
         <div className="mw-stats">
@@ -192,7 +201,7 @@ export function DashboardCalendarView({
             >
               <option value="">All assignees</option>
               <option value={UNASSIGNED_FILTER}>No Assignee</option>
-              {assignees.map((a) => (
+              {[...new Set([...(assigneeRoster || []), ...(assignees || [])])].sort((a, b) => a.localeCompare(b)).map((a) => (
                 <option key={a} value={a}>{a}</option>
               ))}
             </select>

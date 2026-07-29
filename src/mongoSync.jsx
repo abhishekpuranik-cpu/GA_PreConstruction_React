@@ -182,6 +182,7 @@ export function MongoSyncAdapter({
   const flushSaveRefInternal = useRef(null);
   const pullServerCatalogRef = useRef(null);
   const flushInFlightRef = useRef(null);
+  const flushAgainRef = useRef(false);
   const bootSnapAppliedRef = useRef(false);
   /** Bumped on successful PUT / explicit reload so in-flight GETs cannot wipe fresh saves. */
   const applyEpochRef = useRef(0);
@@ -290,9 +291,14 @@ export function MongoSyncAdapter({
       toast('Mongo sync unavailable (open from platform URL)', 'err');
       return false;
     }
-    if (flushInFlightRef.current) return flushInFlightRef.current;
+    // Coalesce overlapping saves: mark dirty-again and reuse the in-flight promise.
+    // Attachment patches after comment save often arrive while the first PUT is running.
+    if (flushInFlightRef.current) {
+      flushAgainRef.current = true;
+      return flushInFlightRef.current;
+    }
 
-    const run = (async () => {
+    const runOnce = async () => {
       const snap = stateRef.current;
       const safeSnap = payloadForSave(snap);
       if (!safeSnap) {
@@ -353,13 +359,22 @@ export function MongoSyncAdapter({
       setCloudStatus('error');
       toast(`Mongo save: ${res.error || 'failed'}`, 'err');
       return false;
+    };
+
+    const run = (async () => {
+      let ok = false;
+      do {
+        flushAgainRef.current = false;
+        ok = await runOnce();
+      } while (flushAgainRef.current);
+      return ok;
     })();
 
     flushInFlightRef.current = run;
     try {
       return await run;
     } finally {
-      flushInFlightRef.current = null;
+      if (flushInFlightRef.current === run) flushInFlightRef.current = null;
     }
   };
   flushSaveRefInternal.current = flushSave;

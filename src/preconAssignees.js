@@ -45,16 +45,23 @@ export function taskMatchesAssigneeFilter(taskWho, filter) {
   return assigneeMatches(taskWho, f);
 }
 
+/**
+ * Person / assignee match for filters.
+ * Exact full-string or shared name tokens only — never substring (e.g. "A" must not
+ * match inside "Nishigandha", which previously leaked other people's tasks onto the calendar).
+ */
 export function nameMatches(a, b) {
   const w = canonicalAssigneeName(a).toLowerCase();
   const p = canonicalAssigneeName(b).toLowerCase();
   if (!w || !p) return false;
   if (w === p) return true;
-  const wParts = w.split(/\s+/);
-  const pParts = p.split(/\s+/);
-  if (wParts.some((x) => x && p.includes(x))) return true;
-  if (pParts.some((x) => x.length > 2 && w.includes(x))) return true;
-  return false;
+  const wParts = w.split(/\s+/).filter(Boolean);
+  const pParts = p.split(/\s+/).filter(Boolean);
+  // Ignore initials / 1–2 letter tokens; require an exact word match either way.
+  return (
+    wParts.some((x) => x.length > 2 && pParts.includes(x)) ||
+    pParts.some((x) => x.length > 2 && wParts.includes(x))
+  );
 }
 
 export function collectAssignees(projects) {

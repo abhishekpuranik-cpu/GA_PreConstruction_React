@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { ATTACHMENT_ACCEPT, attachmentKindFromFile, formatFileSize } from './preconMedia.js';
+import { ATTACHMENT_ACCEPT, attachmentKindFromFile, attachmentUrl, formatFileSize } from './preconMedia.js';
 
 let _key = 0;
 function nextKey() {
@@ -103,16 +103,19 @@ export function AttachmentLinks({ attachments }) {
   if (!attachments?.length) return null;
   return (
     <ul className="att-links">
-      {attachments.map((a) => (
-        <li key={a.id || a.url}>
-          <a href={a.url || `#`} target="_blank" rel="noopener noreferrer" className="att-link">
-            <span className={`att-kind att-kind-${a.kind || 'document'}`} aria-hidden>
-              {kindIcon(a.kind || 'document')}
-            </span>
-            <span>{a.label || a.fileName || 'File'}</span>
-          </a>
-        </li>
-      ))}
+      {attachments.map((a) => {
+        const href = attachmentUrl(a);
+        return (
+          <li key={a.id || href || a.fileName}>
+            <a href={href || '#'} target="_blank" rel="noopener noreferrer" className="att-link">
+              <span className={`att-kind att-kind-${a.kind || 'document'}`} aria-hidden>
+                {kindIcon(a.kind || 'document')}
+              </span>
+              <span>{a.label || a.fileName || 'File'}</span>
+            </a>
+          </li>
+        );
+      })}
     </ul>
   );
 }

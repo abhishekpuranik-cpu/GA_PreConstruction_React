@@ -144,6 +144,15 @@ export function TaskCommentPanel({
               commentIndex,
               patch,
             });
+            // Upload/notify finishes after the initial comment save. Persist this second
+            // patch as well so attachment references are shared across users and reloads.
+            if (typeof onPersist === 'function') {
+              window.setTimeout(() => {
+                void Promise.resolve(
+                  onPersist({ reason: 'comment-attachment-or-notify', taskId: task.id })
+                ).catch(() => {});
+              }, 120);
+            }
           }}
         />
       </div>

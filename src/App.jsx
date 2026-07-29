@@ -28,6 +28,7 @@ import { MyWorkView } from "./MyWorkView.jsx";
 import { DashboardCalendarView } from "./DashboardCalendarView.jsx";
 import { TaskCommentModal } from "./TaskCommentModal.jsx";
 import { ProjectPageShell } from "./ProjectPageShell.jsx";
+import { DrawingsVault } from "./DrawingsVault.jsx";
 import { StatusFilterChips } from "./StatusFilterChips.jsx";
 import { AssigneeMultiSelect } from "./AssigneeMultiSelect.jsx";
 import { filterProjectsForUser, buildAssigneeRoster, projectsForAssigneeRoster, taskMatchesAssigneeFilter, UNASSIGNED_FILTER } from "./preconAssignees.js";
@@ -1853,12 +1854,15 @@ function Dashboard({projects,cloudUrl,setCloudUrl,toast,onOpenProject,onOpenMyWo
         <button type="button" role="tab" aria-selected={dashTab==="ask"} className={`dash-stab${dashTab==="ask"?" act":""}`} onClick={()=>setDashTab("ask")}>Ask AI</button>
         <button type="button" role="tab" aria-selected={dashTab==="overview"} className={`dash-stab${dashTab==="overview"?" act":""}`} onClick={()=>setDashTab("overview")}>Overview</button>
         <button type="button" role="tab" aria-selected={dashTab==="calendar"} className={`dash-stab${dashTab==="calendar"?" act":""}`} onClick={()=>setDashTab("calendar")}>Work Calendar</button>
+        <button type="button" role="tab" aria-selected={dashTab==="drawings"} className={`dash-stab${dashTab==="drawings"?" act":""}`} onClick={()=>setDashTab("drawings")}>Drawings Vault</button>
         <button type="button" role="tab" aria-selected={dashTab==="reports"} className={`dash-stab${dashTab==="reports"?" act":""}`} onClick={()=>setDashTab("reports")}>Reports</button>
       </div>
       {dashTab==="ask"?(
         <AnalyticsAskView projects={displayProjects} dispatch={dispatch} toast={toast} onOpenProject={onOpenProject} loginUser={loginUser}/>
       ):dashTab==="calendar"?(
-        <DashboardCalendarView projects={displayProjects} sourceProjects={projects} departments={departments} dispatch={dispatch} toast={toast} loginUser={loginUser} onOpenProject={onOpenProject} onPersist={onPersist}/>
+        <DashboardCalendarView projects={displayProjects} sourceProjects={projects} departments={departments} dispatch={dispatch} toast={toast} loginUser={loginUser} onOpenProject={onOpenProject} onPersist={onPersist} assigneeFilter={assigneeFilter} setAssigneeFilter={setAssigneeFilter}/>
+      ):dashTab==="drawings"?(
+        <DrawingsVault projects={displayProjects} toast={toast} onOpenProject={onOpenProject}/>
       ):dashTab==="reports"?(
         <DashboardReportsView activityLog={activityLog||[]} projects={displayProjects} onOpenProject={onOpenProject} dispatch={dispatch} toast={toast} loginUser={loginUser}/>
       ):(
@@ -1988,7 +1992,7 @@ const STRUCTURAL_ACTIONS=new Set(["addTask","delTask","addPhase","delPhase","add
 /** Persist to Mongo soon after comments, status, assignees, and structural changes. */
 const MONGO_FLUSH_ACTIONS=new Set([
   ...STRUCTURAL_ACTIONS,
-  "addComment","updComment","markDone","setTaskStatus",
+  "addComment","updComment","addTaskAttachments","markDone","setTaskStatus",
   "updTask","bulkAssignByRole","bulkAssignByDepartment","setMS","setDepartmentHead","setKO","updProject",
 ]);
 
@@ -2583,7 +2587,7 @@ export default function App(){
 
       <main className={`main${curProj?" main-proj":""}`}>
         {curView==="dashboard"
-          ?<Dashboard projects={state.projects} cloudUrl={cloudUrl} setCloudUrl={setCloudUrl} toast={toast} onOpenProject={id=>runGuardedNav(()=>setCurView(id))} onOpenMyWork={()=>runGuardedNav(()=>setCurView("mywork"))} onEditProject={openEditProject} onDeleteProject={confirmDeleteProject} onAddProject={()=>setModal("addProj")} onImportJson={importJSON} onImportExcel={importExcel} departments={state.departments} canDeleteProjects={canDeleteProjects} dispatch={dispatch} loginUser={loginUser} activityLog={state.activityLog} syncLoading={cloudStatus==="loading"} onPersist={saveActivityToMongo}/>
+          ?<Dashboard projects={visibleProjects} cloudUrl={cloudUrl} setCloudUrl={setCloudUrl} toast={toast} onOpenProject={(id,tab)=>runGuardedNav(()=>{setCurView(id);if(tab)setSubTab(p=>({...p,[id]:tab}));})} onOpenMyWork={()=>runGuardedNav(()=>setCurView("mywork"))} onEditProject={openEditProject} onDeleteProject={confirmDeleteProject} onAddProject={()=>setModal("addProj")} onImportJson={importJSON} onImportExcel={importExcel} departments={state.departments} canDeleteProjects={canDeleteProjects} dispatch={dispatch} loginUser={loginUser} activityLog={state.activityLog} syncLoading={cloudStatus==="loading"} onPersist={saveActivityToMongo}/>
           :curView==="mywork"
           ?<MyWorkView projects={visibleProjects} loginUser={loginUser} departments={state.departments} dispatch={dispatch} toast={toast} onOpenProject={id=>runGuardedNav(()=>{setCurView(id);setSubTab(p=>({...p,[id]:"tasks"}));})} onPersist={saveActivityToMongo}/>
           :curProj?(()=>{
@@ -2601,6 +2605,7 @@ export default function App(){
                 canDeleteProjects={canDeleteProjects}
               >
                 {sub==="tasks"&&<TasksView proj={curProj} dispatch={dispatch} toast={toast} departments={state.departments} loginUser={loginUser} assigneeRoster={assigneeRoster} onSaveActivity={saveActivityToMongo}/>}
+                {sub==="drawings"&&<DrawingsVault projects={visibleProjects} fixedProjectId={curProj.id} toast={toast}/>}
                 {sub==="allocate"&&<BulkAllocateView proj={curProj} dispatch={dispatch} assigneeRoster={assigneeRoster} departments={state.departments} toast={toast} onEditDepartments={()=>setModal("deptHeads")}/>}
                 {sub==="gantt"&&<GanttView proj={curProj}/>}
                 {sub==="regs"&&<RegView proj={curProj} regStatus={regStatus} setRegStatus={setRegStatus}/>}
