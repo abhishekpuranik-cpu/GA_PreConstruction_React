@@ -1441,10 +1441,10 @@ function RegView({proj,regStatus,setRegStatus}){
 function phaseExpandKey(projId,phId){return`${projId}:${phId}`;}
 
 function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster,onSaveActivity,onOpenProject}){
-  const dm=useMemo(()=>cDates(proj),[proj.id,proj.ko,proj.phases]);
+  const dm=useMemo(()=>cDates(proj),[proj]);
   const[commentTarget,setCommentTarget]=useState(null);
   const[expandedPh,setExpandedPh]=useState({});
-  const[expandedTasks,setExpandedTasks]=useState({}); // false = collapsed; missing/true = expanded
+  const[expandedTasks,setExpandedTasks]=useState({}); // true = expanded; missing/false = collapsed
   const[dragTask,setDragTask]=useState(null);
   const[dragOverId,setDragOverId]=useState(null);
   const[dragPhase,setDragPhase]=useState(null);
@@ -1486,7 +1486,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster,onS
   };
   const toggleTaskExpand=(tId)=>{
     setExpandedTasks(prev=>{
-      const open=prev[tId]!==false;
+      const open=prev[tId]===true;
       return {...prev,[tId]:!open};
     });
   };
@@ -1542,7 +1542,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster,onS
         </div>
       </div>
       <div className="phases-stack">
-      {displayPhases.map((ph,pi)=>{
+      {displayPhases.map((ph)=>{
         const sourcePhId=realPhaseId(ph);
         const byId=indexTasksById(ph.tasks);
         const treeRows=annotateTreeMeta(ph.tasks)
@@ -1553,7 +1553,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster,onS
         const comp=visible.filter(t=>taskStatus(t,dm)==="completed").length;
         const pct=visible.length?Math.round(comp/visible.length*100):0;
         const ek=phaseExpandKey(proj.id,ph.id);
-        const isOpen=expandedPh[ek]!==false;
+        const isOpen=expandedPh[ek]===true;
         const dept=getDepartmentForPhase(ph._section==="design"?"Design & Team Appointments":ph._section==="approval"?"Regulatory Approvals":ph.name,departments);
         const isPhDragOver=dragOverPhId===sourcePhId&&dragPhase?.phId&&dragPhase.phId!==sourcePhId;
         return(
@@ -1625,7 +1625,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster,onS
                   const seqIdx=rowIdx+1;
                   const d=dm[t.id]||{s:"",e:""};const st=taskStatus(t,dm);const dueIso=currentDueIso(t,dm);const heat=dueDateHeat(dueIso,{status:st,todayStr});const od=st==="overdue"&&dueIso?dbDays(dueIso,todayStr):0;
                   const rolledUp=!!(hasChildren&&d.rolledUp);
-                  const taskOpen=expandedTasks[t.id]!==false;
+                  const taskOpen=expandedTasks[t.id]===true;
                   const rolledDur=rolledUp?dateSpanDays(d.s,d.e):(t.dur??"");
                   const taskComments=collectTaskComments(proj,ph,t);
                   const cc=taskComments.length;
@@ -1749,6 +1749,17 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster,onS
                 })}
               </tbody>
             </table></div>}
+            {isOpen&&ph._section==="design"?(
+              <DrawingsVault
+                projects={[proj]}
+                fixedProjectId={proj.id}
+                toast={toast}
+                departments={departments}
+                dispatch={dispatch}
+                onPersist={onSaveActivity}
+                embedded
+              />
+            ):null}
           </div>
         );
       }).filter(Boolean)}

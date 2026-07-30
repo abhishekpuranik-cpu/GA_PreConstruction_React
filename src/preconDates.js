@@ -76,14 +76,14 @@ export function cDates(proj) {
   return map;
 }
 
-/** True when any ancestor is collapsed (expandedMap[id] === false). Missing key = expanded. */
+/** True when any ancestor is not explicitly expanded. Missing key = collapsed. */
 export function isHiddenByCollapsedAncestor(task, byId, expandedMap) {
   let pid = taskParentId(task);
   const seen = new Set();
   while (pid) {
     if (seen.has(pid)) break;
     seen.add(pid);
-    if (expandedMap && expandedMap[pid] === false) return true;
+    if (!expandedMap || expandedMap[pid] !== true) return true;
     const parent = byId?.get(pid);
     if (!parent) break;
     pid = taskParentId(parent);
