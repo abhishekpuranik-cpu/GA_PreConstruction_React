@@ -47,6 +47,7 @@ export async function checkGrammar(text, { field = 'comment', context = {}, sign
     corrections: Array.isArray(data.corrections) ? data.corrections : [],
     correctedText: typeof data.correctedText === 'string' ? data.correctedText : body,
     unchanged: !!data.unchanged,
+    summary: data.summary || '',
     source: data.source,
   };
 }
@@ -63,7 +64,10 @@ export function applyCorrectionAt(text, correction) {
   return `${src.slice(0, c.start)}${c.suggestion}${src.slice(c.end)}`;
 }
 
-export function applyAllGrammarCorrections(text, corrections) {
+export function applyAllGrammarCorrections(text, corrections, correctedText) {
+  if (typeof correctedText === 'string' && correctedText && correctedText !== text) {
+    return correctedText;
+  }
   let next = String(text || '');
   const ordered = [...(corrections || [])].sort((a, b) => b.start - a.start);
   for (const c of ordered) {

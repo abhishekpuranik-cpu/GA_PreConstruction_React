@@ -892,6 +892,9 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .gram-btn:disabled{opacity:.45;cursor:not-allowed}
 .gram-btn-primary{border-color:#C89A3A;background:#FBF7EE;color:#9A6E20}
 .gram-btn-primary:hover:not(:disabled){background:#F5EDD8}
+.gram-preview{border:1px solid #C5D8F5;background:#F3F8FF;border-radius:8px;padding:8px 10px}
+.gram-preview-lbl{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.45px;color:#1a73e8;margin-bottom:4px}
+.gram-preview-text{font-size:13px;line-height:1.45;color:#1A304A;white-space:pre-wrap;word-break:break-word}
 .gram-editor{position:relative;isolation:isolate}
 .gram-backdrop,.gram-textarea{width:100%;max-width:100%;box-sizing:border-box;margin:0;padding:10px 11px;border:1.5px solid #E2DDD4;border-radius:6px;font-size:16px;font-family:'DM Sans',sans-serif;line-height:1.45;white-space:pre-wrap;word-wrap:break-word;overflow-wrap:break-word}
 .gram-backdrop{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:auto;color:transparent;background:#fff;caret-color:transparent}

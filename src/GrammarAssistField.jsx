@@ -6,7 +6,7 @@ import {
 } from './preconGrammar.js';
 
 /**
- * Gmail-style grammar/spelling assist: underline issues, click to accept, Fix all.
+ * Gmail-style grammar/spelling assist: underline issues, click to accept, Correct all.
  */
 export function GrammarAssistField({
   value,
@@ -19,13 +19,14 @@ export function GrammarAssistField({
   context = {},
   field = 'comment',
   toast,
-  debounceMs = 1200,
+  debounceMs = 1400,
 }) {
   const wrapRef = useRef(null);
   const taRef = useRef(null);
   const backdropRef = useRef(null);
   const menuId = useId();
   const [corrections, setCorrections] = useState([]);
+  const [correctedText, setCorrectedText] = useState('');
   const [checking, setChecking] = useState(false);
   const [activeIdx, setActiveIdx] = useState(null);
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
@@ -41,44 +42,51 @@ export function GrammarAssistField({
     }
   };
 
+  const clearSuggestions = () => {
+    setCorrections([]);
+    setCorrectedText('');
+    setActiveIdx(null);
+  };
+
   const runCheck = useCallback(
     async (text, { force = false } = {}) => {
-      const trimmed = String(text || '');
-      if (!trimmed.trim() || trimmed.trim().length < 8) {
-        setCorrections([]);
-        setActiveIdx(null);
-        lastCheckedRef.current = trimmed;
-        return;
+      const raw = String(text || '');
+      if (!raw.trim() || raw.trim().length < 8) {
+        clearSuggestions();
+        lastCheckedRef.current = raw;
+        return null;
       }
-      if (!force && trimmed === lastCheckedRef.current) return;
+      if (!force && raw === lastCheckedRef.current) return null;
       const seq = ++reqSeq.current;
       setChecking(true);
       try {
-        const result = await checkGrammar(trimmed, { field, context });
-        if (seq !== reqSeq.current) return;
+        const result = await checkGrammar(raw, { field, context });
+        if (seq !== reqSeq.current) return null;
         if (!result.ok) {
           if (force && toast) toast(result.error || 'Grammar check failed', 'err');
-          setCorrections([]);
-          setActiveIdx(null);
-          return;
+          clearSuggestions();
+          return null;
         }
-        lastCheckedRef.current = trimmed;
+        lastCheckedRef.current = raw;
         setCorrections(result.corrections || []);
+        setCorrectedText(result.correctedText || '');
         setActiveIdx(null);
         if (force && toast) {
           if (result.unchanged || !(result.corrections || []).length) {
             toast('Looks good — no grammar issues found', 'ok');
           } else {
             toast(
-              `${result.corrections.length} suggestion${result.corrections.length === 1 ? '' : 's'}`,
+              `${result.corrections.length} suggestion${result.corrections.length === 1 ? '' : 's'} — click Correct to apply`,
               'ok',
             );
           }
         }
+        return result;
       } catch (e) {
-        if (seq !== reqSeq.current) return;
+        if (seq !== reqSeq.current) return null;
         if (force && toast) toast(e?.message || 'Grammar check failed', 'err');
-        setCorrections([]);
+        clearSuggestions();
+        return null;
       } finally {
         if (seq === reqSeq.current) setChecking(false);
       }
@@ -164,24 +172,37 @@ export function GrammarAssistField({
     const next = applyCorrectionAt(value, c);
     onChange?.(next);
     lastCheckedRef.current = '';
-    setCorrections([]);
-    setActiveIdx(null);
-    setTimeout(() => void runCheck(next, { force: false }), 400);
+    clearSuggestions();
+    setTimeout(() => void runCheck(next, { force: false }), 500);
   };
 
-  const acceptAll = () => {
-    if (!corrections.length) {
-      void runCheck(value, { force: true });
+  const applyFullCorrection = async () => {
+    if (correctedText && correctedText !== value) {
+      onChange?.(correctedText);
+      lastCheckedRef.current = correctedText;
+      clearSuggestions();
+      if (toast) toast('Grammar corrected', 'ok');
       return;
     }
-    const next = applyAllGrammarCorrections(value, corrections);
-    onChange?.(next);
-    lastCheckedRef.current = next;
-    setCorrections([]);
-    setActiveIdx(null);
-    if (toast) toast('Grammar corrected', 'ok');
+    if (corrections.length) {
+      const next = applyAllGrammarCorrections(value, corrections, correctedText);
+      onChange?.(next);
+      lastCheckedRef.current = next;
+      clearSuggestions();
+      if (toast) toast('Grammar corrected', 'ok');
+      return;
+    }
+    const result = await runCheck(value, { force: true });
+    if (result?.correctedText && result.correctedText !== value && !result.unchanged) {
+      onChange?.(result.correctedText);
+      lastCheckedRef.current = result.correctedText;
+      clearSuggestions();
+      if (toast) toast('Grammar corrected', 'ok');
+    }
   };
 
+  const canCorrect =
+    (!!correctedText && correctedText !== value) || corrections.length > 0 || (!!String(value || '').trim() && !checking);
   const active = activeIdx != null ? corrections[activeIdx] : null;
 
   return (
@@ -191,9 +212,9 @@ export function GrammarAssistField({
           {checking
             ? 'Checking grammar…'
             : corrections.length
-              ? `${corrections.length} suggestion${corrections.length === 1 ? '' : 's'} — click underline`
+              ? `${corrections.length} fix${corrections.length === 1 ? '' : 'es'} ready`
               : value.trim().length >= 8
-                ? 'Grammar ready'
+                ? 'Ready to proofread'
                 : 'Grammar assist'}
         </span>
         <div className="gram-actions">
@@ -209,14 +230,20 @@ export function GrammarAssistField({
           <button
             type="button"
             className="gram-btn gram-btn-primary"
-            disabled={disabled || checking || !corrections.length}
-            onClick={acceptAll}
-            title="Apply all grammar and spelling suggestions"
+            disabled={disabled || checking || !canCorrect}
+            onClick={() => void applyFullCorrection()}
+            title="Apply the full corrected version"
           >
-            Fix all
+            Correct
           </button>
         </div>
       </div>
+      {correctedText && correctedText !== value && !checking ? (
+        <div className="gram-preview" role="note">
+          <div className="gram-preview-lbl">Suggested</div>
+          <div className="gram-preview-text">{correctedText}</div>
+        </div>
+      ) : null}
       <div className={`gram-editor${corrections.length ? ' gram-editor-has-marks' : ''}`}>
         <div ref={backdropRef} className={`gram-backdrop ${className}`} aria-hidden>
           {highlightNodes}
@@ -242,8 +269,7 @@ export function GrammarAssistField({
             else setActiveIdx(null);
           }}
           onChange={(e) => {
-            setCorrections([]);
-            setActiveIdx(null);
+            clearSuggestions();
             onChange?.(e.target.value);
           }}
         />
@@ -261,11 +287,11 @@ export function GrammarAssistField({
             >
               <span className="gram-chip-was">{c.original}</span>
               <span aria-hidden>→</span>
-              <span className="gram-chip-to">{c.suggestion}</span>
+              <span className="gram-chip-to">{c.suggestion || '(remove)'}</span>
             </button>
           ))}
           {corrections.length > 8 ? (
-            <span className="gram-chip-more">+{corrections.length - 8} more — use Fix all</span>
+            <span className="gram-chip-more">+{corrections.length - 8} more — use Correct</span>
           ) : null}
         </div>
       ) : null}
@@ -282,7 +308,7 @@ export function GrammarAssistField({
           <button type="button" className="gram-menu-accept" onClick={() => acceptOne(activeIdx)}>
             <span className="gram-menu-was">{active.original}</span>
             <span className="gram-menu-arrow">→</span>
-            <span className="gram-menu-to">{active.suggestion}</span>
+            <span className="gram-menu-to">{active.suggestion || '(remove)'}</span>
           </button>
           <button type="button" className="gram-menu-dismiss" onClick={() => setActiveIdx(null)}>
             Dismiss
