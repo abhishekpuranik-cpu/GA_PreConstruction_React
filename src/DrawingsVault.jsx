@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ATTACHMENT_ACCEPT, formatFileSize } from './preconMedia.js';
 import { getDepartmentForPhase } from './preconDepartments.js';
 import {
@@ -6,9 +6,9 @@ import {
   addDrawingCatalogItem,
   archiveDrawing,
   deleteDrawingCatalogItem,
-  fetchDrawingCatalog,
-  fetchDrawingPlan,
-  listDrawings,
+  fetchDrawingVault,
+  getCachedDrawingVault,
+  invalidateDrawingVaultCache,
   restoreDrawing,
   saveDrawingPlan,
   updateDrawing,
@@ -117,11 +117,12 @@ export function DrawingsVault({
   onPersist,
   embedded = false,
 }) {
-  const [catalog, setCatalog] = useState([]);
-  const [canManage, setCanManage] = useState(false);
-  const [drawings, setDrawings] = useState([]);
-  const [plans, setPlans] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const initialCache = getCachedDrawingVault(fixedProjectId || '', { archived: false });
+  const [catalog, setCatalog] = useState(initialCache?.items || []);
+  const [canManage, setCanManage] = useState(!!initialCache?.canManage);
+  const [drawings, setDrawings] = useState(initialCache?.drawings || []);
+  const [plans, setPlans] = useState(initialCache?.plans || []);
+  const [loading, setLoading] = useState(!initialCache);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [projectFilter, setProjectFilter] = useState(fixedProjectId || '');
@@ -129,7 +130,9 @@ export function DrawingsVault({
   const [catalogEditor, setCatalogEditor] = useState(null);
   const [uploadItem, setUploadItem] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [files, setFiles] = useState([]);
+  const scrollBeforeUpload = useRef(0);
   const [uploadForm, setUploadForm] = useState({
     projectId: fixedProjectId || '',
     scopeType: 'project',
@@ -144,29 +147,39 @@ export function DrawingsVault({
   const selectedProjectId = fixedProjectId || projectFilter;
   const selectedProject = projectFor(projects, selectedProjectId);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async ({ silent = false, signal } = {}) => {
+    if (!silent) setLoading(true);
     setError('');
     try {
-      const [catalogRes, drawingRows, planRows] = await Promise.all([
-        fetchDrawingCatalog(),
-        listDrawings(selectedProjectId, { archived: showArchive }),
-        selectedProjectId ? fetchDrawingPlan(selectedProjectId) : Promise.resolve([]),
-      ]);
-      setCatalog(catalogRes.items || []);
-      setCanManage(!!catalogRes.canManage);
-      setDrawings(drawingRows || []);
-      setPlans(planRows || []);
+      const result = await fetchDrawingVault(selectedProjectId, {
+        archived: showArchive,
+        signal,
+      });
+      setCatalog(result.items || []);
+      setCanManage(!!result.canManage);
+      setDrawings(result.drawings || []);
+      setPlans(result.plans || []);
     } catch (e) {
+      if (e?.name === 'AbortError') return;
       setError(e?.message || 'Could not load the drawing tree');
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }, [selectedProjectId, showArchive]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    const controller = new AbortController();
+    const cached = getCachedDrawingVault(selectedProjectId, { archived: showArchive });
+    if (cached) {
+      setCatalog(cached.items || []);
+      setCanManage(!!cached.canManage);
+      setDrawings(cached.drawings || []);
+      setPlans(cached.plans || []);
+      setLoading(false);
+    }
+    void load({ silent: !!cached, signal: controller.signal });
+    return () => controller.abort();
+  }, [load, selectedProjectId, showArchive]);
 
   const visibleCatalog = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -267,7 +280,7 @@ export function DrawingsVault({
         toast?.('Drawing added to the curated list', 'ok');
       }
       setCatalogEditor(null);
-      await load();
+      await load({ silent: true });
     } catch (e) {
       toast?.(e?.message || 'Could not save drawing list', 'err');
     } finally {
@@ -280,7 +293,7 @@ export function DrawingsVault({
     try {
       await deleteDrawingCatalogItem(item.id);
       toast?.('Drawing removed from the curated list', 'ok');
-      await load();
+      await load({ silent: true });
     } catch (e) {
       toast?.(e?.message || 'Could not delete drawing', 'err');
     }
@@ -320,7 +333,7 @@ export function DrawingsVault({
     };
   };
 
-  const createReviewTasks = async (uploaded, projectId) => {
+  const createReviewTasks = (uploaded, projectId) => {
     if (!uploaded?.length || !dispatch) return;
     const { head, phaseId } = designReviewContext(projectId);
     const tasks = uploaded.map((drawing) => ({
@@ -342,12 +355,14 @@ export function DrawingsVault({
         status: 'For review',
       },
     }));
-    await Promise.all(
+    dispatch({ type: 'addDrawingReviewTasks', projId: projectId, phId: phaseId, tasks });
+    void Promise.all(
       tasks.map((task, index) =>
         updateDrawing(uploaded[index].id, { reviewTaskId: task.id, reviewPhaseId: phaseId })
       )
-    );
-    dispatch({ type: 'addDrawingReviewTasks', projId: projectId, phId: phaseId, tasks });
+    ).catch(() => {
+      toast?.('Drawing uploaded; review-task link will retry on refresh.', 'err');
+    });
     window.setTimeout(() => {
       void Promise.resolve(onPersist?.({ reason: 'drawing-review-task' })).catch(() => {});
     }, 120);
@@ -367,44 +382,63 @@ export function DrawingsVault({
       toast?.('Upload one file for a new version', 'err');
       return;
     }
+    scrollBeforeUpload.current = window.scrollY;
     setBusy(true);
+    setUploadProgress(1);
     try {
       const project = projectFor(projects, uploadForm.projectId);
       const scoped = scopeFields(uploadForm.scopeType, uploadForm.scopeValue, project);
-      await saveDrawingPlan(uploadItem.id, {
-        projectId: uploadForm.projectId,
-        scopeType: uploadForm.scopeType,
-        scopeKey: scoped.scopeKey,
-        scopeLabel: scoped.scopeLabel,
-        startDate: uploadForm.startDate,
-        endDate: uploadForm.endDate,
+      const [plan, result] = await Promise.all([
+        saveDrawingPlan(uploadItem.id, {
+          projectId: uploadForm.projectId,
+          scopeType: uploadForm.scopeType,
+          scopeKey: scoped.scopeKey,
+          scopeLabel: scoped.scopeLabel,
+          startDate: uploadForm.startDate,
+          endDate: uploadForm.endDate,
+        }),
+        uploadDrawings({
+          projectId: uploadForm.projectId,
+          ...scoped,
+          scopeType: uploadForm.scopeType,
+          catalogItemId: uploadItem.id,
+          stage: uploadItem.stage,
+          source: uploadItem.source,
+          drawingName: uploadItem.drawingName,
+          drawingType: uploadItem.source,
+          subDrawing: '',
+          plannedStart: uploadForm.startDate,
+          plannedEnd: uploadForm.endDate,
+          revision: uploadForm.revision,
+          description: uploadForm.description,
+          label: uploadItem.drawingName,
+          parentDrawingId: uploadForm.parentDrawingId,
+        }, files, setUploadProgress),
+      ]);
+      const uploaded = result.attachments || [];
+      invalidateDrawingVaultCache(uploadForm.projectId);
+      setPlans((old) => [...old.filter((row) => row.id !== plan.id), plan]);
+      setDrawings((old) => {
+        const uploadedIds = new Set(uploaded.map((row) => row.id));
+        const retained = old
+          .filter((row) => !uploadedIds.has(row.id))
+          .filter((row) =>
+            !(uploadForm.parentDrawingId && row.seriesId === uploaded[0]?.seriesId)
+          );
+        return [...uploaded, ...retained];
       });
-      const result = await uploadDrawings({
-        projectId: uploadForm.projectId,
-        ...scoped,
-        scopeType: uploadForm.scopeType,
-        catalogItemId: uploadItem.id,
-        stage: uploadItem.stage,
-        source: uploadItem.source,
-        drawingName: uploadItem.drawingName,
-        drawingType: uploadItem.source,
-        subDrawing: '',
-        plannedStart: uploadForm.startDate,
-        plannedEnd: uploadForm.endDate,
-        revision: uploadForm.revision,
-        description: uploadForm.description,
-        label: uploadItem.drawingName,
-        parentDrawingId: uploadForm.parentDrawingId,
-      }, files);
-      await createReviewTasks(result.attachments || [], uploadForm.projectId);
+      createReviewTasks(uploaded, uploadForm.projectId);
       toast?.('Drawing uploaded and sent to the Design Head for review', 'ok');
       setUploadItem(null);
       setFiles([]);
-      await load();
+      window.requestAnimationFrame(() => {
+        window.scrollTo({ top: scrollBeforeUpload.current, behavior: 'auto' });
+      });
     } catch (e) {
       toast?.(e?.message || 'Drawing upload failed', 'err');
     } finally {
       setBusy(false);
+      setUploadProgress(0);
     }
   };
 
@@ -446,7 +480,7 @@ export function DrawingsVault({
     if (!window.confirm(`Archive "${drawing.label || drawing.fileName}"?`)) return;
     try {
       await archiveDrawing(drawing.id);
-      await load();
+      await load({ silent: true });
     } catch (e) {
       toast?.(e?.message || 'Archive failed', 'err');
     }
@@ -654,7 +688,7 @@ export function DrawingsVault({
                 <span className="dvt-eyebrow">{uploadItem.stage} · {uploadItem.source}</span>
                 <h3>{uploadForm.parentDrawingId ? 'Upload next version' : uploadItem.drawingName}</h3>
               </div>
-              <button type="button" onClick={() => setUploadItem(null)}>×</button>
+              <button type="button" disabled={busy} onClick={() => setUploadItem(null)}>×</button>
             </div>
             {!fixedProjectId ? (
               <label>Project<select value={uploadForm.projectId} onChange={(e) => setUploadForm((x) => ({ ...x, projectId: e.target.value }))}>
@@ -684,9 +718,15 @@ export function DrawingsVault({
               <label className="span-2">Notes<textarea rows={2} value={uploadForm.description} onChange={(e) => setUploadForm((x) => ({ ...x, description: e.target.value }))} /></label>
               <label className="span-2 dvt-file-input">File{uploadForm.parentDrawingId ? '' : 's'}<input type="file" multiple={!uploadForm.parentDrawingId} accept={ATTACHMENT_ACCEPT} onChange={(e) => setFiles([...e.target.files])} /><span>{files.length ? `${files.length} selected` : 'PDF, image, Office, DWG, DXF or DWF'}</span></label>
             </div>
+            {busy ? (
+              <div className="dvt-upload-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow={uploadProgress}>
+                <span style={{ width: `${uploadProgress}%` }} />
+                <strong>{uploadProgress < 100 ? `Uploading ${uploadProgress}%` : 'Finalizing…'}</strong>
+              </div>
+            ) : null}
             <div className="dvt-modal-actions">
-              <button type="button" className="dvt-btn" onClick={() => setUploadItem(null)}>Cancel</button>
-              <button type="button" className="dvt-btn primary" disabled={busy} onClick={submitUpload}>{busy ? 'Uploading…' : 'Upload & create review task'}</button>
+              <button type="button" className="dvt-btn" disabled={busy} onClick={() => setUploadItem(null)}>Cancel</button>
+              <button type="button" className="dvt-btn primary" disabled={busy} onClick={submitUpload}>{busy ? `${uploadProgress}%` : 'Upload & create review task'}</button>
             </div>
           </div>
         </div>

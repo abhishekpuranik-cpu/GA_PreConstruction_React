@@ -48,6 +48,7 @@
 .dvt-modal input,.dvt-modal select,.dvt-modal textarea{padding:9px 10px;font-size:12px;text-transform:none}.dvt-modal textarea{resize:vertical}
 .dvt-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}.dvt-form-grid .span-2{grid-column:1/-1}
 .dvt-file-input{padding:13px;border:1px dashed #b6c9cf;border-radius:11px;background:#f5f9f9}.dvt-file-input input{padding:0;border:0}.dvt-file-input span{color:var(--dvt-muted);font-size:9px;font-weight:500;text-transform:none}
+.dvt-upload-progress{position:relative;height:30px;overflow:hidden;border:1px solid #b8d5d2;border-radius:9px;background:#eef6f5;color:#174f60}.dvt-upload-progress span{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#bfe2dd,#8fd2c8);transition:width .16s ease}.dvt-upload-progress strong{position:relative;z-index:1;display:grid;height:100%;place-items:center;font-size:10px;letter-spacing:.02em}
 .dvt-modal-actions{justify-content:flex-end;padding-top:5px}
 @media(max-width:900px){.dvt-drawing-row{grid-template-columns:1fr}.dvt-row-actions{justify-content:flex-start}.dvt-toolbar{grid-template-columns:1fr}.dvt-stage-dates{display:none}}
 @media(max-width:640px){.dvt-hero{display:grid;padding:19px}.dvt-hero-actions{justify-content:flex-start}.dvt-form-grid{grid-template-columns:1fr}.dvt-form-grid .span-2{grid-column:auto}.dvt-date-fields{grid-template-columns:1fr}.dvt-file{align-items:flex-start;flex-wrap:wrap}.dvt-files{padding-left:12px}}

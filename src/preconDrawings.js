@@ -25,6 +25,33 @@ async function jsonOrError(res) {
   return data;
 }
 
+const vaultCache = new Map();
+
+export function getCachedDrawingVault(projectId = '', { archived = false } = {}) {
+  return vaultCache.get(`${projectId}:${archived ? 'archive' : 'active'}`) || null;
+}
+
+export function invalidateDrawingVaultCache(projectId = '') {
+  for (const key of vaultCache.keys()) {
+    if (!projectId || key.startsWith(`${projectId}:`)) vaultCache.delete(key);
+  }
+}
+
+export async function fetchDrawingVault(projectId = '', { archived = false, signal } = {}) {
+  const q = new URLSearchParams();
+  if (projectId) q.set('projectId', projectId);
+  if (archived) q.set('view', 'archive');
+  const suffix = q.toString() ? `?${q}` : '';
+  const res = await fetch(`/api/preconstruction/drawing-vault${suffix}`, {
+    credentials: 'include',
+    cache: 'no-cache',
+    signal,
+  });
+  const data = await jsonOrError(res);
+  vaultCache.set(`${projectId}:${archived ? 'archive' : 'active'}`, data);
+  return data;
+}
+
 export async function listDrawings(projectId = '', { archived = false } = {}) {
   const q = new URLSearchParams();
   if (projectId) q.set('projectId', projectId);
@@ -98,7 +125,7 @@ export async function saveDrawingPlan(catalogItemId, plan) {
   return data.plan;
 }
 
-export async function uploadDrawings(meta, files) {
+export async function uploadDrawings(meta, files, onProgress) {
   const fd = new FormData();
   Object.entries({
     projectId: meta.projectId,
@@ -127,12 +154,32 @@ export async function uploadDrawings(meta, files) {
     JSON.stringify((files || []).map((file) => meta.label || file.name))
   );
   (files || []).forEach((file) => fd.append('files', file));
-  const res = await fetch('/api/preconstruction/attachments', {
-    method: 'POST',
-    credentials: 'include',
-    body: fd,
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/preconstruction/attachments');
+    xhr.withCredentials = true;
+    xhr.upload.onprogress = (event) => {
+      if (!event.lengthComputable || typeof onProgress !== 'function') return;
+      onProgress(Math.max(1, Math.min(99, Math.round((event.loaded / event.total) * 100))));
+    };
+    xhr.onerror = () => reject(new Error('Network error while uploading drawing'));
+    xhr.onabort = () => reject(new Error('Drawing upload cancelled'));
+    xhr.onload = () => {
+      let data = {};
+      try {
+        data = JSON.parse(xhr.responseText || '{}');
+      } catch {
+        data = {};
+      }
+      if (xhr.status < 200 || xhr.status >= 300) {
+        reject(new Error(data?.error || `Upload failed (${xhr.status})`));
+        return;
+      }
+      onProgress?.(100);
+      resolve(data);
+    };
+    xhr.send(fd);
   });
-  return jsonOrError(res);
 }
 
 export async function updateDrawing(id, patch) {
