@@ -883,6 +883,45 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .cform-inp:focus,.cform-textarea:focus{outline:none;border-color:#C89A3A;box-shadow:0 0 0 2px rgba(200,154,58,.2)}
 .cform-inp-date{min-height:44px}
 .cform-textarea{resize:vertical;min-height:88px;line-height:1.45}
+.gram-field{position:relative;display:flex;flex-direction:column;gap:6px}
+.gram-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.gram-status{font-size:10px;font-weight:600;color:#96918A;letter-spacing:.02em}
+.gram-actions{display:inline-flex;align-items:center;gap:6px}
+.gram-btn{appearance:none;border:1px solid #E2DDD4;background:#fff;color:#1A304A;border-radius:999px;padding:3px 10px;font-size:10px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;line-height:1.3}
+.gram-btn:hover:not(:disabled){border-color:#C89A3A;background:#FBF7EE}
+.gram-btn:disabled{opacity:.45;cursor:not-allowed}
+.gram-btn-primary{border-color:#C89A3A;background:#FBF7EE;color:#9A6E20}
+.gram-btn-primary:hover:not(:disabled){background:#F5EDD8}
+.gram-editor{position:relative;isolation:isolate}
+.gram-backdrop,.gram-textarea{width:100%;max-width:100%;box-sizing:border-box;margin:0;padding:10px 11px;border:1.5px solid #E2DDD4;border-radius:6px;font-size:16px;font-family:'DM Sans',sans-serif;line-height:1.45;white-space:pre-wrap;word-wrap:break-word;overflow-wrap:break-word}
+.gram-backdrop{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:auto;color:transparent;background:#fff;caret-color:transparent}
+.gram-editor-has-marks .gram-backdrop{pointer-events:none}
+.gram-textarea{position:relative;z-index:1;background:transparent;color:#1A1815;resize:vertical;min-height:88px}
+.gram-textarea:focus{outline:none;border-color:#C89A3A;box-shadow:0 0 0 2px rgba(200,154,58,.2)}
+.gram-mark{border-radius:2px;color:transparent;cursor:pointer;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+.gram-mark-grammar{border-bottom:2px solid #1a73e8;background:rgba(26,115,232,.08)}
+.gram-mark-spelling{border-bottom:2px solid #d93025;background:rgba(217,48,37,.08)}
+.gram-mark-active{background:rgba(200,154,58,.22)}
+.gram-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.gram-chip{appearance:none;border:1px solid #E2DDD4;background:#fff;border-radius:999px;padding:4px 9px;font-size:11px;font-family:'DM Sans',sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:5px;color:#1A304A;max-width:100%}
+.gram-chip:hover{border-color:#C89A3A;background:#FBF7EE}
+.gram-chip-grammar{border-color:#c5d8f5}
+.gram-chip-spelling{border-color:#f0c4c0}
+.gram-chip-was{color:#96918A;text-decoration:line-through;max-width:9em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gram-chip-to{font-weight:700;color:#1A6A3C;max-width:9em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gram-chip-more{font-size:10px;color:#96918A;align-self:center}
+.gram-menu{position:absolute;z-index:5;min-width:180px;max-width:min(280px,92%);padding:8px;border:1px solid #E2DDD4;border-radius:10px;background:#fff;box-shadow:0 10px 28px rgba(26,24,21,.14);display:flex;flex-direction:column;gap:6px}
+.gram-menu-type{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#96918A}
+.gram-menu-msg{font-size:11px;color:#55504A;line-height:1.35}
+.gram-menu-accept{appearance:none;border:1px solid #C5E0CF;background:#EAF5EE;border-radius:8px;padding:8px 10px;cursor:pointer;text-align:left;font-family:'DM Sans',sans-serif;display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.gram-menu-accept:hover{border-color:#1A6A3C}
+.gram-menu-was{font-size:12px;color:#96918A;text-decoration:line-through}
+.gram-menu-arrow{font-size:11px;color:#96918A}
+.gram-menu-to{font-size:13px;font-weight:700;color:#1A6A3C}
+.gram-menu-dismiss{appearance:none;border:0;background:transparent;color:#96918A;font-size:11px;font-weight:600;cursor:pointer;padding:2px 4px;align-self:flex-start;font-family:'DM Sans',sans-serif}
+.gram-menu-dismiss:hover{color:#1A304A}
+.cform-compact .gram-backdrop,.cform-compact .gram-textarea{font-size:13px;padding:8px 10px;line-height:1.4}
+.cform-compact .gram-textarea{min-height:72px}
 .cform-foot{display:flex;justify-content:flex-end;padding-top:2px}
 .cform-foot .btp{min-height:44px;padding:10px 20px;font-size:13px}
 .cform-rich{max-width:min(480px,100%);min-width:0}

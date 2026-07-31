@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { AttachmentPicker } from './AttachmentPicker.jsx';
+import { GrammarAssistField } from './GrammarAssistField.jsx';
 import { SpeechDictationButton } from './SpeechDictationButton.jsx';
 import { validateCommentPayload } from './preconComments.js';
 import { uploadAttachments } from './preconMedia.js';
@@ -48,6 +49,10 @@ export function CommentForm({
   const [markComplete, setMarkComplete] = useState(false);
   const isBusy = busy || externalBusy;
   const assignee = taskWho || '';
+  const grammarContext = useMemo(
+    () => ({ projectName, phaseName, taskName }),
+    [projectName, phaseName, taskName],
+  );
 
   const onSpeechFinal = useCallback((fieldId, chunk) => {
     if (fieldId === 'comment') {
@@ -352,25 +357,36 @@ export function CommentForm({
             onToggle={speech.toggle}
           />
         </div>
-        <textarea
-          className="cform-textarea"
-          rows={3}
-          value={
-            speech.listening && speech.activeField === 'comment' && speech.interim
-              ? joinTranscript(text, speech.interim)
-              : text
-          }
-          disabled={isBusy}
-          required
-          placeholder="Progress update, issue, or decision… (or tap Voice)"
-          onChange={(e) => {
-            if (speech.listening && speech.activeField === 'comment') speech.stop();
-            setText(e.target.value);
-          }}
-        />
         {speech.listening && speech.activeField === 'comment' ? (
-          <p className="cform-mic-hint">Listening — speak clearly. Tap ⏹ to stop.</p>
-        ) : null}
+          <>
+            <textarea
+              className="cform-textarea"
+              rows={3}
+              value={joinTranscript(text, speech.interim)}
+              disabled={isBusy}
+              required
+              placeholder="Progress update, issue, or decision… (or tap Voice)"
+              onChange={(e) => {
+                speech.stop();
+                setText(e.target.value);
+              }}
+            />
+            <p className="cform-mic-hint">Listening — speak clearly. Tap ⏹ to stop.</p>
+          </>
+        ) : (
+          <GrammarAssistField
+            className="cform-textarea"
+            rows={compact ? 3 : 4}
+            value={text}
+            disabled={isBusy}
+            required
+            placeholder="Progress update, issue, or decision… (or tap Voice)"
+            field="comment"
+            context={grammarContext}
+            toast={toast}
+            onChange={(next) => setText(next)}
+          />
+        )}
       </div>
       {allowMarkComplete ? (
         <label className="cform-complete">
