@@ -1,10 +1,9 @@
 /**
- * Read-only derivations for TasksViewV2.
+ * Read-only derivations for PhaseStrip (D2, D7, R1, R2, R3/D16).
  * Pure functions — clone inputs, never mutate props.
+ * R4/R5/R6 removed with the V2 task table.
  */
 import { cDates, dbDays } from './preconDates.js';
-import { getLatestComment, countComments } from './preconComments.js';
-import { taskParentId, directChildren } from './preconTaskTree.js';
 import { todayIso } from './preconTaskStatus.js';
 
 function tasksOf(phase) {
@@ -24,8 +23,8 @@ export function findCurrentPhaseIndex(phases) {
   const list = Array.isArray(phases) ? phases : [];
   if (!list.length) return -1;
   for (let i = 0; i < list.length; i += 1) {
-    const { complete, total } = phaseTaskStats(list[i]);
-    if (!complete) return i; // includes total === 0
+    const { complete } = phaseTaskStats(list[i]);
+    if (!complete) return i;
   }
   return list.length - 1;
 }
@@ -37,7 +36,7 @@ function firstName(who) {
   return token.split(/\s+/)[0] || '';
 }
 
-/** D7 — owner = who with most incomplete tasks; ties alphabetical; else latest completed. */
+/** D7 — owner = who with most incomplete tasks; ties alphabetical; else latest completed with ae. */
 export function phaseOwnerFirstName(phase) {
   const tasks = tasksOf(phase);
   const incompleteCounts = new Map();
@@ -92,7 +91,10 @@ export function phasePlannedWindow(proj, phase) {
   return { plannedStart, plannedEnd };
 }
 
-/** R3 — large metric for the current tile. */
+/**
+ * R3 / D16 — large metric for the current tile.
+ * Future plannedStart → show the date, not a countdown.
+ */
 export function currentPhaseMetric(proj, phase, stats) {
   const window = phasePlannedWindow(proj, phase);
   const today = todayIso();
@@ -104,12 +106,20 @@ export function currentPhaseMetric(proj, phase, stats) {
       tone: 'ink',
     };
   }
+  if (window.plannedStart > today) {
+    return {
+      kind: 'start',
+      value: window.plannedStart,
+      label: 'planned start',
+      tone: 'ink',
+    };
+  }
   if (today > window.plannedEnd) {
     return {
       kind: 'past',
       value: String(Math.max(0, dbDays(window.plannedEnd, today))),
       label: 'd past plan',
-      tone: 'stamp',
+      tone: 'danger',
     };
   }
   return {
@@ -118,44 +128,6 @@ export function currentPhaseMetric(proj, phase, stats) {
     label: 'd to plan end',
     tone: 'ink',
   };
-}
-
-/** R4 */
-export function verifiedFraction(task, allTasks) {
-  const kids = directChildren(allTasks, task.id);
-  if (kids.length) {
-    const x = kids.filter((c) => c.status === 'completed').length;
-    return { x, y: kids.length };
-  }
-  return task.status === 'completed' ? { x: 1, y: 1 } : { x: 0, y: 1 };
-}
-
-/** R5 */
-export function liveNextAction(task) {
-  const latest = getLatestComment(task?.comments);
-  if (!latest) return { text: '', due: '' };
-  const text = String(latest.nextAction || '').trim();
-  const due = String(latest.nextActionDate || '').trim();
-  return { text, due };
-}
-
-/** R6 */
-export function rowStatus(task, dm) {
-  if (task.status === 'completed') return 'Met';
-  const today = todayIso();
-  const nad = String(liveNextAction(task).due || '').trim();
-  const end = dm?.[task.id]?.e;
-  if ((nad && nad < today) || (end && end < today)) return 'Overdue';
-  if (task.status === 'paused') return 'Paused';
-  return 'Open';
-}
-
-export function rootTasks(phase) {
-  return tasksOf(phase).filter((t) => !taskParentId(t));
-}
-
-export function taskCommentCount(task) {
-  return countComments(task?.comments);
 }
 
 export function buildPhaseStripModel(proj) {
@@ -185,23 +157,19 @@ export function buildPhaseStripModel(proj) {
   });
 }
 
-export function buildTaskRows(proj, phase) {
-  const all = tasksOf(phase);
-  const dm = cDates(proj);
-  return rootTasks(phase).map((task) => {
-    const verified = verifiedFraction(task, all);
-    const next = liveNextAction(task);
-    const status = rowStatus(task, dm);
-    const today = todayIso();
-    const duePast = !!(next.due && next.due < today);
-    return {
-      task,
-      verified,
-      next,
-      status,
-      duePast,
-      commentCount: taskCommentCount(task),
-      who: String(task.who || '').trim(),
-    };
-  });
+/**
+ * True only when V1 `.psh` count matches `phases.length` (1:1 index alignment).
+ * Design&Approvals split or filter-hidden phases break this — highlight-only then.
+ */
+export function canScrollByPhaseIndex(phaseCount) {
+  if (typeof document === 'undefined') return false;
+  const n = document.querySelectorAll('.psh').length;
+  return n > 0 && n === phaseCount;
+}
+
+export function scrollToPhaseHeader(phaseIndex) {
+  if (typeof document === 'undefined') return;
+  const headers = document.querySelectorAll('.psh');
+  const el = headers[phaseIndex];
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }

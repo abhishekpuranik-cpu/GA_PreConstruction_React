@@ -1,0 +1,222 @@
+/* Phase strip — vault tokens only (D13b). No Archivo/IBM/sage palette. */
+
+.phase-strip {
+  --ps-bg: var(--ga-canvas, #f3f4f7);
+  --ps-surface: var(--ga-paper, #ffffff);
+  --ps-border: var(--ga-line, #e4e7ec);
+  --ps-ink: var(--ga-navy, #092856);
+  --ps-muted: var(--ga-body, #68717a);
+  --ps-accent: var(--ga-orange, #f0592c);
+  --ps-danger: var(--ga-orange-hi, #d64517);
+  --ps-success: var(--ga-green, #28a745);
+  --ps-radius: var(--ga-radius, 4px);
+  --ps-shadow: var(--ga-shadow-card, 0 18px 40px rgba(33, 38, 49, 0.1));
+  --ps-font-display: var(--ga-font-display, 'Playfair Display', Georgia, serif);
+  --ps-font-text: var(--ga-font-text, 'Jost', 'Segoe UI', sans-serif);
+
+  background: var(--ps-bg);
+  color: var(--ps-ink);
+  font-family: var(--ps-font-text);
+  font-size: 13px;
+  line-height: 1.35;
+  padding: 10px 10px 12px;
+  margin: 0 0 12px;
+  border: 1px solid var(--ps-border);
+  border-radius: var(--ps-radius);
+  box-sizing: border-box;
+}
+
+.phase-strip *,
+.phase-strip *::before,
+.phase-strip *::after {
+  box-sizing: border-box;
+}
+
+.phase-strip-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 10px;
+}
+
+.phase-strip-label {
+  margin: 0;
+  font-family: var(--ps-font-text);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ps-muted);
+}
+
+.phase-strip-collapse {
+  appearance: none;
+  border: 1px solid var(--ps-border);
+  background: var(--ps-surface);
+  color: var(--ps-muted);
+  border-radius: var(--ps-radius);
+  padding: 4px 10px;
+  font-family: var(--ps-font-text);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.phase-strip-collapse:hover {
+  border-color: var(--ps-accent);
+  color: var(--ps-ink);
+}
+
+.phase-strip.is-collapsed .phase-strip-grid {
+  display: none;
+}
+
+.phase-strip-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+  align-items: stretch;
+}
+
+@media (max-width: 1200px) {
+  .phase-strip-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .phase-strip-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.phase-strip-tile {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 100%;
+  height: 100%;
+  padding: 10px;
+  text-align: left;
+  cursor: pointer;
+  border-radius: var(--ps-radius);
+  background: var(--ps-surface);
+  color: var(--ps-ink);
+  font: inherit;
+  border: 1px solid var(--ps-border);
+  box-shadow: none;
+}
+
+.phase-strip-tile:focus-visible {
+  outline: 2px solid var(--ps-accent);
+  outline-offset: 2px;
+}
+
+.phase-strip-tile.is-complete {
+  border-color: var(--ps-success);
+}
+
+.phase-strip-tile.is-current {
+  border: 2px solid var(--ps-ink);
+  box-shadow: var(--ps-shadow);
+}
+
+.phase-strip-tile.is-future {
+  border-style: dashed;
+  border-color: var(--ps-border);
+  opacity: 0.78;
+}
+
+.phase-strip-tile.is-selected {
+  box-shadow: 0 0 0 2px var(--ps-accent);
+}
+
+.phase-strip-tile.is-current.is-selected {
+  box-shadow: var(--ps-shadow), 0 0 0 2px var(--ps-accent);
+}
+
+.phase-strip-tile-name {
+  font-family: var(--ps-font-display);
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 1.2;
+  color: var(--ps-ink);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-height: 2.4em;
+  width: 100%;
+}
+
+.phase-strip-tile-metric {
+  font-family: var(--ps-font-display);
+  font-weight: 600;
+  font-size: 22px;
+  line-height: 1.1;
+  color: var(--ps-ink);
+  width: 100%;
+}
+
+.phase-strip-tile.is-current .phase-strip-tile-metric {
+  font-size: 26px;
+}
+
+.phase-strip-tile-metric.is-danger {
+  color: var(--ps-danger);
+}
+
+.phase-strip-tile-metric-label {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--ps-font-text);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--ps-muted);
+  letter-spacing: 0.02em;
+}
+
+.phase-strip-tile-foot {
+  font-family: var(--ps-font-text);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ps-muted);
+  line-height: 1.35;
+  width: 100%;
+}
+
+.phase-strip-tile.is-complete .phase-strip-tile-foot {
+  color: var(--ps-success);
+}
+
+.phase-strip-add {
+  border-style: dashed;
+  border-color: var(--ps-border);
+  background: transparent;
+  color: var(--ps-muted);
+  align-items: center;
+  justify-content: center;
+  min-height: 92px;
+  font-family: var(--ps-font-text);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+
+.phase-strip-add:hover {
+  border-color: var(--ps-accent);
+  color: var(--ps-ink);
+}
+
+.phase-strip-add-mark {
+  font-size: 18px;
+  line-height: 1;
+  margin-bottom: 4px;
+  color: var(--ps-accent);
+}

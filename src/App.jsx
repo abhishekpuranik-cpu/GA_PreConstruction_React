@@ -28,7 +28,7 @@ import { MyWorkView } from "./MyWorkView.jsx";
 import { DashboardCalendarView } from "./DashboardCalendarView.jsx";
 import { TaskCommentModal } from "./TaskCommentModal.jsx";
 import { ProjectPageShell } from "./ProjectPageShell.jsx";
-import { TasksViewV2 } from "./TasksViewV2.jsx";
+import { PhaseStrip } from "./PhaseStrip.jsx";
 import { isV2Enabled } from "./featureFlags.js";
 import { DrawingsVault } from "./DrawingsVault.jsx";
 import { StatusFilterChips } from "./StatusFilterChips.jsx";
@@ -2716,7 +2716,10 @@ export default function App(){
                 canDeleteProjects={canDeleteProjects}
               >
                 {sub==="tasks"&&(isV2Enabled()
-                  ?<TasksViewV2 proj={curProj} dispatch={dispatch} toast={toast} departments={state.departments} loginUser={loginUser} assigneeRoster={assigneeRoster} onSaveActivity={saveActivityToMongo} onOpenProject={(id,tab="tasks")=>setSubTab(p=>({...p,[id]:tab}))}/>
+                  ?<>
+                    <PhaseStrip proj={curProj} dispatch={dispatch}/>
+                    <TasksView proj={curProj} dispatch={dispatch} toast={toast} departments={state.departments} loginUser={loginUser} assigneeRoster={assigneeRoster} onSaveActivity={saveActivityToMongo} onOpenProject={(id,tab="tasks")=>setSubTab(p=>({...p,[id]:tab}))}/>
+                  </>
                   :<TasksView proj={curProj} dispatch={dispatch} toast={toast} departments={state.departments} loginUser={loginUser} assigneeRoster={assigneeRoster} onSaveActivity={saveActivityToMongo} onOpenProject={(id,tab="tasks")=>setSubTab(p=>({...p,[id]:tab}))}/>)}
                 {sub==="drawings"&&<DrawingsVault projects={visibleProjects} fixedProjectId={curProj.id} toast={toast} departments={state.departments} dispatch={dispatch} onPersist={saveActivityToMongo}/>}
                 {sub==="allocate"&&<BulkAllocateView proj={curProj} dispatch={dispatch} assigneeRoster={assigneeRoster} departments={state.departments} toast={toast} onEditDepartments={()=>setModal("deptHeads")}/>}
