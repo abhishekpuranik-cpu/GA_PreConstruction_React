@@ -1,8 +1,9 @@
 /**
  * Read-only derivations for PhaseStrip (D2, D7, R1, R2, R3/D16).
  * Pure functions — clone inputs, never mutate props.
- * R4/R5/R6 removed with the V2 task table.
+ * Strip tiles use expandPhasesForDisplay (D17) — same list as TasksView.
  */
+import { expandPhasesForDisplay } from './preconDesignApproval.js';
 import { cDates, dbDays } from './preconDates.js';
 import { todayIso } from './preconTaskStatus.js';
 
@@ -130,8 +131,9 @@ export function currentPhaseMetric(proj, phase, stats) {
   };
 }
 
+/** D17 — tiles follow expandPhasesForDisplay (same as TasksView). */
 export function buildPhaseStripModel(proj) {
-  const phases = Array.isArray(proj?.phases) ? proj.phases.slice() : [];
+  const phases = expandPhasesForDisplay(proj?.phases);
   const currentIndex = findCurrentPhaseIndex(phases);
   return phases.map((phase, index) => {
     const stats = phaseTaskStats(phase);
@@ -155,21 +157,4 @@ export function buildPhaseStripModel(proj) {
       phase,
     };
   });
-}
-
-/**
- * True only when V1 `.psh` count matches `phases.length` (1:1 index alignment).
- * Design&Approvals split or filter-hidden phases break this — highlight-only then.
- */
-export function canScrollByPhaseIndex(phaseCount) {
-  if (typeof document === 'undefined') return false;
-  const n = document.querySelectorAll('.psh').length;
-  return n > 0 && n === phaseCount;
-}
-
-export function scrollToPhaseHeader(phaseIndex) {
-  if (typeof document === 'undefined') return;
-  const headers = document.querySelectorAll('.psh');
-  const el = headers[phaseIndex];
-  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }

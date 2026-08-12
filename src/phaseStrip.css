@@ -220,3 +220,55 @@
   margin-bottom: 4px;
   color: var(--ps-accent);
 }
+
+/* D19 — slim context bar inside TasksView when visiblePhaseId is set (vault tokens only). */
+.ps-context {
+  --ps-bg: var(--ga-canvas, #f3f4f7);
+  --ps-surface: var(--ga-paper, #ffffff);
+  --ps-border: var(--ga-line, #e4e7ec);
+  --ps-ink: var(--ga-navy, #092856);
+  --ps-muted: var(--ga-body, #68717a);
+  --ps-font-display: var(--ga-font-display, 'Playfair Display', Georgia, serif);
+  --ps-font-text: var(--ga-font-text, 'Jost', 'Segoe UI', sans-serif);
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  padding: 10px 14px;
+  background: var(--ps-surface);
+  border-bottom: 1px solid var(--ps-border);
+  font-family: var(--ps-font-text);
+  box-sizing: border-box;
+}
+
+.ps-context-left {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.ps-context-name {
+  font-family: var(--ps-font-display);
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 1.2;
+  color: var(--ps-ink);
+}
+
+.ps-context .ps-dept,
+.ps-context .ps-meta {
+  font-family: var(--ps-font-text);
+}
+
+.ps-context .ps-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: auto;
+}

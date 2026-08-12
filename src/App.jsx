@@ -30,6 +30,7 @@ import { TaskCommentModal } from "./TaskCommentModal.jsx";
 import { ProjectPageShell } from "./ProjectPageShell.jsx";
 import { PhaseStrip } from "./PhaseStrip.jsx";
 import { isV2Enabled } from "./featureFlags.js";
+import { phaseOwnerFirstName } from "./tasksViewV2Model.js";
 import { DrawingsVault } from "./DrawingsVault.jsx";
 import { StatusFilterChips } from "./StatusFilterChips.jsx";
 import { AssigneeMultiSelect } from "./AssigneeMultiSelect.jsx";
@@ -1484,7 +1485,7 @@ function RegView({proj,regStatus,setRegStatus}){
 // ── TASKS VIEW ───────────────────────────────────────────
 function phaseExpandKey(projId,phId){return`${projId}:${phId}`;}
 
-function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster,onSaveActivity,onOpenProject}){
+function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster,onSaveActivity,onOpenProject,visiblePhaseId}){
   const dm=useMemo(()=>cDates(proj),[proj]);
   const[commentTarget,setCommentTarget]=useState(null);
   const[expandedPh,setExpandedPh]=useState({});
@@ -1500,7 +1501,11 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster,onS
   const[roleFilter,setRoleFilter]=useState("");
   const assignees=useMemo(()=>collectAssignees([proj]),[proj]);
   const roleOptions=useMemo(()=>collectAllRoles([proj]),[proj]);
-  const displayPhases=useMemo(()=>expandPhasesForDisplay(proj.phases),[proj.phases]);
+  const allDisplayPhases=useMemo(()=>expandPhasesForDisplay(proj.phases),[proj.phases]);
+  const displayPhases=useMemo(()=>{
+    if(visiblePhaseId==null||visiblePhaseId==="")return allDisplayPhases;
+    return allDisplayPhases.filter(ph=>ph.id===visiblePhaseId);
+  },[allDisplayPhases,visiblePhaseId]);
   const todayStr=todayIso();
   const filters={statusFilters,assigneeFilter,departmentFilter,departments,roleFilter,horizonDays,todayStr};
   const filtersActive=!!(statusFilters.length||assigneeFilter||departmentFilter||roleFilter||horizonDays!=null);
@@ -1597,9 +1602,33 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster,onS
         const comp=visible.filter(t=>taskStatus(t,dm)==="completed").length;
         const pct=visible.length?Math.round(comp/visible.length*100):0;
         const ek=phaseExpandKey(proj.id,ph.id);
-        const isOpen=expandedPh[ek]===true;
+        const isOpen=visiblePhaseId!=null?true:expandedPh[ek]===true;
         const dept=getDepartmentForPhase(ph._section==="design"?"Design & Team Appointments":ph._section==="approval"?"Regulatory Approvals":ph.name,departments);
+        const ownerName=visiblePhaseId!=null?phaseOwnerFirstName(ph):"";
         const isPhDragOver=dragOverPhId===sourcePhId&&dragPhase?.phId&&dragPhase.phId!==sourcePhId;
+        const phaseActions=(
+          <div className="ps-actions" onClick={e=>e.stopPropagation()}>
+            {(()=>{
+              const incomplete=visible.filter(t=>taskStatus(t,dm)!=="completed");
+              if(!incomplete.length){
+                return visible.length>0?<span className="ps-all-done" title="All visible tasks complete">All done</span>:null;
+              }
+              return(
+                <button type="button" className="bts ps-complete-all" title={`Mark ${incomplete.length} task(s) complete`}
+                  onClick={()=>{
+                    const n=incomplete.length;
+                    const scope=filtersActive?"visible ":"";
+                    if(!confirm(`Complete all ${n} ${scope}task${n!==1?"s":""} in "${ph.name}"?`))return;
+                    dispatch({type:"bulkCompletePhase",projId:proj.id,phId:sourcePhId,taskIds:incomplete.map(t=>t.id)});
+                    toast(`Marked ${n} complete`,"ok");
+                  }}
+                >Complete all</button>
+              );
+            })()}
+            <button className="bts" onClick={()=>dispatch({type:"addTask",projId:proj.id,phId:sourcePhId,afterId:null})}>+ Task</button>
+            {!ph._section?<button className="bts" onClick={()=>{if(confirm(`Delete phase "${ph.name}"?`))dispatch({type:"delPhase",projId:proj.id,phId:sourcePhId});}}>✕</button>:null}
+          </div>
+        );
         return(
           <div key={ph.id} className={`ps${isPhDragOver?" ps-drag-over":""}${ph._section?` ps-section-${ph._section}`:""}`} style={{"--phase-accent":ph.col||"#CEC8BB"}}
             onDragOver={e=>{if(!dragPhase||dragPhase.phId===sourcePhId)return;e.preventDefault();e.dataTransfer.dropEffect="move";setDragOverPhId(sourcePhId);}}
@@ -1612,6 +1641,20 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster,onS
               setDragPhase(null);
             }}
           >
+            {visiblePhaseId!=null?(
+              <div className="ps-context">
+                <div className="ps-context-left">
+                  <span className="ps-context-name">{ph.name}</span>
+                  {ph._section?<span className="ps-dept" title="View section only — Mongo data unchanged">{ph._section==="design"?"Design work":"Approvals & regulatory"}</span>:null}
+                  {dept?<span className="ps-dept" title="Department head">{dept.name} · {dept.head}</span>:null}
+                  {ownerName?<span className="ps-dept" title="Phase owner">{ownerName}</span>:null}
+                  <span className="ps-meta">{visible.length}{visible.length!==ph.tasks.length?` / ${ph.tasks.length}`:""} tasks</span>
+                  <div className="ppbar"><div className="ppfill" style={{width:`${pct}%`,background:ph.col}}/></div>
+                  <span className="ps-meta">{pct}%</span>
+                </div>
+                {phaseActions}
+              </div>
+            ):(
             <div className="psh" onClick={()=>setExpandedPh(p=>({...p,[ek]:!isOpen}))}>
               <div className="psh-left">
                 <span className="pdrag" draggable={!ph._section} title="Drag section to reorder"
@@ -1628,28 +1671,9 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster,onS
                 <div className="ppbar"><div className="ppfill" style={{width:`${pct}%`,background:ph.col}}/></div>
                 <span className="ps-meta">{pct}%</span>
               </div>
-              <div className="ps-actions" onClick={e=>e.stopPropagation()}>
-                {(()=>{
-                  const incomplete=visible.filter(t=>taskStatus(t,dm)!=="completed");
-                  if(!incomplete.length){
-                    return visible.length>0?<span className="ps-all-done" title="All visible tasks complete">All done</span>:null;
-                  }
-                  return(
-                    <button type="button" className="bts ps-complete-all" title={`Mark ${incomplete.length} task(s) complete`}
-                      onClick={()=>{
-                        const n=incomplete.length;
-                        const scope=filtersActive?"visible ":"";
-                        if(!confirm(`Complete all ${n} ${scope}task${n!==1?"s":""} in "${ph.name}"?`))return;
-                        dispatch({type:"bulkCompletePhase",projId:proj.id,phId:sourcePhId,taskIds:incomplete.map(t=>t.id)});
-                        toast(`Marked ${n} complete`,"ok");
-                      }}
-                    >Complete all</button>
-                  );
-                })()}
-                <button className="bts" onClick={()=>dispatch({type:"addTask",projId:proj.id,phId:sourcePhId,afterId:null})}>+ Task</button>
-                {!ph._section?<button className="bts" onClick={()=>{if(confirm(`Delete phase "${ph.name}"?`))dispatch({type:"delPhase",projId:proj.id,phId:sourcePhId});}}>✕</button>:null}
-              </div>
+              {phaseActions}
             </div>
+            )}
             {isOpen&&<div className="ttable-wrap"><table className="ttable">
               <thead><tr>
                 <th className="tcol-drag" aria-label="Reorder"/>
@@ -2716,10 +2740,9 @@ export default function App(){
                 canDeleteProjects={canDeleteProjects}
               >
                 {sub==="tasks"&&(isV2Enabled()
-                  ?<>
-                    <PhaseStrip proj={curProj} dispatch={dispatch}/>
+                  ?<PhaseStrip proj={curProj} dispatch={dispatch}>
                     <TasksView proj={curProj} dispatch={dispatch} toast={toast} departments={state.departments} loginUser={loginUser} assigneeRoster={assigneeRoster} onSaveActivity={saveActivityToMongo} onOpenProject={(id,tab="tasks")=>setSubTab(p=>({...p,[id]:tab}))}/>
-                  </>
+                  </PhaseStrip>
                   :<TasksView proj={curProj} dispatch={dispatch} toast={toast} departments={state.departments} loginUser={loginUser} assigneeRoster={assigneeRoster} onSaveActivity={saveActivityToMongo} onOpenProject={(id,tab="tasks")=>setSubTab(p=>({...p,[id]:tab}))}/>)}
                 {sub==="drawings"&&<DrawingsVault projects={visibleProjects} fixedProjectId={curProj.id} toast={toast} departments={state.departments} dispatch={dispatch} onPersist={saveActivityToMongo}/>}
                 {sub==="allocate"&&<BulkAllocateView proj={curProj} dispatch={dispatch} assigneeRoster={assigneeRoster} departments={state.departments} toast={toast} onEditDepartments={()=>setModal("deptHeads")}/>}
