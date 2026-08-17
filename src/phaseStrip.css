@@ -1,5 +1,30 @@
 /* Phase strip — vault tokens only (D13b). No Archivo/IBM/sage palette. */
 
+.phase-navigator-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
+  grid-template-areas: 'tasks phases';
+  align-items: start;
+  gap: 12px;
+}
+
+.phase-navigator-layout.is-strip-collapsed {
+  grid-template-columns: minmax(0, 1fr) 180px;
+}
+
+.phase-navigator-main {
+  grid-area: tasks;
+  min-width: 0;
+}
+
+.phase-navigator-main .ttable-wrap {
+  overflow-x: auto !important;
+}
+
+.phase-navigator-main .ttable-wrap .ttable {
+  min-width: 980px !important;
+}
+
 .phase-strip {
   --ps-bg: var(--ga-canvas, #f3f4f7);
   --ps-surface: var(--ga-paper, #ffffff);
@@ -20,7 +45,12 @@
   font-size: 13px;
   line-height: 1.35;
   padding: 10px 10px 12px;
-  margin: 0 0 12px;
+  grid-area: phases;
+  position: sticky;
+  top: 76px;
+  max-height: calc(100vh - 92px);
+  overflow: auto;
+  margin: 0;
   border: 1px solid var(--ps-border);
   border-radius: var(--ps-radius);
   box-sizing: border-box;
@@ -74,18 +104,26 @@
 
 .phase-strip-grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
   align-items: stretch;
 }
 
-@media (max-width: 1200px) {
-  .phase-strip-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
 @media (max-width: 900px) {
+  .phase-navigator-layout,
+  .phase-navigator-layout.is-strip-collapsed {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'phases'
+      'tasks';
+  }
+
+  .phase-strip {
+    position: static;
+    max-height: none;
+    margin-bottom: 12px;
+  }
+
   .phase-strip-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

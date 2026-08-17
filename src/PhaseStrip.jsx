@@ -73,8 +73,9 @@ export function PhaseStrip({ proj, dispatch, children }) {
       : children;
 
   return (
-    <>
-      <div className={`phase-strip${collapsed ? ' is-collapsed' : ''}`}>
+    <div className={`phase-navigator-layout${collapsed ? ' is-strip-collapsed' : ''}`}>
+      <main className="phase-navigator-main">{listChild}</main>
+      <aside className={`phase-strip${collapsed ? ' is-collapsed' : ''}`}>
         <div className="phase-strip-head">
           <p className="phase-strip-label">Phases — select a phase</p>
           <button type="button" className="phase-strip-collapse" onClick={onToggleCollapse}>
@@ -136,8 +137,7 @@ export function PhaseStrip({ proj, dispatch, children }) {
             Phase
           </button>
         </div>
-      </div>
-      {listChild}
-    </>
+      </aside>
+    </div>
   );
 }

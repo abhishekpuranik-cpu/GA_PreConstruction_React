@@ -11,6 +11,70 @@ function tasksOf(phase) {
   return Array.isArray(phase?.tasks) ? phase.tasks.slice() : [];
 }
 
+function normalizedPhaseName(phase) {
+  return String(phase?.name || '')
+    .trim()
+    .toLocaleLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function commentCount(task) {
+  const comments = task?.comments;
+  if (Array.isArray(comments)) return comments.length;
+  if (typeof comments === 'string') return comments.trim() ? 1 : 0;
+  if (comments && typeof comments === 'object') return Object.keys(comments).length;
+  return 0;
+}
+
+function phaseRichness(phase) {
+  const tasks = tasksOf(phase);
+  let comments = 0;
+  let populatedFields = 0;
+  for (const task of tasks) {
+    comments += commentCount(task);
+    for (const key of ['who', 'ms', 'as', 'ae', 'dur', 'status', 'parentId']) {
+      const value = task?.[key];
+      if (value != null && value !== '' && value !== 'notstarted') populatedFields += 1;
+    }
+    if (Array.isArray(task?.pred)) populatedFields += task.pred.length;
+    if (Array.isArray(task?.roles)) populatedFields += task.roles.length;
+  }
+  return [comments, populatedFields, tasks.length];
+}
+
+function isRicher(candidate, current) {
+  const a = phaseRichness(candidate);
+  const b = phaseRichness(current);
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) return a[i] > b[i];
+  }
+  return false;
+}
+
+/**
+ * V2-only display list. Duplicate phase names can exist after legacy imports;
+ * retain the richer record (comments, populated task data, then task count)
+ * while preserving the first occurrence's position.
+ */
+export function displayPhasesForV2(phases) {
+  const expanded = expandPhasesForDisplay(phases);
+  const result = [];
+  const indexByName = new Map();
+  for (const phase of expanded) {
+    const key = normalizedPhaseName(phase);
+    if (!key || !indexByName.has(key)) {
+      indexByName.set(key, result.length);
+      result.push(phase);
+      continue;
+    }
+    const index = indexByName.get(key);
+    if (isRicher(phase, result[index])) result[index] = phase;
+  }
+  return result;
+}
+
 export function phaseTaskStats(phase) {
   const tasks = tasksOf(phase);
   const total = tasks.length;
@@ -133,7 +197,7 @@ export function currentPhaseMetric(proj, phase, stats) {
 
 /** D17 — tiles follow expandPhasesForDisplay (same as TasksView). */
 export function buildPhaseStripModel(proj) {
-  const phases = expandPhasesForDisplay(proj?.phases);
+  const phases = displayPhasesForV2(proj?.phases);
   const currentIndex = findCurrentPhaseIndex(phases);
   return phases.map((phase, index) => {
     const stats = phaseTaskStats(phase);

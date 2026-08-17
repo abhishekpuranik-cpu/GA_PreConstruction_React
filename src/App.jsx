@@ -30,7 +30,7 @@ import { TaskCommentModal } from "./TaskCommentModal.jsx";
 import { ProjectPageShell } from "./ProjectPageShell.jsx";
 import { PhaseStrip } from "./PhaseStrip.jsx";
 import { isV2Enabled } from "./featureFlags.js";
-import { phaseOwnerFirstName } from "./tasksViewV2Model.js";
+import { displayPhasesForV2, phaseOwnerFirstName } from "./tasksViewV2Model.js";
 import { DrawingsVault } from "./DrawingsVault.jsx";
 import { StatusFilterChips } from "./StatusFilterChips.jsx";
 import { AssigneeMultiSelect } from "./AssigneeMultiSelect.jsx";
@@ -591,7 +591,7 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .stab{padding:7px 15px;border:none;background:none;color:#55504A;font-size:12px;font-weight:500;cursor:pointer;border-bottom:2.5px solid transparent;margin-bottom:-1.5px;transition:all .15s;font-family:'DM Sans',sans-serif}
 .stab.act{color:#1A304A;border-bottom-color:#1A304A;font-weight:600}
 .proj-page{display:flex;flex-direction:column;gap:20px;--pj-accent:#1A304A}
-.main.main-proj{padding-top:18px;max-width:1280px}
+.main.main-proj{padding-top:18px;max-width:1600px}
 .pj-hero{position:relative;background:#fff;border:1px solid rgba(26,48,74,.08);border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(26,48,74,.07),0 1px 3px rgba(0,0,0,.04)}
 .pj-hero-bg{position:absolute;inset:0;background:linear-gradient(135deg,rgba(26,48,74,.04) 0%,rgba(200,154,58,.06) 45%,rgba(255,255,255,0) 70%);pointer-events:none}
 .pj-hero-bg::after{content:"";position:absolute;top:-40%;right:-8%;width:min(420px,55vw);height:min(420px,55vw);border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--pj-accent) 12%,transparent) 0%,transparent 70%)}
@@ -1502,10 +1502,11 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster,onS
   const assignees=useMemo(()=>collectAssignees([proj]),[proj]);
   const roleOptions=useMemo(()=>collectAllRoles([proj]),[proj]);
   const allDisplayPhases=useMemo(()=>expandPhasesForDisplay(proj.phases),[proj.phases]);
+  const v2DisplayPhases=useMemo(()=>displayPhasesForV2(proj.phases),[proj.phases]);
   const displayPhases=useMemo(()=>{
     if(visiblePhaseId==null||visiblePhaseId==="")return allDisplayPhases;
-    return allDisplayPhases.filter(ph=>ph.id===visiblePhaseId);
-  },[allDisplayPhases,visiblePhaseId]);
+    return v2DisplayPhases.filter(ph=>ph.id===visiblePhaseId);
+  },[allDisplayPhases,v2DisplayPhases,visiblePhaseId]);
   const todayStr=todayIso();
   const filters={statusFilters,assigneeFilter,departmentFilter,departments,roleFilter,horizonDays,todayStr};
   const filtersActive=!!(statusFilters.length||assigneeFilter||departmentFilter||roleFilter||horizonDays!=null);
