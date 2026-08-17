@@ -1242,7 +1242,61 @@ function ActionFilters({
   roleOptions,
   showHorizon = true,
   allowAllHorizon = false,
+  stacked = false,
 }) {
+  if (stacked) {
+    return (
+      <div className="fbar fbar-sidebar">
+        {showHorizon ? (
+          <section className="filter-rail-section">
+            <label>Actions in</label>
+            <div className="filter-rail-options">
+              {allowAllHorizon ? (
+                <button type="button" className={`fbtn${horizonDays == null ? ' on' : ''}`} onClick={() => setHorizonDays(null)}>
+                  All
+                </button>
+              ) : null}
+              {[7, 15, 30].map((n) => (
+                <button key={n} type="button" className={`fbtn${horizonDays === n ? ' on' : ''}`} onClick={() => setHorizonDays(n)}>
+                  {n} days
+                </button>
+              ))}
+            </div>
+          </section>
+        ) : null}
+        <section className="filter-rail-section">
+          <label>Status</label>
+          <StatusFilterChips value={statusFilters} onChange={setStatusFilters} />
+        </section>
+        <section className="filter-rail-section">
+          <label>Assignee</label>
+          <select value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value)}>
+            <option value="">All</option>
+            <option value={UNASSIGNED_FILTER}>No Assignee</option>
+            {assignees.map((a) => <option key={a} value={a}>{a}</option>)}
+          </select>
+        </section>
+        {departments?.length ? (
+          <section className="filter-rail-section">
+            <label>Department</label>
+            <select value={departmentFilter} onChange={(e) => setDepartmentFilter(e.target.value)}>
+              <option value="">All</option>
+              {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+            </select>
+          </section>
+        ) : null}
+        {roleOptions?.length ? (
+          <section className="filter-rail-section">
+            <label>Role</label>
+            <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
+              <option value="">All</option>
+              {roleOptions.map((r) => <option key={r} value={r}>{r.length > 42 ? `${r.slice(0, 40)}…` : r}</option>)}
+            </select>
+          </section>
+        ) : null}
+      </div>
+    );
+  }
   return (
     <div className="fbar">
       {showHorizon && (
@@ -1570,8 +1624,9 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster,onS
   };
   return(
     <div className="tasks-view">
-      <div className="tasks-filters-card">
-        <ActionFilters horizonDays={horizonDays} setHorizonDays={setHorizonDays} statusFilters={statusFilters} setStatusFilters={setStatusFilters} assigneeFilter={assigneeFilter} setAssigneeFilter={setAssigneeFilter} assignees={assignees} departmentFilter={departmentFilter} setDepartmentFilter={setDepartmentFilter} departments={departments} roleFilter={roleFilter} setRoleFilter={setRoleFilter} roleOptions={roleOptions} allowAllHorizon/>
+      <div className={`tasks-filters-card${visiblePhaseId!=null?" tasks-filters-sidebar":""}`}>
+        {visiblePhaseId!=null?<div className="tasks-filters-heading"><strong>Task filters</strong><span>Refine the selected phase</span></div>:null}
+        <ActionFilters horizonDays={horizonDays} setHorizonDays={setHorizonDays} statusFilters={statusFilters} setStatusFilters={setStatusFilters} assigneeFilter={assigneeFilter} setAssigneeFilter={setAssigneeFilter} assignees={assignees} departmentFilter={departmentFilter} setDepartmentFilter={setDepartmentFilter} departments={departments} roleFilter={roleFilter} setRoleFilter={setRoleFilter} roleOptions={roleOptions} allowAllHorizon stacked={visiblePhaseId!=null}/>
       </div>
       <div className="tasks-toolbar">
         <p className="tasks-toolbar-tip">Drag ⋮⋮ to reorder · ▸/▾ expands subtasks · ⊞ adds a subtask · Parent dates follow first→last subtask · {filtersActive?"Clear filters to enable drag reorder":"Expand phases to edit tasks"}</p>
