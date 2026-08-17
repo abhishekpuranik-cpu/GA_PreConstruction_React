@@ -591,7 +591,7 @@ body,#root{min-height:100vh;background:#F8F6F1;font-family:'DM Sans',sans-serif}
 .stab{padding:7px 15px;border:none;background:none;color:#55504A;font-size:12px;font-weight:500;cursor:pointer;border-bottom:2.5px solid transparent;margin-bottom:-1.5px;transition:all .15s;font-family:'DM Sans',sans-serif}
 .stab.act{color:#1A304A;border-bottom-color:#1A304A;font-weight:600}
 .proj-page{display:flex;flex-direction:column;gap:20px;--pj-accent:#1A304A}
-.main.main-proj{padding-top:18px;max-width:1600px}
+.main.main-proj{padding-top:18px;max-width:1900px}
 .pj-hero{position:relative;background:#fff;border:1px solid rgba(26,48,74,.08);border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(26,48,74,.07),0 1px 3px rgba(0,0,0,.04)}
 .pj-hero-bg{position:absolute;inset:0;background:linear-gradient(135deg,rgba(26,48,74,.04) 0%,rgba(200,154,58,.06) 45%,rgba(255,255,255,0) 70%);pointer-events:none}
 .pj-hero-bg::after{content:"";position:absolute;top:-40%;right:-8%;width:min(420px,55vw);height:min(420px,55vw);border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--pj-accent) 12%,transparent) 0%,transparent 70%)}

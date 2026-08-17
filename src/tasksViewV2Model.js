@@ -5,19 +5,15 @@
  */
 import { expandPhasesForDisplay } from './preconDesignApproval.js';
 import { cDates, dbDays } from './preconDates.js';
+import {
+  normalizePhaseName,
+  phaseLifecycle,
+  sortPhasesByLifecycle,
+} from './preconPhaseLifecycle.js';
 import { todayIso } from './preconTaskStatus.js';
 
 function tasksOf(phase) {
   return Array.isArray(phase?.tasks) ? phase.tasks.slice() : [];
-}
-
-function normalizedPhaseName(phase) {
-  return String(phase?.name || '')
-    .trim()
-    .toLocaleLowerCase()
-    .replace(/&/g, ' and ')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
 }
 
 function commentCount(task) {
@@ -63,7 +59,7 @@ export function displayPhasesForV2(phases) {
   const result = [];
   const indexByName = new Map();
   for (const phase of expanded) {
-    const key = normalizedPhaseName(phase);
+    const key = normalizePhaseName(phase?.name);
     if (!key || !indexByName.has(key)) {
       indexByName.set(key, result.length);
       result.push(phase);
@@ -72,7 +68,7 @@ export function displayPhasesForV2(phases) {
     const index = indexByName.get(key);
     if (isRicher(phase, result[index])) result[index] = phase;
   }
-  return result;
+  return sortPhasesByLifecycle(result);
 }
 
 export function phaseTaskStats(phase) {
@@ -210,9 +206,11 @@ export function buildPhaseStripModel(proj) {
 
     const owner = phaseOwnerFirstName(phase);
     const metric = state === 'current' ? currentPhaseMetric(proj, phase, stats) : null;
+    const lifecycle = phaseLifecycle(phase);
     return {
       id: phase.id,
       name: phase.name || '—',
+      sequenceLabel: lifecycle.label,
       index,
       state,
       stats,

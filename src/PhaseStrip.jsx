@@ -74,10 +74,12 @@ export function PhaseStrip({ proj, dispatch, children }) {
 
   return (
     <div className={`phase-navigator-layout${collapsed ? ' is-strip-collapsed' : ''}`}>
-      <main className="phase-navigator-main">{listChild}</main>
       <aside className={`phase-strip${collapsed ? ' is-collapsed' : ''}`}>
         <div className="phase-strip-head">
-          <p className="phase-strip-label">Phases — select a phase</p>
+          <div>
+            <p className="phase-strip-label">Project lifecycle</p>
+            <p className="phase-strip-hint">Select a phase to view its tasks</p>
+          </div>
           <button type="button" className="phase-strip-collapse" onClick={onToggleCollapse}>
             {collapsed ? 'Show strip' : 'Hide strip'}
           </button>
@@ -91,12 +93,16 @@ export function PhaseStrip({ proj, dispatch, children }) {
                 key={tile.id}
                 type="button"
                 role="listitem"
+                aria-label={`${tile.sequenceLabel}. ${tile.name}`}
                 className={`phase-strip-tile is-${tile.state}${selected ? ' is-selected' : ''}`}
                 onClick={() => onSelectTile(tile)}
               >
-                <div className="phase-strip-tile-name">{tile.name}</div>
+                <div className="phase-strip-tile-top">
+                  <span className="phase-strip-sequence" aria-hidden>{tile.sequenceLabel}</span>
+                  <div className="phase-strip-tile-name">{tile.name}</div>
+                </div>
                 {tile.state === 'current' && tile.metric ? (
-                  <div>
+                  <div className="phase-strip-tile-detail">
                     <div
                       className={`phase-strip-tile-metric${tile.metric.tone === 'danger' ? ' is-danger' : ''}`}
                     >
@@ -104,9 +110,7 @@ export function PhaseStrip({ proj, dispatch, children }) {
                     </div>
                     <span className="phase-strip-tile-metric-label">{tile.metric.label}</span>
                   </div>
-                ) : (
-                  <div aria-hidden="true" style={{ minHeight: 28 }} />
-                )}
+                ) : null}
                 <div className="phase-strip-tile-foot">
                   {tile.state === 'complete' ? (
                     <>
@@ -138,6 +142,7 @@ export function PhaseStrip({ proj, dispatch, children }) {
           </button>
         </div>
       </aside>
+      <main className="phase-navigator-main">{listChild}</main>
     </div>
   );
 }

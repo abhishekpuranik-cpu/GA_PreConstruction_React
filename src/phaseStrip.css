@@ -2,14 +2,14 @@
 
 .phase-navigator-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
-  grid-template-areas: 'tasks phases';
+  grid-template-columns: minmax(300px, 340px) minmax(0, 1fr);
+  grid-template-areas: 'phases tasks';
   align-items: start;
-  gap: 12px;
+  gap: 18px;
 }
 
 .phase-navigator-layout.is-strip-collapsed {
-  grid-template-columns: minmax(0, 1fr) 180px;
+  grid-template-columns: 190px minmax(0, 1fr);
 }
 
 .phase-navigator-main {
@@ -39,12 +39,12 @@
   --ps-font-display: var(--ga-font-display, 'Playfair Display', Georgia, serif);
   --ps-font-text: var(--ga-font-text, 'Jost', 'Segoe UI', sans-serif);
 
-  background: var(--ps-bg);
+  background: linear-gradient(180deg, var(--ps-surface) 0%, var(--ps-bg) 100%);
   color: var(--ps-ink);
   font-family: var(--ps-font-text);
   font-size: 13px;
   line-height: 1.35;
-  padding: 10px 10px 12px;
+  padding: 14px;
   grid-area: phases;
   position: sticky;
   top: 76px;
@@ -52,7 +52,8 @@
   overflow: auto;
   margin: 0;
   border: 1px solid var(--ps-border);
-  border-radius: var(--ps-radius);
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(9, 40, 86, 0.08);
   box-sizing: border-box;
 }
 
@@ -67,17 +68,26 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin: 0 0 10px;
+  margin: 0 0 14px;
+  padding: 0 2px 12px;
+  border-bottom: 1px solid var(--ps-border);
 }
 
 .phase-strip-label {
   margin: 0;
   font-family: var(--ps-font-text);
   font-weight: 600;
-  font-size: 11px;
-  letter-spacing: 0.12em;
+  font-size: 12px;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--ps-muted);
+}
+
+.phase-strip-hint {
+  margin: 3px 0 0;
+  color: var(--ps-muted);
+  font-family: var(--ps-font-text);
+  font-size: 11px;
 }
 
 .phase-strip-collapse {
@@ -103,10 +113,21 @@
 }
 
 .phase-strip-grid {
+  position: relative;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
   align-items: stretch;
+}
+
+.phase-strip-grid::before {
+  content: '';
+  position: absolute;
+  top: 22px;
+  bottom: 48px;
+  left: 25px;
+  width: 2px;
+  background: var(--ps-border);
 }
 
 @media (max-width: 900px) {
@@ -127,26 +148,39 @@
   .phase-strip-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .phase-strip-grid::before {
+    display: none;
+  }
 }
 
 .phase-strip-tile {
   appearance: none;
   display: flex;
+  position: relative;
+  z-index: 1;
   flex-direction: column;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 8px;
+  gap: 7px;
   min-height: 100%;
   height: 100%;
-  padding: 10px;
+  padding: 11px 12px;
   text-align: left;
   cursor: pointer;
-  border-radius: var(--ps-radius);
+  border-radius: 10px;
   background: var(--ps-surface);
   color: var(--ps-ink);
   font: inherit;
   border: 1px solid var(--ps-border);
-  box-shadow: none;
+  box-shadow: 0 2px 8px rgba(9, 40, 86, 0.04);
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.phase-strip-tile:hover {
+  transform: translateX(2px);
+  border-color: var(--ps-accent);
+  box-shadow: 0 7px 18px rgba(9, 40, 86, 0.1);
 }
 
 .phase-strip-tile:focus-visible {
@@ -164,23 +198,59 @@
 }
 
 .phase-strip-tile.is-future {
-  border-style: dashed;
   border-color: var(--ps-border);
-  opacity: 0.78;
+  opacity: 1;
 }
 
 .phase-strip-tile.is-selected {
-  box-shadow: 0 0 0 2px var(--ps-accent);
+  border-color: var(--ps-accent);
+  box-shadow: 0 0 0 2px var(--ps-accent), 0 10px 24px rgba(9, 40, 86, 0.12);
 }
 
 .phase-strip-tile.is-current.is-selected {
   box-shadow: var(--ps-shadow), 0 0 0 2px var(--ps-accent);
 }
 
+.phase-strip-tile-top {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.phase-strip-sequence {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--ps-border);
+  border-radius: 999px;
+  background: var(--ps-surface);
+  color: var(--ps-ink);
+  font-family: var(--ps-font-text);
+  font-size: 11px;
+  font-weight: 700;
+  box-shadow: 0 0 0 4px var(--ps-surface);
+}
+
+.phase-strip-tile.is-current .phase-strip-sequence {
+  background: var(--ps-ink);
+  border-color: var(--ps-ink);
+  color: var(--ps-surface);
+}
+
+.phase-strip-tile.is-selected .phase-strip-sequence {
+  background: var(--ps-accent);
+  border-color: var(--ps-accent);
+  color: var(--ps-surface);
+}
+
 .phase-strip-tile-name {
   font-family: var(--ps-font-display);
   font-weight: 600;
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.2;
   color: var(--ps-ink);
   display: -webkit-box;
@@ -191,6 +261,10 @@
   word-break: break-word;
   max-height: 2.4em;
   width: 100%;
+}
+
+.phase-strip-tile-detail {
+  margin-left: 44px;
 }
 
 .phase-strip-tile-metric {
@@ -227,6 +301,7 @@
   color: var(--ps-muted);
   line-height: 1.35;
   width: 100%;
+  padding-left: 44px;
 }
 
 .phase-strip-tile.is-complete .phase-strip-tile-foot {
@@ -240,11 +315,14 @@
   color: var(--ps-muted);
   align-items: center;
   justify-content: center;
-  min-height: 92px;
+  min-height: 54px;
   font-family: var(--ps-font-text);
   font-weight: 600;
   font-size: 13px;
   letter-spacing: 0.04em;
+  flex-direction: row;
+  gap: 6px;
+  box-shadow: none;
 }
 
 .phase-strip-add:hover {
