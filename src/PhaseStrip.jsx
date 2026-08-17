@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { buildPhaseStripModel, findCurrentPhaseIndex } from './tasksViewV2Model.js';
+import { buildPhaseStripModel, currentPhaseMetric, findCurrentPhaseIndex } from './tasksViewV2Model.js';
 import './phaseStrip.css';
 
 const COLLAPSE_KEY = 'PRECON_V2_PHASE_STRIP_COLLAPSED';
@@ -19,6 +19,11 @@ function readCollapsed() {
  */
 export function PhaseStrip({ proj, dispatch, children }) {
   const strip = useMemo(() => buildPhaseStripModel(proj), [proj]);
+  const overall = useMemo(() => {
+    const total = strip.reduce((sum, tile) => sum + tile.stats.total, 0);
+    const done = strip.reduce((sum, tile) => sum + tile.stats.done, 0);
+    return { total, done, pct: total ? Math.round((done / total) * 100) : 0 };
+  }, [strip]);
   const currentIndex = useMemo(
     () => findCurrentPhaseIndex(strip.map((t) => t.phase)),
     [strip],
@@ -79,6 +84,10 @@ export function PhaseStrip({ proj, dispatch, children }) {
           <div>
             <p className="phase-strip-label">Project lifecycle</p>
             <p className="phase-strip-hint">Select a phase to view its tasks</p>
+            <div className="phase-strip-overall">
+              <div className="phase-strip-overall-bar"><i style={{ width: `${overall.pct}%` }} /></div>
+              <span>{overall.done} of {overall.total} done</span>
+            </div>
           </div>
           <button type="button" className="phase-strip-collapse" onClick={onToggleCollapse}>
             {collapsed ? 'Show strip' : 'Hide strip'}
@@ -88,58 +97,32 @@ export function PhaseStrip({ proj, dispatch, children }) {
         <div className="phase-strip-grid" role="list">
           {strip.map((tile) => {
             const selected = tile.id === visiblePhaseId;
+            const planMetric = tile.metric || currentPhaseMetric(proj, tile.phase, tile.stats);
             return (
               <button
                 key={tile.id}
                 type="button"
                 role="listitem"
-                aria-label={`${tile.sequenceLabel}. ${tile.name}`}
+                aria-label={`Phase ${tile.index + 1}. ${tile.name}`}
                 className={`phase-strip-tile is-${tile.state}${selected ? ' is-selected' : ''}`}
                 onClick={() => onSelectTile(tile)}
               >
-                <div className="phase-strip-tile-top">
-                  <span className="phase-strip-sequence" aria-hidden>{tile.sequenceLabel}</span>
+                <span className="phase-strip-sequence" aria-hidden>{tile.state === 'complete' ? '✓' : tile.index + 1}</span>
+                <div className="phase-strip-tile-content">
                   <div className="phase-strip-tile-name">{tile.name}</div>
-                </div>
-                {tile.state === 'current' && tile.metric ? (
-                  <div className="phase-strip-tile-detail">
-                    <div
-                      className={`phase-strip-tile-metric${tile.metric.tone === 'danger' ? ' is-danger' : ''}`}
-                    >
-                      {tile.metric.value}
-                    </div>
-                    <span className="phase-strip-tile-metric-label">{tile.metric.label}</span>
+                  <div className="phase-strip-tile-foot">
+                    {tile.stats.done}/{tile.stats.total} tasks
+                    {tile.owner ? ` · ${tile.owner}` : ''}
+                    {planMetric.kind === 'past' ? <strong> · {planMetric.value}d late</strong> : null}
                   </div>
-                ) : null}
-                <div className="phase-strip-tile-foot">
-                  {tile.state === 'complete' ? (
-                    <>
-                      ✓ all {tile.stats.total} tasks
-                      {tile.owner ? ` · ${tile.owner}` : ''}
-                    </>
-                  ) : null}
-                  {tile.state === 'current' ? (
-                    <>
-                      {tile.stats.done}/{tile.stats.total} tasks
-                      {tile.owner ? ` · ${tile.owner}` : ''}
-                    </>
-                  ) : null}
-                  {tile.state === 'future' ? (
-                    <>
-                      {tile.stats.total} tasks planned
-                      {tile.owner ? ` · ${tile.owner}` : ''}
-                    </>
-                  ) : null}
+                  <div className="phase-strip-row-progress"><i style={{ width: `${tile.stats.total ? Math.round((tile.stats.done / tile.stats.total) * 100) : 0}%` }} /></div>
                 </div>
               </button>
             );
           })}
-          <button type="button" className="phase-strip-tile phase-strip-add" onClick={onAddPhase}>
-            <span className="phase-strip-add-mark" aria-hidden>
-              +
-            </span>
-            Phase
-          </button>
+        </div>
+        <div className="phase-strip-footer">
+          <button type="button" className="phase-strip-add" onClick={onAddPhase}>+ Add phase</button>
         </div>
       </aside>
       <main className="phase-navigator-main">{listChild}</main>

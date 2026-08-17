@@ -30,7 +30,7 @@ import { TaskCommentModal } from "./TaskCommentModal.jsx";
 import { ProjectPageShell } from "./ProjectPageShell.jsx";
 import { PhaseStrip } from "./PhaseStrip.jsx";
 import { isV2Enabled } from "./featureFlags.js";
-import { displayPhasesForV2, phaseOwnerFirstName } from "./tasksViewV2Model.js";
+import { displayPhasesForV2, phaseOwnerFirstName, phasePlannedWindow } from "./tasksViewV2Model.js";
 import { DrawingsVault } from "./DrawingsVault.jsx";
 import { StatusFilterChips } from "./StatusFilterChips.jsx";
 import { AssigneeMultiSelect } from "./AssigneeMultiSelect.jsx";
@@ -1553,6 +1553,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster,onS
   const[assigneeFilter,setAssigneeFilter]=useState("");
   const[departmentFilter,setDepartmentFilter]=useState("");
   const[roleFilter,setRoleFilter]=useState("");
+  const[filtersOpen,setFiltersOpen]=useState(false);
   const assignees=useMemo(()=>collectAssignees([proj]),[proj]);
   const roleOptions=useMemo(()=>collectAllRoles([proj]),[proj]);
   const allDisplayPhases=useMemo(()=>expandPhasesForDisplay(proj.phases),[proj.phases]);
@@ -1564,6 +1565,10 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster,onS
   const todayStr=todayIso();
   const filters={statusFilters,assigneeFilter,departmentFilter,departments,roleFilter,horizonDays,todayStr};
   const filtersActive=!!(statusFilters.length||assigneeFilter||departmentFilter||roleFilter||horizonDays!=null);
+  const selectedPhaseTasks=visiblePhaseId!=null?displayPhases.flatMap(ph=>ph.tasks||[]):[];
+  const overdueCount=selectedPhaseTasks.filter(t=>taskStatus(t,dm)==="overdue").length;
+  const mineFilterName=loginUser?.ready?(loginUser.name||""):"";
+  const mineCount=mineFilterName?selectedPhaseTasks.filter(t=>taskMatchesAssigneeFilter(t.who,mineFilterName)).length:0;
   const expandAll=()=>{
     const nextPh={};
     const nextTasks={};
@@ -1623,29 +1628,61 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster,onS
     },toast);
   };
   return(
-    <div className="tasks-view">
-      <div className={`tasks-filters-card${visiblePhaseId!=null?" tasks-filters-sidebar":""}`}>
-        {visiblePhaseId!=null?<div className="tasks-filters-heading"><strong>Task filters</strong><span>Refine the selected phase</span></div>:null}
-        <ActionFilters horizonDays={horizonDays} setHorizonDays={setHorizonDays} statusFilters={statusFilters} setStatusFilters={setStatusFilters} assigneeFilter={assigneeFilter} setAssigneeFilter={setAssigneeFilter} assignees={assignees} departmentFilter={departmentFilter} setDepartmentFilter={setDepartmentFilter} departments={departments} roleFilter={roleFilter} setRoleFilter={setRoleFilter} roleOptions={roleOptions} allowAllHorizon stacked={visiblePhaseId!=null}/>
-      </div>
-      <div className="tasks-toolbar">
-        <p className="tasks-toolbar-tip">Drag ⋮⋮ to reorder · ▸/▾ expands subtasks · ⊞ adds a subtask · Parent dates follow first→last subtask · {filtersActive?"Clear filters to enable drag reorder":"Expand phases to edit tasks"}</p>
-        <div className="tasks-toolbar-actions">
-          <button type="button" className="btg" onClick={expandAll}>Expand all</button>
-          <button type="button" className="btg" onClick={collapseAll}>Collapse all</button>
-          <button className="btg" onClick={()=>dispatch({type:"addPhase",projId:proj.id})}>+ Phase</button>
-          <button className="btg" onClick={()=>{
-            const dm2=cDates(proj);let csv="Phase,Parent_ID,Task ID,Task,Start,End,Dur,Assignee,Status,Comments\n";
-            proj.phases.forEach(ph=>orderTasksAsTree(ph.tasks).forEach(t=>{
-              if(!taskPassesFilters(t,dm2,ph.name,filters))return;
-              const d=dm2[t.id]||{s:"",e:""};
-              const cm=sortCommentsChronologically(t.comments).map(({comment:c})=>formatCommentLine(c)).join(" | ");
-              csv+=`"${ph.name}","${taskParentId(t)||""}","${t.id}","${t.name}","${d.s}","${d.e}","${t.dur}","${t.who||""}","${statusLabel(taskStatus(t,dm2))}","${cm.replace(/"/g,'""')}"\n`;
-            }));
-            const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download=proj.name.replace(/\s+/g,"_")+"_Schedule.csv";a.click();toast("CSV exported","ok");
-          }}>Export CSV</button>
+    <div className={`tasks-view${visiblePhaseId!=null?" tasks-view-v23":""}`}>
+      {visiblePhaseId!=null?(
+        <div className="tasks-toolbar tasks-toolbar-v23">
+          <div className="tasks-toolbar-v23-row">
+            <button type="button" className="v23-chip" onClick={expandAll}>Expand all</button>
+            <button type="button" className="v23-chip" onClick={collapseAll}>Collapse all</button>
+            <span className="v23-toolbar-divider" aria-hidden/>
+            <button type="button" className={`v23-chip v23-filter-toggle${filtersOpen?" is-open":""}`} onClick={()=>setFiltersOpen(v=>!v)}>Filters</button>
+            <button type="button" className={`v23-chip${statusFilters.includes("overdue")?" is-active":""}`} onClick={()=>setStatusFilters(v=>v.includes("overdue")?v.filter(x=>x!=="overdue"):[...v,"overdue"])}>Overdue · {overdueCount}</button>
+            <button type="button" className={`v23-chip${mineFilterName&&assigneeFilter===mineFilterName?" is-active":""}`} disabled={!mineFilterName} onClick={()=>setAssigneeFilter(v=>v===mineFilterName?"":mineFilterName)}>Mine · {mineCount}</button>
+            <p className="tasks-toolbar-tip">Drag ⋮⋮ to reorder · ▸/▾ expands subtasks · ⊞ adds a subtask · {filtersActive?"Clear filters to enable drag reorder":"Expand phases to edit tasks"}</p>
+            <span className="v23-toolbar-divider" aria-hidden/>
+            <button className="v23-export" onClick={()=>{
+              const dm2=cDates(proj);let csv="Phase,Parent_ID,Task ID,Task,Start,End,Dur,Assignee,Status,Comments\n";
+              proj.phases.forEach(ph=>orderTasksAsTree(ph.tasks).forEach(t=>{
+                if(!taskPassesFilters(t,dm2,ph.name,filters))return;
+                const d=dm2[t.id]||{s:"",e:""};
+                const cm=sortCommentsChronologically(t.comments).map(({comment:c})=>formatCommentLine(c)).join(" | ");
+                csv+=`"${ph.name}","${taskParentId(t)||""}","${t.id}","${t.name}","${d.s}","${d.e}","${t.dur}","${t.who||""}","${statusLabel(taskStatus(t,dm2))}","${cm.replace(/"/g,'""')}"\n`;
+              }));
+              const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download=proj.name.replace(/\s+/g,"_")+"_Schedule.csv";a.click();toast("CSV exported","ok");
+            }}>Export CSV</button>
+          </div>
+          {filtersOpen?(
+            <div className="tasks-filter-panel-v23">
+              <ActionFilters horizonDays={horizonDays} setHorizonDays={setHorizonDays} statusFilters={statusFilters} setStatusFilters={setStatusFilters} assigneeFilter={assigneeFilter} setAssigneeFilter={setAssigneeFilter} assignees={assignees} departmentFilter={departmentFilter} setDepartmentFilter={setDepartmentFilter} departments={departments} roleFilter={roleFilter} setRoleFilter={setRoleFilter} roleOptions={roleOptions} allowAllHorizon stacked/>
+              <button type="button" className="v23-clear-filters" onClick={()=>{setHorizonDays(null);setStatusFilters([]);setAssigneeFilter("");setDepartmentFilter("");setRoleFilter("");}}>Clear all</button>
+            </div>
+          ):null}
         </div>
-      </div>
+      ):(
+        <>
+          <div className="tasks-filters-card">
+            <ActionFilters horizonDays={horizonDays} setHorizonDays={setHorizonDays} statusFilters={statusFilters} setStatusFilters={setStatusFilters} assigneeFilter={assigneeFilter} setAssigneeFilter={setAssigneeFilter} assignees={assignees} departmentFilter={departmentFilter} setDepartmentFilter={setDepartmentFilter} departments={departments} roleFilter={roleFilter} setRoleFilter={setRoleFilter} roleOptions={roleOptions} allowAllHorizon/>
+          </div>
+          <div className="tasks-toolbar">
+            <p className="tasks-toolbar-tip">Drag ⋮⋮ to reorder · ▸/▾ expands subtasks · ⊞ adds a subtask · Parent dates follow first→last subtask · {filtersActive?"Clear filters to enable drag reorder":"Expand phases to edit tasks"}</p>
+            <div className="tasks-toolbar-actions">
+              <button type="button" className="btg" onClick={expandAll}>Expand all</button>
+              <button type="button" className="btg" onClick={collapseAll}>Collapse all</button>
+              <button className="btg" onClick={()=>dispatch({type:"addPhase",projId:proj.id})}>+ Phase</button>
+              <button className="btg" onClick={()=>{
+                const dm2=cDates(proj);let csv="Phase,Parent_ID,Task ID,Task,Start,End,Dur,Assignee,Status,Comments\n";
+                proj.phases.forEach(ph=>orderTasksAsTree(ph.tasks).forEach(t=>{
+                  if(!taskPassesFilters(t,dm2,ph.name,filters))return;
+                  const d=dm2[t.id]||{s:"",e:""};
+                  const cm=sortCommentsChronologically(t.comments).map(({comment:c})=>formatCommentLine(c)).join(" | ");
+                  csv+=`"${ph.name}","${taskParentId(t)||""}","${t.id}","${t.name}","${d.s}","${d.e}","${t.dur}","${t.who||""}","${statusLabel(taskStatus(t,dm2))}","${cm.replace(/"/g,'""')}"\n`;
+                }));
+                const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download=proj.name.replace(/\s+/g,"_")+"_Schedule.csv";a.click();toast("CSV exported","ok");
+              }}>Export CSV</button>
+            </div>
+          </div>
+        </>
+      )}
       <div className="phases-stack">
       {displayPhases.map((ph)=>{
         const sourcePhId=realPhaseId(ph);
@@ -1661,6 +1698,9 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster,onS
         const isOpen=visiblePhaseId!=null?true:expandedPh[ek]===true;
         const dept=getDepartmentForPhase(ph._section==="design"?"Design & Team Appointments":ph._section==="approval"?"Regulatory Approvals":ph.name,departments);
         const ownerName=visiblePhaseId!=null?phaseOwnerFirstName(ph):"";
+        const planWindow=visiblePhaseId!=null?phasePlannedWindow(proj,ph):null;
+        const daysPastPlan=planWindow&&todayStr>planWindow.plannedEnd?Math.max(0,dbDays(planWindow.plannedEnd,todayStr)):0;
+        const allVisibleDone=visible.length>0&&comp===visible.length;
         const isPhDragOver=dragOverPhId===sourcePhId&&dragPhase?.phId&&dragPhase.phId!==sourcePhId;
         const phaseActions=(
           <div className="ps-actions" onClick={e=>e.stopPropagation()}>
@@ -1681,8 +1721,8 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster,onS
                 >Complete all</button>
               );
             })()}
-            <button className="bts" onClick={()=>dispatch({type:"addTask",projId:proj.id,phId:sourcePhId,afterId:null})}>+ Task</button>
-            {!ph._section?<button className="bts" onClick={()=>{if(confirm(`Delete phase "${ph.name}"?`))dispatch({type:"delPhase",projId:proj.id,phId:sourcePhId});}}>✕</button>:null}
+            <button className={visiblePhaseId!=null?"bts ps-add-task":"bts"} onClick={()=>dispatch({type:"addTask",projId:proj.id,phId:sourcePhId,afterId:null})}>+ Task</button>
+            {!ph._section?<button className={visiblePhaseId!=null?"bts ps-delete-phase":"bts"} onClick={()=>{if(confirm(`Delete phase "${ph.name}"?`))dispatch({type:"delPhase",projId:proj.id,phId:sourcePhId});}}>✕</button>:null}
           </div>
         );
         return(
@@ -1699,16 +1739,37 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster,onS
           >
             {visiblePhaseId!=null?(
               <div className="ps-context">
-                <div className="ps-context-left">
-                  <span className="ps-context-name">{ph.name}</span>
-                  {ph._section?<span className="ps-dept" title="View section only — Mongo data unchanged">{ph._section==="design"?"Design work":"Approvals & regulatory"}</span>:null}
-                  {dept?<span className="ps-dept" title="Department head">{dept.name} · {dept.head}</span>:null}
-                  {ownerName?<span className="ps-dept" title="Phase owner">{ownerName}</span>:null}
-                  <span className="ps-meta">{visible.length}{visible.length!==ph.tasks.length?` / ${ph.tasks.length}`:""} tasks</span>
-                  <div className="ppbar"><div className="ppfill" style={{width:`${pct}%`,background:ph.col}}/></div>
-                  <span className="ps-meta">{pct}%</span>
+                <div className="ps-context-top">
+                  <div className="ps-context-title-row">
+                    <span className="ps-context-name">{ph.name}</span>
+                    <span className={`ps-context-status${daysPastPlan?" is-late":" is-good"}`}>
+                      {daysPastPlan?`${daysPastPlan} days past plan`:allVisibleDone?"All done":"On track"}
+                    </span>
+                  </div>
+                  {phaseActions}
                 </div>
-                {phaseActions}
+                <div className="ps-context-meta-strip">
+                  <div className="ps-context-meta-cell">
+                    <span>Department</span>
+                    <strong>{dept?.name||(ph._section==="design"?"Design work":ph._section==="approval"?"Approvals & regulatory":"—")}</strong>
+                  </div>
+                  <div className="ps-context-meta-cell">
+                    <span>Phase lead</span>
+                    <strong>{ownerName||dept?.head||"—"}</strong>
+                  </div>
+                  <div className="ps-context-meta-cell">
+                    <span>Tasks</span>
+                    <strong>{comp} of {visible.length}</strong>
+                  </div>
+                  <div className="ps-context-meta-cell">
+                    <span>Plan</span>
+                    <strong className={daysPastPlan?"is-late":""}>{daysPastPlan?`${daysPastPlan} days past`:"Within plan"}</strong>
+                  </div>
+                  <div className="ps-context-meta-cell ps-context-progress">
+                    <span>Progress</span>
+                    <div><div className="ps-context-progress-bar"><i style={{width:`${pct}%`}}/></div><strong>{pct}%</strong></div>
+                  </div>
+                </div>
               </div>
             ):(
             <div className="psh" onClick={()=>setExpandedPh(p=>({...p,[ek]:!isOpen}))}>
@@ -1741,7 +1802,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster,onS
                 <th className="tcol-who">Assignee</th>
                 <th className="tcol-status">Status</th>
                 <th className="tcol-comments">Comments</th>
-                <th className="tcol-save">Save</th>
+                <th className="tcol-save">{visiblePhaseId==null?"Save":null}</th>
                 <th className="tcol-del" aria-label="Delete"/>
               </tr></thead>
               <tbody>
@@ -1776,7 +1837,7 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster,onS
                       <td className="tcol-num">{seqIdx}</td>
                       <td className="tcol-task">
                         <div className="ttree-cell">
-                          <span className="ttree-indent" style={{width:Math.max(0,depth)*14}} aria-hidden/>
+                          <span className="ttree-indent" style={{width:visiblePhaseId!=null?(depth>0?44+(depth-1)*30:0):Math.max(0,depth)*14}} aria-hidden/>
                           {hasChildren?(
                             <button type="button" className="ttree-toggle" aria-expanded={taskOpen} title={taskOpen?"Collapse subtasks":"Expand subtasks"}
                               onClick={(e)=>{e.stopPropagation();toggleTaskExpand(t.id);}}
@@ -1873,6 +1934,11 @@ function TasksView({proj,dispatch,toast,departments,loginUser,assigneeRoster,onS
                 })}
               </tbody>
             </table></div>}
+            {isOpen&&visiblePhaseId!=null?(
+              <div className="ps-add-task-footer">
+                <button type="button" onClick={()=>dispatch({type:"addTask",projId:proj.id,phId:sourcePhId,afterId:null})}>+ Add task to this phase</button>
+              </div>
+            ):null}
             {isOpen&&ph._section==="design"?(
               <DrawingsVault
                 projects={[proj]}
